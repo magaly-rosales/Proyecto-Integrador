@@ -16,6 +16,30 @@ se expresan mediante señas y personas que no conocen este lenguaje.
 
 Base de datos compartida (relacional) en `/database`.
 
+## Versiones del proyecto
+
+Todo el equipo debe trabajar con exactamente estas versiones, para evitar
+errores de compatibilidad entre laptops:
+
+| Tecnología | Versión |
+|---|---|
+| PostgreSQL | 18 |
+| Java (JDK) | 21 (LTS) |
+| Spring Boot | 3.3.x |
+| Kotlin | 2.0.21 |
+| Node.js | 20 LTS |
+
+Antes de empezar a programar, cada integrante debe verificar su versión
+instalada con estos comandos:
+
+- java -version        (debe mostrar 21.x)
+- kotlinc -version      (debe mostrar 2.0.21)
+- node -v               (debe mostrar v20.x)
+- psql --version        (debe mostrar 18.x)
+
+Si alguna versión no coincide, desinstalar y reinstalar la versión correcta
+antes de continuar con el desarrollo.
+
 ## Estructura del repositorio
 - `backend/` → Lógica de servidor de ambos módulos (Usuario y Administración)
 - `frontend/` → Interfaces web de ambos módulo

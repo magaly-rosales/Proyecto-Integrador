@@ -30,3 +30,10 @@ CREATE TABLE registro_uso (
     cantidad_senas_traducidas INT,
     plataforma VARCHAR(20)
 );
+
+CREATE TABLE muestra_sena (
+    id_muestra SERIAL PRIMARY KEY,
+    id_sena INT NOT NULL REFERENCES sena(id_sena),
+    puntos TEXT NOT NULL,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -24,8 +24,8 @@ public class ReconocimientoController {
     // Recibe los 21 puntos y devuelve la seña reconocida
     @PostMapping("/puntos")
     public ResponseEntity<?> recibirPuntos(@RequestBody List<PuntoMano> puntos) {
-        if (puntos.size() != 21) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Se esperan 21 puntos"));
+        if (puntos.size() != 21 && puntos.size() != 42) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Se esperan 21 puntos (una mano) o 42 (dos manos)"));
         }
         return ResponseEntity.ok(clasificadorService.clasificar(puntos));
     }
@@ -34,8 +34,8 @@ public class ReconocimientoController {
     @PostMapping("/muestras/{idSena}")
     public ResponseEntity<?> guardarMuestra(@PathVariable Integer idSena,
                                             @RequestBody List<PuntoMano> puntos) {
-        if (puntos.size() != 21) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Se esperan 21 puntos"));
+        if (puntos.size() != 21 && puntos.size() != 42) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Se esperan 21 puntos (una mano) o 42 (dos manos)"));
         }
         clasificadorService.guardarMuestra(idSena, puntos);
         return ResponseEntity.ok(Map.of("status", "muestra guardada"));

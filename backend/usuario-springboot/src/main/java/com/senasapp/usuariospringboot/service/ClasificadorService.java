@@ -24,14 +24,15 @@ public class ClasificadorService {
         this.senaRepository = senaRepository;
     }
 
-    // 21 puntos -> 63 números, relativos a la muñeca y escalados
+    // 21 puntos (una mano) o 42 (dos manos) -> relativos al primer punto y escalados
     private double[] normalizar(List<PuntoMano> p) {
-        PuntoMano muneca = p.get(0);
-        double[] v = new double[63];
-        for (int i = 0; i < 21; i++) {
-            v[i * 3] = p.get(i).getX() - muneca.getX();
-            v[i * 3 + 1] = p.get(i).getY() - muneca.getY();
-            v[i * 3 + 2] = p.get(i).getZ() - muneca.getZ();
+        int n = p.size();
+        PuntoMano origen = p.get(0);
+        double[] v = new double[n * 3];
+        for (int i = 0; i < n; i++) {
+            v[i * 3] = p.get(i).getX() - origen.getX();
+            v[i * 3 + 1] = p.get(i).getY() - origen.getY();
+            v[i * 3 + 2] = p.get(i).getZ() - origen.getZ();
         }
         double max = 0;
         for (double d : v) max = Math.max(max, Math.abs(d));
@@ -50,6 +51,8 @@ public class ClasificadorService {
         muestraRepository.save(m);
     }
 
+
+
     public Map<String, Object> clasificar(List<PuntoMano> puntos) {
         Map<String, Object> res = new HashMap<>();
         List<MuestraSena> muestras = muestraRepository.findAll();
@@ -61,12 +64,20 @@ public class ClasificadorService {
 
         record Vecino(double distancia, String nombre) {}
         List<Vecino> vecinos = new ArrayList<>();
+
+        // ---- BLOQUE NUEVO (reemplaza el for y el sort anteriores) ----
         for (MuestraSena m : muestras) {
             double[] ref = Arrays.stream(m.getPuntos().split(","))
                     .mapToDouble(Double::parseDouble).toArray();
+            if (ref.length != v.length) continue; // solo compara 1 mano con 1 mano, 2 con 2
             vecinos.add(new Vecino(distancia(v, ref), m.getSena().getNombre()));
         }
+        if (vecinos.isEmpty()) {
+            res.put("sena", "sin_muestras");
+            return res;
+        }
         vecinos.sort(Comparator.comparingDouble(Vecino::distancia));
+        // ---- FIN DEL BLOQUE NUEVO ----
 
         List<Vecino> top = vecinos.subList(0, Math.min(K, vecinos.size()));
         String ganador = top.stream()

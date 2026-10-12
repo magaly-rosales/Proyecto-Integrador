@@ -42,3 +42,43 @@ main {
   transform: scaleX(-1);
   pointer-events: none;
 }
+.resultado {
+  margin-top: 1rem;
+}
+
+.sena-grande {
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+  text-transform: capitalize;
+}
+
+.estado {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  background: #eee;
+  color: #444;
+}
+
+.estado-enviando {
+  background: #fff3cd;
+  color: #7a5b00;
+}
+
+.estado-listo {
+  background: #d4edda;
+  color: #155724;
+}
+
+.estado-error {
+  background: #f8d7da;
+  color: #721c24;
+}
+.sena-aviso {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0.75rem 0;
+  color: #555;
+}

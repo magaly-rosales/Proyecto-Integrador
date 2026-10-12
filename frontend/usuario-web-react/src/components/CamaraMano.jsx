@@ -99,10 +99,10 @@ export default function CamaraMano({ onLandmarks }) {
 
         // MediaPipe asume imagen espejada; nuestro video no está volteado,
         // por eso se intercambian las etiquetas Left/Right.
-        const manos = resultado.landmarks.map((puntos, i) => {
-          const etiqueta = resultado.handednesses[i][0].categoryName;
+          const manos = resultado.landmarks.map((puntos, i) => {
+          const etiqueta = resultado.handednesses[i][0].categoryName; // "Left" | "Right" (crudo)
           const mano = etiqueta === "Left" ? "Derecha" : "Izquierda";
-          return { mano, puntos };
+          return { mano, etiqueta, puntos };
         });
 
         for (const { mano, puntos } of manos) dibujarMano(puntos, COLORES[mano]);

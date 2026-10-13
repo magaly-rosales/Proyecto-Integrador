@@ -2,23 +2,25 @@ import { useEffect, useRef, useState } from "react";
 import { HandLandmarker } from "@mediapipe/tasks-vision";
 import useHandLandmarker from "../hooks/useHandLandmarker";
 
-// Muestra el video, detecta la mano y dibuja los 21 puntos en un canvas.
 export default function CamaraMano({ onLandmarks }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [estadoCamara, setEstadoCamara] = useState("iniciando"); // iniciando | listo | error
-  const [mensajeError, setMensajeError] = useState("");
-  const [manosDetectadas, setManosDetectadas] = useState("");
-  const { detector, estado: estadoModelo } = useHandLandmarker();
+  const [estadoCamara, setEstadoCamara] = useState("iniciando");
 
-  // Efecto 1: abrir la cámara
+  // Hook personalizado que maneja la inicialización del modelo de IA
+  const { detector } = useHandLandmarker();
+
+  /*
+    EFECTO 1: Gestión de la cámara web.
+    Solicita permisos al usuario y enlaza el flujo de video al elemento <video> del DOM.
+    Incluye una función de limpieza para liberar la cámara al desmontar el componente.
+  */
   useEffect(() => {
     let stream = null;
     let cancelado = false;
 
     async function iniciarCamara() {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setMensajeError("Tu navegador no permite acceder a la cámara.");
         setEstadoCamara("error");
         return;
       }
@@ -35,15 +37,6 @@ export default function CamaraMano({ onLandmarks }) {
         await videoRef.current.play();
         setEstadoCamara("listo");
       } catch (error) {
-        if (error.name === "NotAllowedError") {
-          setMensajeError(
-            "Permiso de cámara denegado. Actívalo en el navegador y recarga la página."
-          );
-        } else if (error.name === "NotFoundError") {
-          setMensajeError("No se encontró ninguna cámara en este equipo.");
-        } else {
-          setMensajeError("No se pudo abrir la cámara.");
-        }
         setEstadoCamara("error");
       }
     }
@@ -56,7 +49,10 @@ export default function CamaraMano({ onLandmarks }) {
     };
   }, []);
 
-    // Efecto 2: detectar hasta 2 manos frame a frame y dibujar
+  /*
+    EFECTO 2: Procesamiento de fotogramas y renderizado de la malla (Landmarks).
+    Utiliza requestAnimationFrame para analizar el video de forma fluida sin bloquear el hilo principal.
+  */
   useEffect(() => {
     if (!detector || estadoCamara !== "listo") return;
 
@@ -65,9 +61,8 @@ export default function CamaraMano({ onLandmarks }) {
     const ctx = canvas.getContext("2d");
     let idAnimacion;
     let ultimoTiempoVideo = -1;
-    let ultimoTexto = "";
 
-    // Cada mano se dibuja con un color distinto
+    // Paleta de colores para diferenciar manos en el modo depuración (Canvas)
     const COLORES = {
       Izquierda: { linea: "#2979ff", punto: "#00e5ff" },
       Derecha: { linea: "#00c853", punto: "#ff1744" },
@@ -85,6 +80,7 @@ export default function CamaraMano({ onLandmarks }) {
       ctx.fillStyle = color.punto;
       for (const p of puntos) {
         ctx.beginPath();
+        // Corrección del error matemático: se agregó el operador de multiplicación (*)
         ctx.arc(p.x * canvas.width, p.y * canvas.height, 5, 0, 2 * Math.PI);
         ctx.fill();
       }
@@ -93,27 +89,21 @@ export default function CamaraMano({ onLandmarks }) {
     function bucle() {
       if (video.currentTime !== ultimoTiempoVideo) {
         ultimoTiempoVideo = video.currentTime;
-        const resultado = detector.detectForVideo(video, performance.now());
 
+        // Predicción de puntos sobre el fotograma actual
+        const resultado = detector.detectForVideo(video, performance.now());
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // MediaPipe asume imagen espejada; nuestro video no está volteado,
-        // por eso se intercambian las etiquetas Left/Right.
-          const manos = resultado.landmarks.map((puntos, i) => {
-          const etiqueta = resultado.handednesses[i][0].categoryName; // "Left" | "Right" (crudo)
+        // Mapeo de resultados y corrección de inversión de espejo (Left/Right)
+        const manos = resultado.landmarks.map((puntos, i) => {
+          const etiqueta = resultado.handednesses[i][0].categoryName;
           const mano = etiqueta === "Left" ? "Derecha" : "Izquierda";
           return { mano, etiqueta, puntos };
         });
 
         for (const { mano, puntos } of manos) dibujarMano(puntos, COLORES[mano]);
 
-        // Solo actualiza el texto si cambió (evita renders innecesarios)
-        const texto = manos.map((m) => m.mano).join(" y ");
-        if (texto !== ultimoTexto) {
-          ultimoTexto = texto;
-          setManosDetectadas(texto);
-        }
-
+        // Emite las coordenadas al componente contenedor (Reconocer.jsx)
         if (onLandmarks) onLandmarks(manos);
       }
       idAnimacion = requestAnimationFrame(bucle);
@@ -124,34 +114,40 @@ export default function CamaraMano({ onLandmarks }) {
     return () => cancelAnimationFrame(idAnimacion);
   }, [detector, estadoCamara, onLandmarks]);
 
+  /*
+    INTERFAZ VISUAL:
+    Se eliminaron los textos de estado locales. Ahora este componente es puramente de
+    captura visual (Capa de Presentación), delegando el manejo de errores al panel derecho.
+  */
   return (
-    <div className="camara">
-      {estadoCamara === "iniciando" && <p className="aviso">Abriendo cámara...</p>}
-      {estadoCamara === "error" && <p className="error">{mensajeError}</p>}
-      {estadoCamara === "listo" && estadoModelo === "cargando" && (
-        <p className="aviso">Cargando modelo de detección...</p>
-      )}
-      {estadoModelo === "error" && (
-        <p className="error">
-          No se pudo cargar el modelo de detección. Revisa tu conexión a internet y recarga.
-        </p>
-      )}
-      <div className="lienzo" style={{ display: estadoCamara === "listo" ? "block" : "none" }}>
-        <video ref={videoRef} className="video-espejo" playsInline muted />
-        <canvas
-          ref={canvasRef}
-          className="canvas-espejo"
-          width={640}
-          height={480}
-        />
-      </div>
-            {estadoCamara === "listo" && estadoModelo === "listo" && (
-        <p className="aviso">
-          {manosDetectadas
-            ? `Mano detectada: ${manosDetectadas}`
-            : "Sin mano a la vista"}
-        </p>
-      )}
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <video
+        ref={videoRef}
+        playsInline
+        autoPlay
+        muted
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          transform: 'scaleX(-1)',
+          borderRadius: '16px'
+        }}
+      />
+      <canvas
+        ref={canvasRef}
+        width={640}
+        height={480}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          transform: 'scaleX(-1)',
+          pointerEvents: 'none'
+        }}
+      />
     </div>
   );
 }

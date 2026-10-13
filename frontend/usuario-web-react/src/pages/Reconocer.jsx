@@ -87,6 +87,15 @@ export default function Reconocer() {
           </section>
 
         </div>
+
+        {/* Nuevo Banner de Consejo debajo del grid */}
+                <div className="banner-consejo">
+                  <div className="icono-foco">💡</div>
+                  <div className="texto-consejo">
+                    <h4>Consejo</h4>
+                    <p>Para mejores resultados, asegúrate de que la mano esté bien iluminada y dentro del marco de la cámara.</p>
+                  </div>
+                </div>
       </main>
     </div>
   );

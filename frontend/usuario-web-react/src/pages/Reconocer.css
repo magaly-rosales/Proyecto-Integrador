@@ -1,95 +1,284 @@
 /* src/pages/Reconocer.css */
+:root {
+  --color-fondo: #F4F7FF;
+  --color-primario: #5A4BFA;
+  --color-primario-suave: #EEEDFD;
+  --color-texto-oscuro: #1E1E2F;
+  --color-texto-gris: #8A8AA3;
+  --color-exito: #10B981;
+}
+
 .layout-principal {
   display: flex;
   min-height: 100vh;
-  background-color: #F8F9FA;
-  font-family: system-ui, -apple-system, sans-serif;
+  background-color: var(--color-fondo);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 .contenido-traductor {
   flex: 1;
-  padding: 40px;
+  padding: 40px 60px;
 }
 
+/* Cabecera */
 .cabecera-traductor h2 {
-  font-size: 24px;
-  color: #1A1A24;
-  margin-bottom: 8px;
-  font-weight: bold;
+  font-size: 28px;
+  color: var(--color-texto-oscuro);
+  margin-bottom: 6px;
+  font-weight: 700;
 }
-
 .cabecera-traductor p {
-  color: #6B7280;
+  color: var(--color-texto-gris);
   margin-bottom: 32px;
+  font-size: 16px;
 }
 
-/* El sistema de Grid para dividir la pantalla en dos columnas */
+/* Layout de dos columnas */
 .grid-traductor {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.2fr 1fr;
   gap: 32px;
-  align-items: start;
+  align-items: stretch;
 }
 
-/* Diseño del panel izquierdo (Cámara) */
+/* --- PANEL IZQUIERDO (CÁMARA) --- */
 .panel-camara {
   background: white;
-  border-radius: 20px;
+  border-radius: 24px;
   padding: 24px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
 }
-
 .marco-video {
   position: relative;
-  background-color: #2D2D3B;
-  border-radius: 16px;
+  background-color: #555566;
+  border-radius: 20px;
   overflow: hidden;
-  min-height: 300px;
-  margin-bottom: 16px;
+  height: 400px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-
 .indicador-envivo {
   position: absolute;
   top: 16px;
   right: 16px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(30, 30, 47, 0.7);
   color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
-  z-index: 10;
+  backdrop-filter: blur(4px);
 }
-
 .punto-rojo {
   width: 8px;
   height: 8px;
-  background-color: #EF4444;
+  background-color: #FF4757;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.8);
+}
+.btn-detener-camara {
+  width: 100%;
+  padding: 18px;
+  background-color: var(--color-primario-suave);
+  color: var(--color-primario);
+  border: none;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.btn-detener-camara:hover {
+  background-color: #E2E0FC;
+}
+
+/* --- PANEL DERECHO (RESULTADOS) --- */
+.panel-resultados {
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Estados */
+.estado-reconocimiento {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.estado-reconocimiento.exito { background-color: #ECFDF5; color: var(--color-exito); }
+.estado-reconocimiento.error { background-color: #FEE2E2; color: #EF4444; }
+.estado-reconocimiento.gris { background-color: #F3F4F6; color: #6B7280; }
+
+.icono-circulo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 18px;
+  height: 18px;
+  background-color: currentColor;
+  color: white;
+  border-radius: 50%;
+  font-size: 10px;
+}
+
+/* Traducción */
+.traduccion-caja {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 50px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid #F0F0F5;
+}
+.texto-traducido {
+  font-size: 56px;
+  color: var(--color-texto-oscuro);
+  font-weight: 700;
+  margin: 0;
+}
+.btn-audio-circular {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: var(--color-primario-suave);
+  color: var(--color-primario);
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.btn-audio-circular:hover { transform: scale(1.05); }
+
+/* Botones Modo de Salida */
+.configuracion-salida h3 {
+  font-size: 16px;
+  color: var(--color-texto-oscuro);
+  margin-bottom: 16px;
+}
+.botones-modo {
+  display: flex;
+  gap: 16px;
+}
+.btn-modo {
+  flex: 1;
+  padding: 24px 16px;
+  background-color: white;
+  border: 2px solid #E5E7EB;
+  border-radius: 16px;
+  cursor: pointer;
+  color: var(--color-texto-gris);
+  font-weight: 600;
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s;
+  position: relative;
+}
+.btn-modo:hover { border-color: #D1D5DB; }
+.btn-modo.activo {
+  background-color: var(--color-primario-suave);
+  border-color: var(--color-primario);
+  color: var(--color-primario);
+}
+.check-activo {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: var(--color-primario);
+  color: white;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 10px;
+}
+/* Hacer que el indicador de estado ocupe todo el ancho */
+.estado-reconocimiento {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px; /* Bordes menos redondeados como en el diseño */
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Dibujar las esquinas blancas de enfoque sobre la cámara */
+.marco-video::after {
+  content: '';
+  position: absolute;
+  width: 70%;
+  height: 70%;
+  background:
+    linear-gradient(to right, white 4px, transparent 4px) 0 0,
+    linear-gradient(to bottom, white 4px, transparent 4px) 0 0,
+    linear-gradient(to left, white 4px, transparent 4px) 100% 0,
+    linear-gradient(to bottom, white 4px, transparent 4px) 100% 0,
+    linear-gradient(to right, white 4px, transparent 4px) 0 100%,
+    linear-gradient(to top, white 4px, transparent 4px) 0 100%,
+    linear-gradient(to left, white 4px, transparent 4px) 100% 100%,
+    linear-gradient(to top, white 4px, transparent 4px) 100% 100%;
+  background-repeat: no-repeat;
+  background-size: 40px 40px; /* Tamaño de las esquinas */
+  pointer-events: none;
+  border-radius: 12px;
+}
+
+/* Estilos para el nuevo banner inferior */
+.banner-consejo {
+  margin-top: 32px;
+  background-color: white;
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+
+.icono-foco {
+  font-size: 24px;
+  background-color: #F4F7FF;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   border-radius: 50%;
 }
 
-.btn-detener-camara {
-  width: 100%;
-  padding: 16px;
-  background-color: #DDE2FF;
-  color: #6C5CE7;
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+.texto-consejo h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: var(--color-texto-oscuro);
 }
 
-.btn-detener-camara:hover {
-  background-color: #C8D0FF;
-}
-
-/* Diseño del panel derecho (Resultados) */
-.panel-resultados {
-  background: white;
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+.texto-consejo p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-texto-gris);
 }

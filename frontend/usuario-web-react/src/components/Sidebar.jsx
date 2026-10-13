@@ -1,35 +1,38 @@
 // src/components/Sidebar.jsx
+import { NavLink } from "react-router-dom";
 import Logo from './Logo';
 import './Sidebar.css';
 
 export default function Sidebar() {
+  const claseItem = ({ isActive }) => (isActive ? "nav-item activo" : "nav-item");
+
   return (
     <aside className="sidebar-container">
-      {/* Logo corporativo en la parte superior del menú */}
       <div className="sidebar-logo-wrapper">
         <Logo />
       </div>
 
-      {/* Opciones de navegación */}
       <nav className="sidebar-nav">
-        <a href="#inicio" className="nav-item">
+        <NavLink to="/inicio" className={claseItem}>
           <span className="nav-icon">🏠</span> Inicio
-        </a>
-        <a href="#traducir" className="nav-item activo">
+        </NavLink>
+        <NavLink to="/reconocer" className={claseItem}>
           <span className="nav-icon">📷</span> Traducir
-        </a>
-        <a href="#diccionario" className="nav-item">
+        </NavLink>
+        <NavLink to="/entrenamiento" className={claseItem}>
+          <span className="nav-icon">🏋️‍♂️</span> Entrenamiento
+        </NavLink>
+        <NavLink to="/diccionario" className={claseItem}>
           <span className="nav-icon">📖</span> Diccionario
-        </a>
-        <a href="#historial" className="nav-item">
+        </NavLink>
+        <NavLink to="/historial" className={claseItem}>
           <span className="nav-icon">⏱️</span> Historial
-        </a>
-        <a href="#perfil" className="nav-item">
+        </NavLink>
+        <NavLink to="/perfil" className={claseItem}>
           <span className="nav-icon">👤</span> Perfil
-        </a>
+        </NavLink>
       </nav>
 
-      {/* Tarjeta de SeñasApp Premium en la parte inferior */}
       <div className="sidebar-premium-card">
         <div className="premium-icon">👑</div>
         <div className="premium-content">

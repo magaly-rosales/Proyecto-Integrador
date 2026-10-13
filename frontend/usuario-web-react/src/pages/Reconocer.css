@@ -1,0 +1,95 @@
+/* src/pages/Reconocer.css */
+.layout-principal {
+  display: flex;
+  min-height: 100vh;
+  background-color: #F8F9FA;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.contenido-traductor {
+  flex: 1;
+  padding: 40px;
+}
+
+.cabecera-traductor h2 {
+  font-size: 24px;
+  color: #1A1A24;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.cabecera-traductor p {
+  color: #6B7280;
+  margin-bottom: 32px;
+}
+
+/* El sistema de Grid para dividir la pantalla en dos columnas */
+.grid-traductor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+/* Diseño del panel izquierdo (Cámara) */
+.panel-camara {
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.marco-video {
+  position: relative;
+  background-color: #2D2D3B;
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 300px;
+  margin-bottom: 16px;
+}
+
+.indicador-envivo {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.punto-rojo {
+  width: 8px;
+  height: 8px;
+  background-color: #EF4444;
+  border-radius: 50%;
+}
+
+.btn-detener-camara {
+  width: 100%;
+  padding: 16px;
+  background-color: #DDE2FF;
+  color: #6C5CE7;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-detener-camara:hover {
+  background-color: #C8D0FF;
+}
+
+/* Diseño del panel derecho (Resultados) */
+.panel-resultados {
+  background: white;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}

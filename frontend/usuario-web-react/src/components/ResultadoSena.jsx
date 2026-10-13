@@ -1,14 +1,36 @@
+import { useState, useEffect } from "react";
+
 export default function ResultadoSena({ sena, estado, mensajeError }) {
+  // Estado para el modo de salida, inicializado desde localStorage para que "recuerde" la elección
+  const [modoSalida, setModoSalida] = useState(() => {
+    return localStorage.getItem("senasapp_modo_salida") || "ambos";
+  });
+
+  // Cada vez que cambie el modo, lo guardamos en la memoria del navegador (localStorage)
+  useEffect(() => {
+    localStorage.setItem("senasapp_modo_salida", modoSalida);
+  }, [modoSalida]);
+
+  // Función simulada de Text-to-Speech (Voz) que se ejecutará si el modo incluye voz
+  const reproducirVoz = (texto) => {
+    if ((modoSalida === "voz" || modoSalida === "ambos") && 'speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(texto);
+      utterance.lang = 'es-ES';
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Disparar audio automáticamente cuando llegue una seña nueva (si el modo lo permite)
+  useEffect(() => {
+    if (estado === "listo" && sena) {
+      reproducirVoz(sena);
+    }
+  }, [sena, estado]);
+
   return (
-    // Contenedor principal: Utiliza Flexbox en columna para distribuir el espacio verticalmente
-    // y permitir que la configuración de salida (marginTop: 'auto') se fije al fondo del panel.
     <div className="contenedor-resultado" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
-      {/*
-        SECCIÓN 1: Indicador de Estado
-        Renderizado condicional basado en la prop 'estado' gestionada por el contenedor padre (Reconocer.jsx).
-        Informa al usuario el estado de la comunicación con el modelo de IA o el backend.
-      */}
+      {/* 1. Indicador de Estado */}
       <div className="estado-contenedor" style={{ marginBottom: '24px' }}>
         {estado === "listo" && sena && (
           <div className="estado-reconocimiento exito">
@@ -27,36 +49,55 @@ export default function ResultadoSena({ sena, estado, mensajeError }) {
         )}
       </div>
 
-      {/*
-        SECCIÓN 2: Resultado de la Traducción
-        Renderiza la predicción final devuelta por el backend.
-        Contiene la estructura visual del botón Text-to-Speech (TTS), cuya lógica se implementará en la HU-02.
-      */}
+      {/* 2. Texto Traducido y Botón de Audio Manual */}
       <div className="traduccion-caja">
-        <h1 className="texto-traducido">{sena ? sena : "Hola"}</h1>
-        <button className="btn-audio-circular" title="Escuchar">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-          </svg>
-        </button>
+        <h1 className="texto-traducido">
+          {sena ? sena : "Hola"}
+        </h1>
+        {(modoSalida === "voz" || modoSalida === "ambos") && (
+          <button
+            className="btn-audio-circular"
+            title="Escuchar"
+            onClick={() => reproducirVoz(sena || "Hola")}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+          </button>
+        )}
       </div>
 
-      {/*
-        SECCIÓN 3: Panel de Preferencias de Usuario
-        Componentes visuales para la selección del modo de salida (Texto, Voz, Ambos).
-        Estructura preparada para ser conectada con los estados globales en las HU-05 y HU-06.
-      */}
+      {/* 3. Configuración de Salida Interactiva */}
       <div className="configuracion-salida" style={{ marginTop: 'auto' }}>
         <h3>Modo de salida</h3>
         <div className="botones-modo">
-          <button className="btn-modo">📄 Texto</button>
-          <button className="btn-modo">🎙️ Voz</button>
-          <button className="btn-modo activo">🔊 Ambos <span className="check-activo">✓</span></button>
+          <button
+            className={`btn-modo ${modoSalida === "texto" ? "activo" : ""}`}
+            onClick={() => setModoSalida("texto")}
+          >
+            📄 Texto
+            {modoSalida === "texto" && <span className="check-activo">✓</span>}
+          </button>
+
+          <button
+            className={`btn-modo ${modoSalida === "voz" ? "activo" : ""}`}
+            onClick={() => setModoSalida("voz")}
+          >
+            🎙️ Voz
+            {modoSalida === "voz" && <span className="check-activo">✓</span>}
+          </button>
+
+          <button
+            className={`btn-modo ${modoSalida === "ambos" ? "activo" : ""}`}
+            onClick={() => setModoSalida("ambos")}
+          >
+            🔊 Ambos
+            {modoSalida === "ambos" && <span className="check-activo">✓</span>}
+          </button>
         </div>
       </div>
-
     </div>
   );
 }

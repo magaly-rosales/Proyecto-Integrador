@@ -2,22 +2,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import CamaraMano from "../components/CamaraMano";
 import ResultadoSena from "../components/ResultadoSena";
 import { enviarPuntos } from "../services/api";
-import './Reconocer.css'; // Importación de los estilos visuales
+import './Reconocer.css';
 
 const INTERVALO_ENVIO_MS = 250; // unos 4 envíos por segundo
 
 export default function Reconocer() {
-  const manosRef = useRef([]); // manos más recientes (no provoca renders)
-  const enviandoRef = useRef(false); // evita peticiones superpuestas
+  const manosRef = useRef([]);
+  const enviandoRef = useRef(false);
 
-  // Estado unificado: elimina la redundancia de usar tres useState separados
   const [infoSena, setInfoSena] = useState({
     sena: null,
-    estado: "sin_mano", // sin_mano | enviando | listo | error
+    estado: "sin_mano",
     mensajeError: "",
   });
 
-  // CamaraMano llama a esto en cada frame; solo guardamos el último valor.
   const alDetectar = useCallback((manos) => {
     manosRef.current = manos;
   }, []);
@@ -27,7 +25,6 @@ export default function Reconocer() {
       const manos = manosRef.current;
 
       if (manos.length === 0) {
-        // Evita actualizar el estado repetitivamente si ya está en "sin_mano"
         setInfoSena((prev) =>
           prev.estado === "sin_mano"
             ? prev
@@ -36,7 +33,7 @@ export default function Reconocer() {
         return;
       }
 
-      if (enviandoRef.current) return; // todavía esperando la respuesta anterior
+      if (enviandoRef.current) return;
 
       enviandoRef.current = true;
       setInfoSena((prev) => ({ ...prev, estado: "enviando" }));
@@ -54,49 +51,51 @@ export default function Reconocer() {
     return () => clearInterval(temporizador);
   }, []);
 
-  // === INTERFAZ VISUAL MAQUETADA ===
   return (
-    <div className="layout-principal">
-      <main className="contenido-traductor">
-        <header className="cabecera-traductor">
-          <div className="titulos">
-            <h2>Traducir en tiempo real</h2>
-            <p>Usa la cámara para reconocer señas al instante.</p>
-          </div>
-        </header>
+    <div className="contenido-traductor">
 
-        <div className="grid-traductor">
+      {/* Título de la sección (Ya sin el logo repetido arriba) */}
+      <header className="cabecera-traductor" style={{ marginBottom: '24px' }}>
+        <h2 style={{ fontSize: '28px', fontWeight: '700', color: '#1E1E2F', marginBottom: '6px' }}>
+          Traducir en tiempo real
+        </h2>
+        <p style={{ color: '#8A8AA3', fontSize: '16px' }}>
+          Usa la cámara para reconocer señas al instante.
+        </p>
+      </header>
 
-          {/* COLUMNA IZQUIERDA: Área de Captura */}
-          <section className="panel-camara">
-            <div className="marco-video">
-              <div className="indicador-envivo">
-                <span className="punto-rojo"></span> En vivo
-              </div>
-              <CamaraMano onLandmarks={alDetectar} />
+      {/* Estructura de dos columnas (Cámara y Resultados) */}
+      <div className="grid-traductor">
+
+        {/* Columna Izquierda: Captura de Video */}
+        <section className="panel-camara">
+          <div className="marco-video">
+            <div className="indicador-envivo">
+              <span className="punto-rojo"></span> En vivo
             </div>
-            <button className="btn-detener-camara">
-              📷 Detener cámara
-            </button>
-          </section>
+            <CamaraMano onLandmarks={alDetectar} />
+          </div>
+          <button className="btn-detener-camara">
+            📷 Detener cámara
+          </button>
+        </section>
 
-          {/* COLUMNA DERECHA: Resultados */}
-          <section className="panel-resultados">
-            {/* Pasamos todas las propiedades del objeto directamente */}
-            <ResultadoSena {...infoSena} />
-          </section>
+        {/* Columna Derecha: Panel de Resultados */}
+        <section className="panel-resultados">
+          <ResultadoSena {...infoSena} />
+        </section>
 
+      </div>
+
+      {/* Banner de Consejos inferior */}
+      <div className="banner-consejo">
+        <div className="icono-foco">💡</div>
+        <div className="texto-consejo">
+          <h4>Consejo</h4>
+          <p>Para mejores resultados, asegúrate de que la mano esté bien iluminada y dentro del marco de la cámara.</p>
         </div>
+      </div>
 
-        {/* Nuevo Banner de Consejo debajo del grid */}
-                <div className="banner-consejo">
-                  <div className="icono-foco">💡</div>
-                  <div className="texto-consejo">
-                    <h4>Consejo</h4>
-                    <p>Para mejores resultados, asegúrate de que la mano esté bien iluminada y dentro del marco de la cámara.</p>
-                  </div>
-                </div>
-      </main>
     </div>
   );
 }

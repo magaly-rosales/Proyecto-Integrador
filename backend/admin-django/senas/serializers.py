@@ -1,0 +1,17 @@
+from rest_framework import serializers
+from .models import Sena
+
+class SenaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sena
+        fields = ['id', 'nombre', 'categoria', 'descripcion', 'video', 'fecha_creacion']
+
+    def validate_nombre(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("CA-04: El Nombre de la seña no puede estar vacío.")
+        return value.strip()
+
+    def validate_categoria(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("CA-04: La Categoría no puede estar vacía.")
+        return value.strip()

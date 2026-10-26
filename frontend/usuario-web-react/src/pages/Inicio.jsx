@@ -25,6 +25,7 @@ export default function Inicio() {
   const escrita = useEscribir(palabra, 90);
   const [tab, setTab] = useState(0);
   const activa = TABS[tab];
+  const [paso, setPaso] = useState(0);
 
   return (
     <div className="sa-inicio">
@@ -117,9 +118,12 @@ export default function Inicio() {
           {PASOS.map(({ n, Icono, titulo, texto }, i) => (
             <li key={n} className={i % 2 === 0 ? "sa-zz izq" : "sa-zz der"}>
               <Aparecer retraso={i * 140}>
-                <div className="sa-zz-tarjeta">
+                <div
+                  className={i === paso ? "sa-zz-tarjeta activa" : "sa-zz-tarjeta"}
+                  onClick={() => setPaso(i)}
+                >
                   <span className="sa-zz-icono">
-                    <Icono tamano={50} />
+                    <Icono tamano={28} />
                   </span>
                   <div>
                     <strong>{titulo}</strong>
@@ -127,7 +131,15 @@ export default function Inicio() {
                   </div>
                 </div>
               </Aparecer>
-              <span className={`sa-numero n${n} sa-zz-num`}>{n}</span>
+              <button
+                type="button"
+                className={i === paso ? "sa-zz-num activo" : "sa-zz-num"}
+                onClick={() => setPaso(i)}
+                aria-label={`Paso ${n}: ${titulo}`}
+                aria-pressed={i === paso}
+              >
+                {n}
+              </button>
             </li>
           ))}
         </ol>

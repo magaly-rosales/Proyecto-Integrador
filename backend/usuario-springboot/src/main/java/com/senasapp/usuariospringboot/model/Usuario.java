@@ -20,7 +20,11 @@ public class Usuario {
     private String passwordHash;
 
     private String rol;
+    @Column(columnDefinition = "TEXT")
+    private String foto;
 
+    public String getFoto() { return foto; }
+    public void setFoto(String foto) { this.foto = foto; }
     public Integer getIdUsuario() { return idUsuario; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }

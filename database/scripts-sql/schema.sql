@@ -18,9 +18,10 @@ CREATE TABLE video_referencia (
 CREATE TABLE usuario (
     id_usuario SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(150) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     rol VARCHAR(30) NOT NULL,
+    foto TEXT,
     CONSTRAINT usuario_email_unico UNIQUE (email)
 );
 

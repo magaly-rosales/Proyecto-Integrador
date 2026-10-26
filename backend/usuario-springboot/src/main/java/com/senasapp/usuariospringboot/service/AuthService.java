@@ -67,6 +67,6 @@ public class AuthService {
     }
 
     private UsuarioRespuesta aRespuesta(Usuario u) {
-        return new UsuarioRespuesta(u.getIdUsuario(), u.getNombre(), u.getEmail(), u.getRol());
+        return new UsuarioRespuesta(u.getIdUsuario(), u.getNombre(), u.getEmail(), u.getRol(), u.getFoto());
     }
 }

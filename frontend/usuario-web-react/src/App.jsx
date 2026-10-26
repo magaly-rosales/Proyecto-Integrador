@@ -4,13 +4,14 @@ import Navbar from "./components/Navbar";
 import RutaProtegida from "./components/RutaProtegida";
 import { useAuth } from "./context/useAuth";
 import Configuracion from "./pages/Configuracion";
+
 import Entrenamiento from "./pages/Entrenamiento";
 import Inicio from "./pages/Inicio";
 import Login from "./pages/Login";
 import Registro from "./pages/Registro";
 import Traducir from "./pages/Traducir";
 import "./App.css";
-
+import Perfil from "./pages/Perfil";
 export default function App() {
   const { usuario } = useAuth();
 
@@ -28,6 +29,7 @@ export default function App() {
           {/* Solo con sesión */}
           <Route path="/traducir" element={<RutaProtegida><Traducir /></RutaProtegida>} />
           <Route path="/configuracion" element={<RutaProtegida><Configuracion /></RutaProtegida>} />
+          <Route path="/perfil" element={<RutaProtegida><Perfil /></RutaProtegida>} />
           {/* Temporal: sin enlace en el menú. Pasará al panel de administrador. */}
           <Route path="/entrenamiento" element={<RutaProtegida><Entrenamiento /></RutaProtegida>} />
 

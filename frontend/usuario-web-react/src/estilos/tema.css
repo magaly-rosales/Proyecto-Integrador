@@ -1976,6 +1976,366 @@ button.sa-menu-item:hover {
 }
 .sa-consejo { font-size: 0.8rem; margin-top: 10px; }
 
+/* ---------- Avatar con foto ---------- */
+.sa-avatar { overflow: hidden; }
+.sa-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* ---------- Perfil ---------- */
+.sa-perfil { max-width: 980px; margin: 0 auto; width: 100%; }
+.sa-perfil-cabeza {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding: 24px 28px;
+  border-radius: 14px;
+  background: var(--tarjeta);
+  box-shadow: var(--sombra);
+}
+.sa-perfil .sa-avatar-grande {
+  flex: none;
+  width: 112px;
+  height: 112px;
+  font-size: 2.6rem;
+}
+.sa-perfil-info { min-width: 0; flex: 1; }
+.sa-perfil-info h2 { margin: 0; font-size: 1.5rem; }
+.sa-perfil-info p { margin: 4px 0 10px; color: var(--texto-suave); }
+.sa-rol {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--verde-claro);
+  color: var(--acento);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+:root[data-tema="oscuro"] .sa-rol { color: #3ddc97; }
+.sa-perfil-acciones { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 4px; }
+
+.sa-perfil-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.sa-perfil-tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--tarjeta);
+  box-shadow: var(--sombra);
+}
+.sa-perfil-tarjeta h3 {
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--borde);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texto-suave);
+}
+
+.sa-pbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--acento);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+.sa-pbtn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+.sa-pbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sa-pbtn.sec {
+  background: transparent;
+  border: 1.5px solid var(--borde);
+  color: var(--texto);
+}
+
+.sa-msg { margin: 0; padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; }
+.sa-msg.ok { background: var(--verde-claro); color: var(--acento); }
+:root[data-tema="oscuro"] .sa-msg.ok { color: #3ddc97; }
+.sa-msg.error { background: rgba(179, 38, 30, 0.12); color: var(--rojo); }
+
+@media (max-width: 800px) {
+  .sa-perfil-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- Perfil: botones en plomo ---------- */
+.sa-pbtn {
+  background: #1c1e22;
+  color: #fff;
+}
+.sa-pbtn:hover:not(:disabled) {
+  background: #1c1e22;
+  filter: none;
+}
+.sa-pbtn.sec {
+  background: transparent;
+  border: 1.5px solid #b8c2cf;
+  color: #1c1e22;
+}
+.sa-pbtn.sec:hover:not(:disabled) { background: #eef1f5; }
+
+:root[data-tema="oscuro"] .sa-pbtn { background: #1c1e22; }
+:root[data-tema="oscuro"] .sa-pbtn:hover:not(:disabled) { background: #1c1e22; }
+:root[data-tema="oscuro"] .sa-pbtn.sec { border-color: #1c1e22; color: var(--texto); }
+:root[data-tema="oscuro"] .sa-pbtn.sec:hover:not(:disabled) { background: #1c1e22; }
+/* ---------- Botones en negro y plomo (reemplazan el verde) ---------- */
+:root {
+  --boton: #1c1e22;
+  --boton-hover: #4a5260; /* plomo al pasar el mouse */
+}
+:root[data-tema="oscuro"] {
+  --boton: #3b4658;
+  --boton-hover: #5a667a;
+}
+
+.boton,
+.sa-pbtn {
+  background: var(--boton);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(28, 30, 34, 0.25);
+  transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.boton:hover,
+.sa-pbtn:hover:not(:disabled) {
+  background: var(--boton-hover);
+  filter: none;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(28, 30, 34, 0.3);
+}
+
+/* Botón activo de la barra (Inicio / Traducir) en plomo */
+.sa-enlace.activo,
+:root[data-tema="oscuro"] .sa-enlace.activo {
+  background: #4a5260;
+  box-shadow: none;
+}
+
+/* ---------- Paleta sobria: negro, gris y un solo acento naranja ---------- */
+:root {
+  --paso1: #1c1e22;
+  --paso2: #3b4658;
+  --paso3: #6b7686;
+}
+:root[data-tema="oscuro"] {
+  --paso1: #4a5568;
+  --paso2: #5a667a;
+  --paso3: #6f7b8f;
+}
+
+/* Etiqueta y título */
+.sa-insignia { background: #e3e8ee; color: #3b4658; }
+.sa-resalte { color: #1c1e22; }
+:root[data-tema="oscuro"] .sa-insignia { background: #323844; color: #cfd6df; }
+:root[data-tema="oscuro"] .sa-resalte { color: #eef1f5; text-shadow: none; }
+
+/* Franja de traducción */
+.sa-traduccion {
+  background: #ffffff;
+  border: 1.5px solid #d5dae1;
+  box-shadow: 0 8px 22px rgba(28, 30, 34, 0.1);
+  color: #1c1e22;
+}
+:root[data-tema="oscuro"] .sa-traduccion {
+  background: #272c36;
+  border-color: #373e4b;
+  color: var(--texto);
+}
+.sa-burbuja { background: #1c1e22; color: #fff; }
+.sa-burbuja:nth-child(2) { background: #4a5260; }
+.sa-traduccion .sa-detectada { border-left-color: #f28c28; }
+.sa-traduccion .sa-detectada small { color: #6b7280; }
+
+/* Pestañas */
+.sa-seccion:has(.sa-tabs) { background: linear-gradient(135deg, #dfe3e8 0%, #eef0f3 100%); }
+:root[data-tema="oscuro"] .sa-seccion:has(.sa-tabs) { background: #23272e; }
+.sa-tab.activo { background: #1c1e22; }
+:root[data-tema="oscuro"] .sa-tab.activo { background: #4a5568; }
+.sa-tabs-panel { background: linear-gradient(135deg, #1c1e22, #3b4658); }
+:root[data-tema="oscuro"] .sa-tabs-panel { background: linear-gradient(135deg, #2b303a, #3b4658); }
+
+/* Cómo funciona */
+.sa-como { background: linear-gradient(135deg, #dfe3e8 0%, #eef0f3 100%); }
+:root[data-tema="oscuro"] .sa-como { background: #23272e; }
+.sa-como h2 { color: #1c1e22; }
+:root[data-tema="oscuro"] .sa-como h2 { color: var(--texto); }
+.sa-como .sa-subrayado { background: #f28c28; }
+.sa-como .sa-nota { color: #5b6472; }
+:root[data-tema="oscuro"] .sa-como .sa-nota { color: var(--texto-suave); }
+.sa-zigzag::before { background: linear-gradient(#1c1e22, #8a94a3); }
+.sa-zz-num { border-color: #e9ecf0; }
+:root[data-tema="oscuro"] .sa-zz-num { border-color: #23272e; }
+.sa-numero.n1, .sa-zz:nth-child(1) .sa-zz-icono { background: var(--paso1); }
+.sa-numero.n2, .sa-zz:nth-child(2) .sa-zz-icono { background: var(--paso2); }
+.sa-numero.n3, .sa-zz:nth-child(3) .sa-zz-icono { background: var(--paso3); }
+
+/* Panel de frase en Traducir */
+.sa-palabra { background: #e3e8ee; color: #3b4658; }
+.sa-palabra.nueva { background: #1c1e22; color: #fff; }
+:root[data-tema="oscuro"] .sa-palabra { background: #323844; color: #cfd6df; }
+:root[data-tema="oscuro"] .sa-palabra.nueva { background: #eef1f5; color: #1c1e22; }
+
+
+/* ---------- Cómo funciona: círculos como botones ---------- */
+.sa-zigzag .sa-zz-num {
+  padding: 0;
+  background: #ffffff;
+  color: #1c1e22;
+  border: 3px solid #1c1e22;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.25s ease, color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.sa-zigzag .sa-zz-num:hover { transform: scale(1.12); }
+.sa-zigzag .sa-zz-num.activo {
+  background: #1c1e22;
+  color: #ffffff;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 5px rgba(28, 30, 34, 0.15);
+}
+.sa-zigzag .sa-zz-num:focus-visible { outline: 3px solid #f28c28; outline-offset: 3px; }
+
+:root[data-tema="oscuro"] .sa-zigzag .sa-zz-num {
+  background: #272c36;
+  color: #eef1f5;
+  border-color: #6f7b8f;
+}
+:root[data-tema="oscuro"] .sa-zigzag .sa-zz-num.activo {
+  background: #eef1f5;
+  color: #1c1e22;
+  border-color: #eef1f5;
+  box-shadow: 0 0 0 5px rgba(238, 241, 245, 0.15);
+}
+
+/* Tarjeta del paso elegido */
+.sa-zz-tarjeta {
+  cursor: pointer;
+  opacity: 0.72;
+  border: 2px solid transparent;
+  transition: opacity 0.25s ease, border-color 0.25s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.sa-zz-tarjeta.activa { opacity: 1; border-color: #f28c28; }
+/* ---------- Configuración: datos de la cuenta e interruptor ---------- */
+.sa-datos-cuenta { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; }
+.sa-datos-cuenta .sa-avatar-grande { flex: none; width: 72px; height: 72px; font-size: 1.8rem; }
+.sa-datos-cuenta dl { flex: 1; min-width: 220px; margin: 0; display: grid; gap: 8px; }
+.sa-datos-cuenta dl div { display: flex; gap: 12px; }
+.sa-datos-cuenta dt { width: 70px; color: var(--texto-suave); font-size: 0.9rem; }
+.sa-datos-cuenta dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+
+.sa-perfil .sa-switch.activo { background: #1c1e22; }
+:root[data-tema="oscuro"] .sa-perfil .sa-switch.activo { background: #6f7b8f; }
+
+/* opción elegida: negro */
+.sa-perfil .sa-opcion.activo { background: #1c1e22; border-color: #1c1e22; color: #fff; }
+.sa-perfil .sa-opcion:hover:not(.activo) { background: #eef1f5; border-color: #8a94a3; }
+:root[data-tema="oscuro"] .sa-perfil .sa-opcion.activo { background: #eef1f5; border-color: #eef1f5; color: #1c1e22; }
+:root[data-tema="oscuro"] .sa-perfil .sa-opcion:hover:not(.activo) { background: #323844; border-color: #5a667a; }
+/* ---------- Botones: variables por tema ---------- */
+:root {
+  --boton-texto: #ffffff;
+}
+:root[data-tema="oscuro"] {
+  --boton: #cfd5de;        /* plomo blanquecino */
+  --boton-texto: #1c1e22;
+  --boton-hover: #050607;  /* negro intenso al pasar el mouse */
+}
+
+.boton,
+.sa-pbtn:not(.sec) {
+  background: var(--boton);
+  color: var(--boton-texto);
+}
+.boton:hover,
+.sa-pbtn:not(.sec):hover:not(:disabled) {
+  background: var(--boton-hover);
+  color: #ffffff;
+}
+
+/* Botón con borde ("Editar en Mi perfil", "Quitar foto"): en oscuro también va relleno */
+:root[data-tema="oscuro"] .sa-pbtn.sec {
+  background: var(--boton);
+  color: var(--boton-texto);
+  border-color: transparent;
+}
+:root[data-tema="oscuro"] .sa-pbtn.sec:hover:not(:disabled) {
+  background: var(--boton-hover);
+  color: #ffffff;
+}
+
+/* Un borde fino para que el negro se note sobre el fondo oscuro */
+:root[data-tema="oscuro"] .boton:hover,
+:root[data-tema="oscuro"] .sa-pbtn:hover:not(:disabled) {
+  box-shadow: 0 0 0 1px #4a5568, 0 10px 22px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Botones en modo oscuro (fuerza los colores) ---------- */
+:root[data-tema="oscuro"] .boton,
+:root[data-tema="oscuro"] .sa-pbtn {
+  background: #cfd5de !important;
+  color: #1c1e22 !important;
+  border-color: transparent;
+}
+:root[data-tema="oscuro"] .boton:hover:not(:disabled),
+:root[data-tema="oscuro"] .sa-pbtn:hover:not(:disabled) {
+  background: #050607 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 1px #4a5568, 0 10px 22px rgba(0, 0, 0, 0.5);
+}
+/* ---------- Pestañas: colores y hover ---------- */
+/* Modo claro: al pasar el mouse pasa a plomo */
+.sa-tab:hover:not(.activo) {
+  background: #4a5260;
+  color: #ffffff;
+}
+
+/* Modo oscuro */
+:root[data-tema="oscuro"] .sa-tab {
+  background: #cfd5de;
+  color: #1c1e22;
+}
+:root[data-tema="oscuro"] .sa-tab:hover:not(.activo) {
+  background: #050607;
+  color: #ffffff;
+  box-shadow: 0 0 0 1px #4a5568;
+}
+:root[data-tema="oscuro"] .sa-tab.activo {
+  background: #050607;
+  color: #ffffff;
+  box-shadow: inset 4px 0 0 #f28c28, 0 0 0 1px #4a5568;
+}
+:root[data-tema="oscuro"] .sa-tabs-panel {
+  background: linear-gradient(135deg, #0b0c0e, #2b303a);
+  box-shadow: 0 0 0 1px #373e4b, 0 14px 30px rgba(0, 0, 0, 0.4);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

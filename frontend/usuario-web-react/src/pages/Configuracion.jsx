@@ -1,6 +1,7 @@
+import { Link } from "react-router-dom";
+import Avatar from "../components/Avatar";
 import { useAuth } from "../context/useAuth";
 import { usePreferencias } from "../context/usePreferencias";
-import { IconoAjustes, IconoCamara, IconoCampana } from "../components/Iconos";
 
 const MODOS = [
   { id: "texto", etiqueta: "Texto" },
@@ -46,7 +47,7 @@ function Interruptor({ activo, onCambiar, nombre }) {
       role="switch"
       aria-checked={activo}
       aria-label={nombre}
-      className={activo ? "sa-switch naranja activo" : "sa-switch naranja"}
+      className={activo ? "sa-switch activo" : "sa-switch"}
       onClick={() => onCambiar(!activo)}
     />
   );
@@ -55,86 +56,67 @@ function Interruptor({ activo, onCambiar, nombre }) {
 export default function Configuracion() {
   const { usuario } = useAuth();
   const { prefs, cambiar } = usePreferencias();
+  const rol = usuario.rol === "oyente" ? "Usuario" : usuario.rol;
 
   return (
-    <section className="sa-pagina">
-      <header className="sa-titulo-pagina con-icono">
-        <span className="sa-icono-caja naranja">
-          <IconoAjustes tamano={30} />
-        </span>
-        <div>
-          <h1>Configuración</h1>
-          <p>Personaliza tu experiencia en SeñasApp. Los cambios se guardan solos.</p>
-        </div>
+    <section className="sa-pagina sa-perfil">
+      <header className="sa-titulo-pagina">
+        <h1>Configuración</h1>
+        <p>Personaliza tu experiencia en SeñasApp. Los cambios se guardan solos.</p>
       </header>
 
-      <div className="sa-config">
-        <section className="tarjeta">
-          <h3>Información de la cuenta</h3>
-          <div className="sa-cuenta">
-            <span className="sa-avatar sa-avatar-xl">{usuario.nombre.charAt(0).toUpperCase()}</span>
-            <div>
-              <strong>{usuario.nombre}</strong>
-              <small>{usuario.email}</small>
-            </div>
-            <div className="sa-dato">
-              <small>Rol</small>
-              <strong>{usuario.rol === "oyente" ? "Usuario" : usuario.rol}</strong>
-            </div>
-          </div>
-        </section>
-
-        <section className="tarjeta">
-          <h3>Preferencias generales</h3>
-
-          <div className="sa-fila">
-            <div>
-              <strong>Modo de salida</strong>
-              <small>Cómo quieres recibir cada seña traducida.</small>
-            </div>
-            <Opciones lista={MODOS} valor={prefs.modo} onElegir={(modo) => cambiar({ modo })} nombre="Modo de salida" />
-          </div>
-
-          <div className="sa-fila">
-            <div>
-              <strong>Tema visual</strong>
-              <small>Elige el estilo de colores que más te guste.</small>
-            </div>
-            <Opciones lista={TEMAS} valor={prefs.tema} onElegir={(tema) => cambiar({ tema })} nombre="Tema visual" />
-          </div>
-
-          <div className="sa-fila">
-            <div>
-              <strong>Tamaño de texto</strong>
-              <small>Ajusta el tamaño del texto en la app.</small>
-            </div>
-            <Opciones lista={TAMANOS} valor={prefs.tamano} onElegir={(tamano) => cambiar({ tamano })} nombre="Tamaño de texto" />
-          </div>
-        </section>
-
-        <div className="sa-dos">
-          <section className="tarjeta sa-interruptor-tarjeta">
-            <span className="sa-icono-caja azul">
-              <IconoCampana tamano={22} />
-            </span>
-            <div>
-              <strong>Notificaciones</strong>
-              <small>Alertas sobre nuevas señas y actualizaciones.</small>
-            </div>
-            <Interruptor activo={prefs.notificaciones} onCambiar={(v) => cambiar({ notificaciones: v })} nombre="Notificaciones" />
-          </section>
-          <section className="tarjeta sa-interruptor-tarjeta">
-            <span className="sa-icono-caja verde">
-              <IconoCamara tamano={22} />
-            </span>
-            <div>
-              <strong>Cámara y micrófono</strong>
-              <small>Acceso para la traducción en tiempo real.</small>
-            </div>
-            <Interruptor activo={prefs.camara} onCambiar={(v) => cambiar({ camara: v })} nombre="Cámara y micrófono" />
-          </section>
+      <section className="sa-perfil-tarjeta">
+        <h3>Información de la cuenta</h3>
+        <div className="sa-datos-cuenta">
+          <Avatar usuario={usuario} grande />
+          <dl>
+            <div><dt>Nombre</dt><dd>{usuario.nombre}</dd></div>
+            <div><dt>Correo</dt><dd>{usuario.email}</dd></div>
+            <div><dt>Rol</dt><dd>{rol}</dd></div>
+          </dl>
+          <Link to="/perfil" className="sa-pbtn sec">Editar en Mi perfil</Link>
         </div>
-      </div>
+      </section>
+
+      <section className="sa-perfil-tarjeta">
+        <h3>Notificaciones</h3>
+        <div className="sa-fila">
+          <div>
+            <strong>Recibir notificaciones</strong>
+            <small>Muestra la campana con avisos de nuevas señas y novedades del equipo.</small>
+          </div>
+          <Interruptor
+            activo={prefs.notificaciones}
+            onCambiar={(v) => cambiar({ notificaciones: v })}
+            nombre="Recibir notificaciones"
+          />
+        </div>
+      </section>
+
+      <section className="sa-perfil-tarjeta">
+        <h3>Preferencias generales</h3>
+        <div className="sa-fila">
+          <div>
+            <strong>Modo de salida</strong>
+            <small>Cómo quieres recibir cada seña traducida.</small>
+          </div>
+          <Opciones lista={MODOS} valor={prefs.modo} onElegir={(modo) => cambiar({ modo })} nombre="Modo de salida" />
+        </div>
+        <div className="sa-fila">
+          <div>
+            <strong>Tema visual</strong>
+            <small>Elige el estilo de colores que más te guste.</small>
+          </div>
+          <Opciones lista={TEMAS} valor={prefs.tema} onElegir={(tema) => cambiar({ tema })} nombre="Tema visual" />
+        </div>
+        <div className="sa-fila">
+          <div>
+            <strong>Tamaño de texto</strong>
+            <small>Ajusta el tamaño del texto en la app.</small>
+          </div>
+          <Opciones lista={TAMANOS} valor={prefs.tamano} onElegir={(tamano) => cambiar({ tamano })} nombre="Tamaño de texto" />
+        </div>
+      </section>
     </section>
   );
 }

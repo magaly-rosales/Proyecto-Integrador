@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { usePreferencias } from "../context/usePreferencias";
+import Avatar from "./Avatar";
 import {
   IconoAjustes,
   IconoChevron,
@@ -33,7 +34,7 @@ export default function MenuUsuario() {
     };
   }, [abierto]);
 
-  const inicial = (usuario.nombre || "?").charAt(0).toUpperCase();
+  
   const primerNombre = (usuario.nombre || "").split(" ")[0];
   const oscuro = temaFinal === "oscuro";
 
@@ -52,7 +53,7 @@ export default function MenuUsuario() {
         aria-expanded={abierto}
         aria-haspopup="menu"
       >
-        <span className="sa-avatar">{inicial}</span>
+        <Avatar usuario={usuario} />
         Hola, {primerNombre}
         <IconoChevron tamano={16} />
       </button>
@@ -60,14 +61,14 @@ export default function MenuUsuario() {
       {abierto && (
         <div className="sa-menu" role="menu">
           <div className="sa-menu-cabeza">
-            <span className="sa-avatar sa-avatar-grande">{inicial}</span>
+            <Avatar usuario={usuario} grande />
             <div>
               <strong>{usuario.nombre}</strong>
               <small>{usuario.email}</small>
             </div>
           </div>
 
-          <Link to="/configuracion" className="sa-menu-item" role="menuitem" onClick={() => setAbierto(false)}>
+          <Link to="/perfil" className="sa-menu-item" role="menuitem" onClick={() => setAbierto(false)}>
             <IconoPerfil tamano={20} /> Mi perfil
           </Link>
           <Link to="/configuracion" className="sa-menu-item" role="menuitem" onClick={() => setAbierto(false)}>

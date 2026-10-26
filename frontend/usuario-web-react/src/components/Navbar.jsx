@@ -1,5 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import { usePreferencias } from "../context/usePreferencias";
 import Logo from "./Logo";
 import MenuUsuario from "./MenuUsuario";
 import { IconoCampana, IconoInicio, IconoTraducir } from "./Iconos";
@@ -9,6 +10,7 @@ const claseEnlace = ({ isActive }) => (isActive ? "sa-enlace activo" : "sa-enlac
 // Barra superior: logo a la izquierda; menú, notificaciones y usuario a la derecha.
 export default function Navbar() {
   const { usuario } = useAuth();
+  const { prefs } = usePreferencias();
 
   return (
     <header className="sa-barra">
@@ -33,18 +35,18 @@ export default function Navbar() {
           {usuario ? (
             <>
               <span className="sa-sep" aria-hidden="true" />
-              <button type="button" className="sa-campana" aria-label="Notificaciones">
-                <IconoCampana tamano={22} />
-                <i className="sa-punto" />
-              </button>
+              {prefs.notificaciones && (
+                <button type="button" className="sa-campana" aria-label="Notificaciones">
+                  <IconoCampana tamano={22} />
+                  <i className="sa-punto" />
+                </button>
+              )}
               <MenuUsuario />
             </>
           ) : (
-            <>
-              <Link to="/login" className="sa-boton-borde sa-btn-login">
-                Iniciar sesión
-              </Link>
-            </>
+            <Link to="/login" className="sa-boton-borde sa-btn-login">
+              Iniciar sesión
+            </Link>
           )}
         </div>
       </div>

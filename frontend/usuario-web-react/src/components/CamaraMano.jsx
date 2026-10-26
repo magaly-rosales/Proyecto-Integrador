@@ -69,11 +69,13 @@ export default function CamaraMano({ onLandmarks }) {
 
     // Cada mano se dibuja con un color distinto
     const COLORES = {
-      Izquierda: { linea: "#2979ff", punto: "#00e5ff" },
-      Derecha: { linea: "#00c853", punto: "#ff1744" },
+      Izquierda: { linea: "#5aa9ff", punto: "#ffb454" },
+      Derecha: { linea: "#3ddc97", punto: "#f28c28" },
     };
 
     function dibujarMano(puntos, color) {
+      ctx.shadowColor = color.punto; // brillo alrededor de los puntos
+      ctx.shadowBlur = 12;
       ctx.strokeStyle = color.linea;
       ctx.lineWidth = 3;
       for (const { start, end } of HandLandmarker.HAND_CONNECTIONS) {
@@ -88,6 +90,7 @@ export default function CamaraMano({ onLandmarks }) {
         ctx.arc(p.x * canvas.width, p.y * canvas.height, 5, 0, 2 * Math.PI);
         ctx.fill();
       }
+      ctx.shadowBlur = 0;
     }
 
     function bucle() {

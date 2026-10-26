@@ -21,7 +21,7 @@ public class ReconocimientoController {
     @Autowired
     private ClasificadorService clasificadorService;
 
-    // Recibe los 21 puntos y devuelve la seña reconocida
+    // Recibe los 21 o 42 puntos y devuelve la seña reconocida
     @PostMapping("/puntos")
     public ResponseEntity<?> recibirPuntos(@RequestBody List<PuntoMano> puntos) {
         if (puntos.size() != 21 && puntos.size() != 42) {

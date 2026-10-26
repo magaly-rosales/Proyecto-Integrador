@@ -20,7 +20,8 @@ CREATE TABLE usuario (
     nombre VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    rol VARCHAR(30) DEFAULT 'curador'
+    rol VARCHAR(30) NOT NULL,
+    CONSTRAINT usuario_email_unico UNIQUE (email)
 );
 
 CREATE TABLE registro_uso (

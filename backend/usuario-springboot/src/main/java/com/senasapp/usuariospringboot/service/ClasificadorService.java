@@ -15,6 +15,7 @@ public class ClasificadorService {
 
     private static final int K = 3;
     private static final double UMBRAL = 0.8; // valor inicial, ajústalo probando
+    private static final double MARGEN = 0.8; // si el ganador no es claramente mejor que el rival, es "dudosa"
 
     private final MuestraSenaRepository muestraRepository;
     private final SenaRepository senaRepository;
@@ -86,9 +87,20 @@ public class ClasificadorService {
                 .max(Map.Entry.comparingByValue())
                 .get().getKey();
 
-        double mejor = top.get(0).distancia();
-        res.put("sena", mejor > UMBRAL ? "desconocida" : ganador);
-        res.put("distancia", mejor);
+        double dGanador = vecinos.stream()
+                .filter(x -> x.nombre().equals(ganador))
+                .mapToDouble(Vecino::distancia).min().getAsDouble();
+        double dOtra = vecinos.stream()
+                .filter(x -> !x.nombre().equals(ganador))
+                .mapToDouble(Vecino::distancia).min().orElse(Double.MAX_VALUE);
+
+        String resultado;
+        if (dGanador > UMBRAL) resultado = "desconocida";
+        else if (dGanador > MARGEN * dOtra) resultado = "dudosa";
+        else resultado = ganador;
+
+        res.put("sena", resultado);
+        res.put("distancia", dGanador);
         return res;
     }
 

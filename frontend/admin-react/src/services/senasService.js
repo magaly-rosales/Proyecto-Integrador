@@ -3,6 +3,16 @@ import axios from 'axios';
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 export const getSenas = () => axios.get(`${API_BASE_URL}/senas/`);
-export const createSena = (data) => axios.post(`${API_BASE_URL}/senas/`, data);
-export const updateSena = (id, data) => axios.put(`${API_BASE_URL}/senas/${id}/`, data);
+
+// Configurado para enviar tanto texto como archivos de video
+export const createSena = (formData) =>
+    axios.post(`${API_BASE_URL}/senas/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+export const updateSena = (id, formData) =>
+    axios.put(`${API_BASE_URL}/senas/${id}/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
 export const deleteSena = (id) => axios.delete(`${API_BASE_URL}/senas/${id}/`);

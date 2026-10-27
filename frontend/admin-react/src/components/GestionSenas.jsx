@@ -6,6 +6,7 @@ export const GestionSenas = () => {
     const [senas, setSenas] = useState([]);
     const [nombre, setNombre] = useState('');
     const [categoria, setCategoria] = useState('');
+    const [videoFile, setVideoFile] = useState(null);
     const [loading, setLoading] = useState(false);
 
     const cargarSenas = useCallback(async () => {
@@ -28,13 +29,25 @@ export const GestionSenas = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!nombre.trim() || !categoria.trim()) return;
+
+        // Construcción de FormData para enviar campos de texto y archivo de video
+        const formData = new FormData();
+        formData.append('nombre', nombre);
+        formData.append('categoria', categoria);
+        if (videoFile) {
+            formData.append('video', videoFile);
+        }
+
         try {
-            await createSena({ nombre, categoria });
+            await createSena(formData);
             setNombre('');
             setCategoria('');
+            setVideoFile(null);
+            const inputVideo = document.getElementById('video-input');
+            if (inputVideo) inputVideo.value = '';
             cargarSenas();
         } catch (error) {
-            console.error("Error al guardar la seña:", error);
+            console.error("Error al guardar la seña con video:", error);
         }
     };
 
@@ -77,7 +90,7 @@ export const GestionSenas = () => {
             <main className="admin-main">
                 <header className="admin-header">
                     <h1 className="admin-title">Módulo de Señas LSB</h1>
-                    <p className="admin-subtitle">Administra las señas registradas en la base de datos de Django</p>
+                    <p className="admin-subtitle">Administra las señas y videos de referencia en Django</p>
                 </header>
 
                 {/* KPIs */}
@@ -87,9 +100,9 @@ export const GestionSenas = () => {
                         <span className="kpi-label">Total de Señas Registradas</span>
                     </div>
                     <div className="kpi-card">
-            <span className="kpi-number">
-              {new Set(senas.map(s => s.categoria)).size}
-            </span>
+                        <span className="kpi-number">
+                            {new Set(senas.map(s => s.categoria)).size}
+                        </span>
                         <span className="kpi-label">Categorías Activas</span>
                     </div>
                     <div className="kpi-card">
@@ -127,6 +140,17 @@ export const GestionSenas = () => {
                                 />
                             </div>
 
+                            <div className="form-group">
+                                <label>Video de Referencia (MP4, máx 50MB)</label>
+                                <input
+                                    id="video-input"
+                                    type="file"
+                                    accept="video/mp4,video/*"
+                                    onChange={(e) => setVideoFile(e.target.files[0])}
+                                    className="admin-input"
+                                />
+                            </div>
+
                             <button type="submit" className="btn-primary">
                                 Guardar en BD
                             </button>
@@ -151,13 +175,14 @@ export const GestionSenas = () => {
                                         <th>ID</th>
                                         <th>Nombre</th>
                                         <th>Categoría</th>
+                                        <th>Video MP4</th>
                                         <th style={{ textAlign: 'center' }}>Acciones</th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {senas.length === 0 ? (
                                         <tr>
-                                            <td colSpan="4" style={{ textAlign: 'center', color: '#64748b' }}>
+                                            <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>
                                                 No hay señas registradas.
                                             </td>
                                         </tr>
@@ -168,6 +193,19 @@ export const GestionSenas = () => {
                                                 <td className="td-bold">{sena.nombre}</td>
                                                 <td>
                                                     <span className="badge">{sena.categoria}</span>
+                                                </td>
+                                                <td>
+                                                    {sena.video ? (
+                                                        <video
+                                                            src={sena.video}
+                                                            width="110"
+                                                            height="70"
+                                                            controls
+                                                            style={{ borderRadius: '6px', objectFit: 'cover' }}
+                                                        />
+                                                    ) : (
+                                                        <span style={{ color: '#64748b', fontSize: '12px' }}>Sin video</span>
+                                                    )}
                                                 </td>
                                                 <td style={{ textAlign: 'center' }}>
                                                     <button

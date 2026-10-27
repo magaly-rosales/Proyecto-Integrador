@@ -6,13 +6,13 @@ from django.core.exceptions import ValidationError
 def renombrar_y_validar_video(instance, filename):
     ext = filename.split('.')[-1].lower()
     if ext != 'mp4':
-        raise ValidationError('CA-03: Formato no permitido. El archivo debe ser strictly un video MP4.')
+        raise ValidationError('CA-03: Formato no permitido. El archivo debe ser estrictamente un video MP4.')
 
     nuevo_nombre = f"{uuid.uuid4()}.mp4"
     return os.path.join('videos_senas/', nuevo_nombre)
 
 def validar_tamano_video(file):
-    max_size = 50 * 1024 * 1024
+    max_size = 50 * 1024 * 1024  # Límite máximo de 50MB
     if file.size > max_size:
         raise ValidationError('CA-03: El tamaño del video excede el límite máximo permitido de 50MB.')
 

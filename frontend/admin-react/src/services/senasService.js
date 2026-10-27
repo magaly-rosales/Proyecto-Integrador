@@ -16,3 +16,7 @@ export const updateSena = (id, formData) =>
     });
 
 export const deleteSena = (id) => axios.delete(`${API_BASE_URL}/senas/${id}/`);
+
+// Servicio para entrenamiento e inferencia de IA (landmarks de la mano)
+export const predecirSena = (landmarks) =>
+    axios.post(`${API_BASE_URL}/predecir/`, { landmarks });

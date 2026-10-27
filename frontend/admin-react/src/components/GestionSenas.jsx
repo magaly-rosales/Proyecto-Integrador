@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSenas, createSena, deleteSena } from '../services/senasService';
+import { getSenas, createSena, deleteSena, predecirSena } from '../services/senasService';
 import './GestionSenas.css';
 
 export const GestionSenas = () => {
@@ -8,6 +8,10 @@ export const GestionSenas = () => {
     const [categoria, setCategoria] = useState('');
     const [videoFile, setVideoFile] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    // Estados para la prueba de IA / Keypoints de MediaPipe
+    const [resultadoIA, setResultadoIA] = useState(null);
+    const [probandoIA, setProbandoIA] = useState(false);
 
     const cargarSenas = useCallback(async () => {
         setLoading(true);
@@ -30,7 +34,6 @@ export const GestionSenas = () => {
         e.preventDefault();
         if (!nombre.trim() || !categoria.trim()) return;
 
-        // Construcción de FormData para enviar campos de texto y archivo de video
         const formData = new FormData();
         formData.append('nombre', nombre);
         formData.append('categoria', categoria);
@@ -62,6 +65,26 @@ export const GestionSenas = () => {
         }
     };
 
+    // Función para simular el envío de 21 puntos clave de MediaPipe al servicio de IA
+    const handleProbarIA = async () => {
+        setProbandoIA(true);
+        try {
+            // Genera 21 puntos ficticios (x, y, z) simulando la detección de la mano
+            const mockLandmarks = Array.from({ length: 21 }, (_, i) => ({
+                x: parseFloat((0.1 + i * 0.02).toFixed(3)),
+                y: parseFloat((0.2 + i * 0.01).toFixed(3)),
+                z: 0.005
+            }));
+
+            const response = await predecirSena(mockLandmarks);
+            setResultadoIA(response.data.data);
+        } catch (error) {
+            console.error("Error al ejecutar inferencia de IA:", error);
+        } finally {
+            setProbandoIA(false);
+        }
+    };
+
     return (
         <div className="admin-layout">
             {/* Sidebar Lateral */}
@@ -90,7 +113,7 @@ export const GestionSenas = () => {
             <main className="admin-main">
                 <header className="admin-header">
                     <h1 className="admin-title">Módulo de Señas LSB</h1>
-                    <p className="admin-subtitle">Administra las señas y videos de referencia en Django</p>
+                    <p className="admin-subtitle">Administración de señas, videos e inferencia del clasificador IA</p>
                 </header>
 
                 {/* KPIs */}
@@ -106,10 +129,33 @@ export const GestionSenas = () => {
                         <span className="kpi-label">Categorías Activas</span>
                     </div>
                     <div className="kpi-card">
-                        <span className="kpi-number">Django REST</span>
-                        <span className="kpi-label">API Status 200 OK</span>
+                        <span className="kpi-number">MediaPipe 63D</span>
+                        <span className="kpi-label">IA / Normalizador Activo</span>
                     </div>
                 </div>
+
+                {/* Panel de Inferencia / Clasificador IA */}
+                <section className="admin-card" style={{ marginBottom: '1.5rem' }}>
+                    <div className="card-header">
+                        <h3 className="card-title">🧠 Módulo de Entrenamiento & Inferencia IA</h3>
+                        <button onClick={handleProbarIA} className="btn-primary" disabled={probandoIA}>
+                            {probandoIA ? 'Procesando...' : '⚡ Probar Normalización (21 Puntos)'}
+                        </button>
+                    </div>
+
+                    {resultadoIA && (
+                        <div style={{ marginTop: '1rem', padding: '1rem', background: '#0f172a', borderRadius: '8px', border: '1px solid #334155' }}>
+                            <p style={{ color: '#38bdf8', margin: '0 0 0.5rem 0', fontWeight: 'bold' }}>
+                                ✨ Resultado del Modelo:
+                            </p>
+                            <div style={{ display: 'flex', gap: '1.5rem', color: '#f8fafc', fontSize: '14px' }}>
+                                <span><strong>Seña Detectada:</strong> {resultadoIA.sena_detectada}</span>
+                                <span><strong>Confianza:</strong> {(resultadoIA.confianza * 100).toFixed(1)}%</span>
+                                <span><strong>Vector Normalizado:</strong> {resultadoIA.features_procesadas} datos</span>
+                            </div>
+                        </div>
+                    )}
+                </section>
 
                 {/* Formulario + Tabla */}
                 <div className="content-grid">

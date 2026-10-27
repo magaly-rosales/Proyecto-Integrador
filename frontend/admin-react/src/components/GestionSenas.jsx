@@ -11,7 +11,7 @@ import {
 } from '../services/senasService';
 import './GestionSenas.css';
 
-export const GestionSenas = () => {
+export const GestionSenas = ({ onLogout }) => {
     const [senas, setSenas] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
     const [estadisticas, setEstadisticas] = useState({ total_traducciones: 0, top_senas: [] });
@@ -163,24 +163,44 @@ export const GestionSenas = () => {
                         📊 Estadísticas de Uso
                     </button>
                 </nav>
-                <div className="system-status">
-                    <span className="status-dot"></span> Backend Django Online
+                <div className="system-status" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    <div><span className="status-dot"></span> Backend Django Online</div>
+                    {onLogout && (
+                        <button
+                            onClick={onLogout}
+                            style={{
+                                background: '#dc2626',
+                                color: '#ffffff',
+                                border: 'none',
+                                padding: '0.5rem 0.8rem',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                fontSize: '13px',
+                                width: '100%'
+                            }}
+                        >
+                            🚪 Cerrar Sesión
+                        </button>
+                    )}
                 </div>
             </aside>
 
             {/* Contenido Principal */}
             <main className="admin-main">
-                <header className="admin-header">
-                    <h1 className="admin-title">
-                        {seccionActiva === 'senas' && 'Módulo de Señas LSB'}
-                        {seccionActiva === 'usuarios' && 'Gestión de Usuarios & Cuentas'}
-                        {seccionActiva === 'dashboard' && 'Dashboard de Estadísticas (RegistroUso)'}
-                    </h1>
-                    <p className="admin-subtitle">
-                        {seccionActiva === 'senas' && 'Administra las señas, videos e inferencia IA'}
-                        {seccionActiva === 'usuarios' && 'Monitorea y activa/desactiva cuentas de usuarios en el sistema'}
-                        {seccionActiva === 'dashboard' && 'Métricas de traducciones realizadas y ranking de señas más consultadas'}
-                    </p>
+                <header className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                        <h1 className="admin-title">
+                            {seccionActiva === 'senas' && 'Módulo de Señas LSB'}
+                            {seccionActiva === 'usuarios' && 'Gestión de Usuarios & Cuentas'}
+                            {seccionActiva === 'dashboard' && 'Dashboard de Estadísticas (RegistroUso)'}
+                        </h1>
+                        <p className="admin-subtitle">
+                            {seccionActiva === 'senas' && 'Administra las señas, videos e inferencia IA'}
+                            {seccionActiva === 'usuarios' && 'Monitorea y activa/desactiva cuentas de usuarios en el sistema'}
+                            {seccionActiva === 'dashboard' && 'Métricas de traducciones realizadas y ranking de señas más consultadas'}
+                        </p>
+                    </div>
                 </header>
 
                 {/* KPIs */}

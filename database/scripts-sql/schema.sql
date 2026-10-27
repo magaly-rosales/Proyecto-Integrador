@@ -39,3 +39,11 @@ CREATE TABLE muestra_sena (
     puntos TEXT NOT NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE muestra_secuencia (
+    id_secuencia SERIAL PRIMARY KEY,
+    id_sena INT NOT NULL REFERENCES sena(id_sena),
+    cuadros TEXT NOT NULL,
+    num_cuadros INT NOT NULL,
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

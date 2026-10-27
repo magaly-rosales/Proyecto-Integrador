@@ -1,11 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import SenaViewSet, predecir_sena
+from .views import SenaViewSet
 
 router = DefaultRouter()
-router.register(r'senas', SenaViewSet, basename='sena')
+router.register(r'senas', SenaViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('predecir/', predecir_sena, name='predecir_sena'),  # <-- Registra el endpoint del Módulo 4
 ]

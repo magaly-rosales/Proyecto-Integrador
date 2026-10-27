@@ -5,6 +5,7 @@ class SenaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sena
         fields = ['id', 'nombre', 'categoria', 'descripcion', 'video', 'fecha_creacion']
+        read_only_fields = ['id', 'fecha_creacion']
 
     def validate_nombre(self, value):
         if not value or not value.strip():

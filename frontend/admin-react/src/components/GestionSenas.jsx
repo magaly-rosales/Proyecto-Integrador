@@ -5,19 +5,24 @@ import {
     deleteSena,
     predecirSena,
     getUsuarios,
-    toggleEstadoUsuario
+    toggleEstadoUsuario,
+    getEstadisticasUso,
+    getRegistroUso
 } from '../services/senasService';
 import './GestionSenas.css';
 
 export const GestionSenas = () => {
     const [senas, setSenas] = useState([]);
     const [usuarios, setUsuarios] = useState([]);
+    const [estadisticas, setEstadisticas] = useState({ total_traducciones: 0, top_senas: [] });
+    const [registrosUso, setRegistrosUso] = useState([]);
+
     const [nombre, setNombre] = useState('');
     const [categoria, setCategoria] = useState('');
     const [videoFile, setVideoFile] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    // Navegación de secciones (senas / usuarios)
+    // Navegación de secciones (senas / usuarios / dashboard)
     const [seccionActiva, setSeccionActiva] = useState('senas');
 
     // Estados para IA
@@ -45,11 +50,23 @@ export const GestionSenas = () => {
         }
     }, []);
 
+    const cargarEstadisticas = useCallback(async () => {
+        try {
+            const resStats = await getEstadisticasUso();
+            const resLogs = await getRegistroUso();
+            setEstadisticas(resStats.data);
+            setRegistrosUso(resLogs.data);
+        } catch (error) {
+            console.error("Error al cargar estadísticas de uso:", error);
+        }
+    }, []);
+
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         cargarSenas();
         cargarUsuarios();
-    }, [cargarSenas, cargarUsuarios]);
+        cargarEstadisticas();
+    }, [cargarSenas, cargarUsuarios, cargarEstadisticas]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -97,6 +114,8 @@ export const GestionSenas = () => {
 
             const response = await predecirSena(mockLandmarks);
             setResultadoIA(response.data.data);
+            // Actualizar métricas automáticamente ya que la inferencia guarda el log
+            cargarEstadisticas();
         } catch (error) {
             console.error("Error al ejecutar inferencia:", error);
         } finally {
@@ -136,6 +155,13 @@ export const GestionSenas = () => {
                     >
                         👥 Gestión de Usuarios
                     </button>
+                    <button
+                        onClick={() => setSeccionActiva('dashboard')}
+                        className={`nav-item ${seccionActiva === 'dashboard' ? 'active' : ''}`}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                    >
+                        📊 Estadísticas de Uso
+                    </button>
                 </nav>
                 <div className="system-status">
                     <span className="status-dot"></span> Backend Django Online
@@ -146,12 +172,14 @@ export const GestionSenas = () => {
             <main className="admin-main">
                 <header className="admin-header">
                     <h1 className="admin-title">
-                        {seccionActiva === 'senas' ? 'Módulo de Señas LSB' : 'Gestión de Usuarios & Cuentas'}
+                        {seccionActiva === 'senas' && 'Módulo de Señas LSB'}
+                        {seccionActiva === 'usuarios' && 'Gestión de Usuarios & Cuentas'}
+                        {seccionActiva === 'dashboard' && 'Dashboard de Estadísticas (RegistroUso)'}
                     </h1>
                     <p className="admin-subtitle">
-                        {seccionActiva === 'senas'
-                            ? 'Administra las señas, videos e inferencia IA'
-                            : 'Monitorea y activa/desactiva cuentas de usuarios en el sistema'}
+                        {seccionActiva === 'senas' && 'Administra las señas, videos e inferencia IA'}
+                        {seccionActiva === 'usuarios' && 'Monitorea y activa/desactiva cuentas de usuarios en el sistema'}
+                        {seccionActiva === 'dashboard' && 'Métricas de traducciones realizadas y ranking de señas más consultadas'}
                     </p>
                 </header>
 
@@ -162,18 +190,18 @@ export const GestionSenas = () => {
                         <span className="kpi-label">Señas Registradas</span>
                     </div>
                     <div className="kpi-card">
-                        <span className="kpi-number">{usuarios.length}</span>
-                        <span className="kpi-label">Usuarios Totales</span>
+                        <span className="kpi-number">{estadisticas.total_traducciones}</span>
+                        <span className="kpi-label">Traducciones Totales</span>
                     </div>
                     <div className="kpi-card">
                         <span className="kpi-number">
-                            {usuarios.filter(u => u.is_active).length}
+                            {usuarios.filter(u => u.is_active).length} / {usuarios.length}
                         </span>
-                        <span className="kpi-label">Cuentas Activas</span>
+                        <span className="kpi-label">Usuarios Activos</span>
                     </div>
                 </div>
 
-                {seccionActiva === 'senas' ? (
+                {seccionActiva === 'senas' && (
                     <>
                         {/* Panel IA */}
                         <section className="admin-card" style={{ marginBottom: '1.5rem' }}>
@@ -279,8 +307,9 @@ export const GestionSenas = () => {
                             </section>
                         </div>
                     </>
-                ) : (
-                    /* Vista de Gestión de Usuarios */
+                )}
+
+                {seccionActiva === 'usuarios' && (
                     <section className="admin-card">
                         <div className="card-header">
                             <h3 className="card-title">👥 Listado de Usuarios Registrados</h3>
@@ -300,47 +329,116 @@ export const GestionSenas = () => {
                                 </tr>
                                 </thead>
                                 <tbody>
-                                {usuarios.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="6" style={{ textAlign: 'center', color: '#64748b' }}>
-                                            No hay usuarios registrados.
+                                {usuarios.map((usr) => (
+                                    <tr key={usr.id}>
+                                        <td className="td-muted">#{usr.id}</td>
+                                        <td className="td-bold">{usr.username}</td>
+                                        <td>{usr.email || 'Sin correo'}</td>
+                                        <td>
+                                                <span className="badge" style={{ background: usr.is_staff ? '#6366f1' : '#334155' }}>
+                                                    {usr.is_staff ? 'Admin' : 'Usuario'}
+                                                </span>
+                                        </td>
+                                        <td>
+                                                <span style={{ color: usr.is_active ? '#4ade80' : '#f87171', fontWeight: '600' }}>
+                                                    {usr.is_active ? 'Activo' : 'Inactivo'}
+                                                </span>
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <button
+                                                onClick={() => handleToggleUsuario(usr.id, usr.is_active)}
+                                                className={usr.is_active ? 'btn-danger' : 'btn-primary'}
+                                                style={{ fontSize: '12px', padding: '0.4rem 0.8rem' }}
+                                            >
+                                                {usr.is_active ? '🚫 Desactivar' : '✅ Activar'}
+                                            </button>
                                         </td>
                                     </tr>
-                                ) : (
-                                    usuarios.map((usr) => (
-                                        <tr key={usr.id}>
-                                            <td className="td-muted">#{usr.id}</td>
-                                            <td className="td-bold">{usr.username}</td>
-                                            <td>{usr.email || 'Sin correo'}</td>
-                                            <td>
-                                                    <span className="badge" style={{ background: usr.is_staff ? '#6366f1' : '#334155' }}>
-                                                        {usr.is_staff ? 'Admin' : 'Usuario'}
-                                                    </span>
-                                            </td>
-                                            <td>
-                                                    <span style={{
-                                                        color: usr.is_active ? '#4ade80' : '#f87171',
-                                                        fontWeight: '600'
-                                                    }}>
-                                                        {usr.is_active ? 'Activo' : 'Inactivo'}
-                                                    </span>
-                                            </td>
-                                            <td style={{ textAlign: 'center' }}>
-                                                <button
-                                                    onClick={() => handleToggleUsuario(usr.id, usr.is_active)}
-                                                    className={usr.is_active ? 'btn-danger' : 'btn-primary'}
-                                                    style={{ fontSize: '12px', padding: '0.4rem 0.8rem' }}
-                                                >
-                                                    {usr.is_active ? '🚫 Desactivar' : '✅ Activar'}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
+                                ))}
                                 </tbody>
                             </table>
                         </div>
                     </section>
+                )}
+
+                {seccionActiva === 'dashboard' && (
+                    <div className="content-grid">
+                        {/* Top Señas Consultadas */}
+                        <section className="admin-card">
+                            <div className="card-header">
+                                <h3 className="card-title">🏆 Señas Más Consultadas (Top 5)</h3>
+                                <button onClick={cargarEstadisticas} className="btn-refresh">🔄 Actualizar</button>
+                            </div>
+                            <div className="table-wrapper">
+                                <table className="admin-table">
+                                    <thead>
+                                    <tr>
+                                        <th>Seña Consultada</th>
+                                        <th style={{ textAlign: 'center' }}>Total Consultas</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {estadisticas.top_senas.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="2" style={{ textAlign: 'center', color: '#64748b' }}>
+                                                No hay consultas registradas aún.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        estadisticas.top_senas.map((item, idx) => (
+                                            <tr key={idx}>
+                                                <td className="td-bold">⭐ {item.nombre_sena_consultada}</td>
+                                                <td style={{ textAlign: 'center' }}>
+                                                        <span className="badge" style={{ background: '#3b82f6', fontSize: '14px' }}>
+                                                            {item.total}
+                                                        </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        {/* Registro de Uso Reciente */}
+                        <section className="admin-card">
+                            <div className="card-header">
+                                <h3 className="card-title">📜 Historial de Uso (RegistroUso)</h3>
+                                <button onClick={cargarEstadisticas} className="btn-refresh">🔄 Actualizar</button>
+                            </div>
+                            <div className="table-wrapper">
+                                <table className="admin-table">
+                                    <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Seña</th>
+                                        <th>Fecha y Hora</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {registrosUso.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="3" style={{ textAlign: 'center', color: '#64748b' }}>
+                                                Sin registros de uso.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        registrosUso.map((reg) => (
+                                            <tr key={reg.id}>
+                                                <td className="td-muted">#{reg.id}</td>
+                                                <td className="td-bold">{reg.nombre_sena_consultada}</td>
+                                                <td style={{ color: '#94a3b8', fontSize: '12px' }}>
+                                                    {new Date(reg.fecha_consulta).toLocaleString()}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
                 )}
             </main>
         </div>

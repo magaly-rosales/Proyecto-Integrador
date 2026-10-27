@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Sena
+from .models import Sena, RegistroUso
 
 class SenaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,3 +24,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'date_joined']
         read_only_fields = ['id', 'date_joined']
+
+
+class RegistroUsoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RegistroUso
+        fields = ['id', 'sena', 'nombre_sena_consultada', 'fecha_consulta']
+        read_only_fields = ['id', 'fecha_consulta']

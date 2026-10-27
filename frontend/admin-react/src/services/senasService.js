@@ -24,3 +24,8 @@ export const getUsuarios = () => axios.get(`${API_BASE_URL}/usuarios/`);
 
 export const toggleEstadoUsuario = (id, is_active) =>
     axios.patch(`${API_BASE_URL}/usuarios/${id}/`, { is_active });
+
+// --- MÓDULO DE DASHBOARD Y REGISTRO DE USO (Commit 5) ---
+export const getEstadisticasUso = () => axios.get(`${API_BASE_URL}/estadisticas/`);
+
+export const getRegistroUso = () => axios.get(`${API_BASE_URL}/registro-uso/`);

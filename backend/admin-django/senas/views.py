@@ -3,8 +3,9 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.decorators import api_view
 from django.contrib.auth.models import User
-from .models import Sena
-from .serializers import SenaSerializer, UserSerializer
+from django.db.models import Count
+from .models import Sena, RegistroUso
+from .serializers import SenaSerializer, UserSerializer, RegistroUsoSerializer
 from .services import KeypointProcessorService
 
 class SenaViewSet(viewsets.ModelViewSet):
@@ -72,6 +73,27 @@ class UserViewSet(viewsets.ModelViewSet):
         return super().partial_update(request, *args, **kwargs)
 
 
+class RegistroUsoViewSet(viewsets.ModelViewSet):
+    queryset = RegistroUso.objects.all().order_by('-fecha_consulta')
+    serializer_class = RegistroUsoSerializer
+
+
+@api_view(['GET'])
+def estadisticas_uso(request):
+    total_traducciones = RegistroUso.objects.count()
+    top_senas = (
+        RegistroUso.objects.values('nombre_sena_consultada')
+        .annotate(total=Count('id'))
+        .order_by('-total')[:5]
+    )
+
+    return Response({
+        "exito": True,
+        "total_traducciones": total_traducciones,
+        "top_senas": list(top_senas)
+    }, status=status.HTTP_200_OK)
+
+
 @api_view(['POST'])
 def predecir_sena(request):
     landmarks = request.data.get('landmarks', [])
@@ -85,6 +107,14 @@ def predecir_sena(request):
     try:
         vector_features = KeypointProcessorService.preprocesar_landmarks(landmarks)
         resultado = KeypointProcessorService.predecir_sena(vector_features)
+
+        # Registro automático en RegistroUso para la analítica del Dashboard
+        nombre_detectado = resultado.get("sena_detectada", "Desconocido")
+        sena_obj = Sena.objects.filter(nombre__iexact=nombre_detectado).first()
+        RegistroUso.objects.create(
+            sena=sena_obj,
+            nombre_sena_consultada=nombre_detectado
+        )
 
         return Response({
             "exito": True,

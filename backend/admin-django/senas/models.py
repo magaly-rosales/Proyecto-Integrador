@@ -35,3 +35,17 @@ class Sena(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.categoria})"
+
+
+class RegistroUso(models.Model):
+    sena = models.ForeignKey(Sena, on_delete=models.CASCADE, related_name='registros_uso', null=True, blank=True)
+    nombre_sena_consultada = models.CharField(max_length=100)
+    fecha_consulta = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Registro de Uso"
+        verbose_name_plural = "Registros de Uso"
+        ordering = ['-fecha_consulta']
+
+    def __str__(self):
+        return f"{self.nombre_sena_consultada} - {self.fecha_consulta.strftime('%Y-%m-%d %H:%M')}"

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import CamaraMano from "../components/CamaraMano";
-import { guardarMuestra, obtenerSenas } from "../services/api";
-
+import { guardarMuestra, guardarSecuencia, obtenerSenas } from "../services/api";
 const CUENTA_REGRESIVA_S = 3;
 const MUESTRAS_RAFAGA = 20;
 const INTERVALO_RAFAGA_MS = 300;
-
+const DURACION_MOV_MS = 2000; 
+const INTERVALO_MOV_MS = 100; 
+const MIN_CUADROS = 8;
 const esperar = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
 
 // Pantalla de apoyo para el equipo: graba ejemplos de cada seña para que
@@ -17,7 +18,8 @@ export default function Entrenamiento() {
   const [idSena, setIdSena] = useState("");
   const [errorSenas, setErrorSenas] = useState("");
   const [cantidadManos, setCantidadManos] = useState(0);
-  const [muestras, setMuestras] = useState({}); // { idSena: cantidad en esta sesión }
+  const [muestras, setMuestras] = useState({});
+  const [secuencias, setSecuencias] = useState({}); // { idSena: cantidad en esta sesión }
   const [mensaje, setMensaje] = useState(null); // { tipo: "ok" | "aviso" | "error", texto }
   const [ocupado, setOcupado] = useState(false);
 
@@ -120,7 +122,54 @@ export default function Entrenamiento() {
       if (montadoRef.current) setOcupado(false);
     }
   }
+  async function grabarMovimiento() {
+    setOcupado(true);
+    try {
+      for (let s = CUENTA_REGRESIVA_S; s > 0; s--) {
+        setMensaje({ tipo: "aviso", texto: `Prepara la seña... ${s}` });
+        await esperar(1000);
+        if (!montadoRef.current) return;
+      }
 
+      const cuadros = [];
+      let numManos = 0;
+      const fin = Date.now() + DURACION_MOV_MS;
+      setMensaje({ tipo: "aviso", texto: "¡Haz la seña ahora!" });
+
+      while (Date.now() < fin) {
+        const manos = manosRef.current;
+        if (manos.length > 0) {
+          if (numManos === 0) numManos = manos.length; // se fija con el primer cuadro
+          if (manos.length === numManos) {
+            cuadros.push(
+              manos.map((m) => ({
+                etiqueta: m.etiqueta,
+                puntos: m.puntos.map(({ x, y, z }) => ({ x, y, z })),
+              }))
+            );
+          }
+        }
+        await esperar(INTERVALO_MOV_MS);
+        if (!montadoRef.current) return;
+      }
+
+      if (cuadros.length < MIN_CUADROS) {
+        setMensaje({
+          tipo: "aviso",
+          texto: `Solo se captaron ${cuadros.length} cuadros: mantén la mano a la vista y repite.`,
+        });
+        return;
+      }
+
+      await guardarSecuencia(idSena, cuadros);
+      setSecuencias((previas) => ({ ...previas, [idSena]: (previas[idSena] ?? 0) + 1 }));
+      setMensaje({ tipo: "ok", texto: `Movimiento guardado (${cuadros.length} cuadros).` });
+    } catch (error) {
+      setMensaje({ tipo: "error", texto: error.message });
+    } finally {
+      if (montadoRef.current) setOcupado(false);
+    }
+  }
   const totalSesion = Object.values(muestras).reduce((suma, n) => suma + n, 0);
 
   return (
@@ -154,6 +203,9 @@ export default function Entrenamiento() {
           <button onClick={capturarRafaga} disabled={ocupado || !idSena}>
             Ráfaga de {MUESTRAS_RAFAGA} ({CUENTA_REGRESIVA_S} s de cuenta regresiva)
           </button>
+                    <button onClick={grabarMovimiento} disabled={ocupado || !idSena}>
+            Grabar movimiento ({DURACION_MOV_MS / 1000} s)
+          </button>
         </div>
 
         {mensaje && <p className={`mensaje mensaje-${mensaje.tipo}`}>{mensaje.texto}</p>}
@@ -161,6 +213,9 @@ export default function Entrenamiento() {
         <p className="aviso">
           Muestras de esta seña (esta sesión): <strong>{muestras[idSena] ?? 0}</strong> · Total:{" "}
           <strong>{totalSesion}</strong>
+        </p>
+                <p className="aviso">
+          Movimientos de esta seña (esta sesión): <strong>{secuencias[idSena] ?? 0}</strong>
         </p>
         <p className="aviso">
           Graba cada seña siempre con el mismo número de manos y mueve un poco la mano

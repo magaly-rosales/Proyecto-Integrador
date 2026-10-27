@@ -66,3 +66,19 @@ export function guardarMuestra(idSena, manos) {
 export function obtenerSenas() {
   return peticion("/api/reconocimiento/senas-disponibles");
 }
+export function guardarSecuencia(idSena, cuadros) {
+  return peticion(`/api/reconocimiento/secuencias/${idSena}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cuadros.map(aPuntos)),
+  });
+}
+
+
+export function enviarSecuencia(cuadros) {
+  return peticion("/api/reconocimiento/secuencia", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cuadros.map(aPuntos)),
+  });
+}

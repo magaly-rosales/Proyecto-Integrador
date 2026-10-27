@@ -3,37 +3,40 @@ import CamaraMano from "../components/CamaraMano";
 import ModoSalida from "../components/ModoSalida";
 import ResultadoSena from "../components/ResultadoSena";
 import { usePreferencias } from "../context/usePreferencias";
-import { enviarPuntos } from "../services/api";
+import { enviarPuntos, enviarSecuencia } from "../services/api";
 import { hablar } from "../services/voz";
 
-const INTERVALO_ENVIO_MS = 250; // unos 4 envíos por segundo
-const CONFIRMACIONES = 3; // respuestas seguidas iguales para dar por buena una seña
-const CICLOS_SIN_MANO = 4; // ~1 s sin mano: se puede repetir la misma seña
-const CICLOS_PAUSA = 8; // ~2 s sin mano: la frase se da por terminada y se dice en voz alta
+const INTERVALO_ENVIO_MS = 250; 
+const CONFIRMACIONES = 3; 
+const CICLOS_SIN_MANO = 4; 
+const CICLOS_PAUSA = 8; 
+const MOV_INTERVALO_MS = 100; 
+const MOV_VENTANA = 20; 
+const MOV_CADA = 3; 
+const MOV_CONFIRMACIONES = 2; 
 
 const esSenaValida = (s) =>
   Boolean(s) && s !== "desconocida" && s !== "sin_muestras" && s !== "dudosa";
 
 export default function Traducir() {
   const { prefs, cambiar } = usePreferencias();
-  const manosRef = useRef([]); // manos más recientes (no provoca renders)
-  const enviandoRef = useRef(false); // evita peticiones superpuestas
-  const modoRef = useRef(prefs.modo); // copia del modo para usarla dentro del temporizador
+  const manosRef = useRef([]);
+  const enviandoRef = useRef(false); 
+  const modoRef = useRef(prefs.modo); 
   const candidataRef = useRef({ sena: null, veces: 0 });
-  const confirmadaRef = useRef(null); // seña ya agregada mientras la mano sigue a la vista
+  const confirmadaRef = useRef(null); 
   const sinManoRef = useRef(0);
-  const fraseRef = useRef([]); // palabras de la frase actual
-  const habladaRef = useRef(true); // true si la frase actual ya se dijo en voz alta
+  const fraseRef = useRef([]); 
+  const habladaRef = useRef(true); 
 
-  const [modo, setModo] = useState(prefs.modo); // texto | voz | ambos
-  const [sena, setSena] = useState(null); // última respuesta del backend
-  const [frase, setFrase] = useState([]); // palabras que se muestran
-  const [estado, setEstado] = useState("sin_mano"); // sin_mano | listo | error
+  const [modo, setModo] = useState(prefs.modo); 
+  const [sena, setSena] = useState(null); 
+  const [frase, setFrase] = useState([]); 
+  const [estado, setEstado] = useState("sin_mano"); 
   const [mensajeError, setMensajeError] = useState("");
-  const [hablando, setHablando] = useState(false); // para animar la onda de voz
+  const [hablando, setHablando] = useState(false); 
 
-  // CamaraMano llama a esto en cada frame; solo guardamos el último valor.
-  const alDetectar = useCallback((manos) => {
+ const alDetectar = useCallback((manos) => {
     manosRef.current = manos;
   }, []);
 
@@ -60,16 +63,15 @@ export default function Traducir() {
     setFrase([]);
   }
 
-  useEffect(() => {
-    function agregar(palabra) {
-      fraseRef.current = [...fraseRef.current, palabra];
-      habladaRef.current = false;
-      setFrase(fraseRef.current);
-    }
+  function agregarPalabra(palabra) {
+    fraseRef.current = [...fraseRef.current, palabra];
+    habladaRef.current = false;
+    setFrase(fraseRef.current);
+  }
 
-    // Una seña solo se da por buena si se repite varias respuestas seguidas:
-    // así la frase no salta entre señas mientras se mueve la mano.
-    function confirmar(valor) {
+  // Señas estáticas (un solo cuadro)
+  useEffect(() => {
+   function confirmar(valor) {
       if (!esSenaValida(valor)) {
         candidataRef.current = { sena: null, veces: 0 };
         return;
@@ -80,7 +82,7 @@ export default function Traducir() {
 
       if (candidataRef.current.veces >= CONFIRMACIONES && confirmadaRef.current !== valor) {
         confirmadaRef.current = valor;
-        agregar(valor);
+        agregarPalabra(valor);
       }
     }
 
@@ -122,6 +124,65 @@ export default function Traducir() {
         enviandoRef.current = false;
       }
     }, INTERVALO_ENVIO_MS);
+
+    return () => clearInterval(temporizador);
+  }, []);
+
+  // Señas con movimiento: se mira una ventana deslizante de los últimos ~2 s
+  useEffect(() => {
+    const buffer = [];
+    let cuadros = 0;
+    let enviando = false;
+    let sinMano = 0;
+    let candidata = { sena: null, veces: 0 };
+
+    const temporizador = setInterval(async () => {
+      const manos = manosRef.current;
+
+      if (manos.length === 0) {
+        sinMano += 1;
+        if (sinMano >= 10) {
+          // ~1 s sin mano: se empieza de cero
+          buffer.length = 0;
+          candidata = { sena: null, veces: 0 };
+        }
+        return;
+      }
+      sinMano = 0;
+
+      // si cambia el número de manos, no se mezclan cuadros
+      if (buffer.length > 0 && buffer[buffer.length - 1].length !== manos.length) {
+        buffer.length = 0;
+      }
+      buffer.push(manos.map((m) => ({ etiqueta: m.etiqueta, puntos: m.puntos })));
+      if (buffer.length > MOV_VENTANA) buffer.shift();
+
+      cuadros += 1;
+      if (buffer.length < MOV_VENTANA || cuadros % MOV_CADA !== 0 || enviando) return;
+
+      enviando = true;
+      try {
+        const respuesta = await enviarSecuencia([...buffer]);
+        const valor = respuesta.sena;
+        if (!esSenaValida(valor)) {
+          candidata = { sena: null, veces: 0 };
+        } else {
+          candidata =
+            candidata.sena === valor
+              ? { sena: valor, veces: candidata.veces + 1 }
+              : { sena: valor, veces: 1 };
+          if (candidata.veces >= MOV_CONFIRMACIONES && confirmadaRef.current !== valor) {
+            confirmadaRef.current = valor; // evita repetirla mientras la mano sigue a la vista
+            agregarPalabra(valor);
+            buffer.length = 0; // la próxima seña empieza con ventana limpia
+          }
+        }
+      } catch {
+        // si falla una consulta se ignora; la siguiente lo intentará de nuevo
+      } finally {
+        enviando = false;
+      }
+    }, MOV_INTERVALO_MS);
 
     return () => clearInterval(temporizador);
   }, []);

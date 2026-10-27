@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from .models import Sena
 
 class SenaSerializer(serializers.ModelSerializer):
@@ -16,3 +17,10 @@ class SenaSerializer(serializers.ModelSerializer):
         if not value or not value.strip():
             raise serializers.ValidationError("CA-04: La Categoría no puede estar vacía.")
         return value.strip()
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'is_staff', 'date_joined']
+        read_only_fields = ['id', 'date_joined']

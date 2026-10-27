@@ -4,7 +4,6 @@ const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 export const getSenas = () => axios.get(`${API_BASE_URL}/senas/`);
 
-// Configurado para enviar tanto texto como archivos de video
 export const createSena = (formData) =>
     axios.post(`${API_BASE_URL}/senas/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -17,6 +16,11 @@ export const updateSena = (id, formData) =>
 
 export const deleteSena = (id) => axios.delete(`${API_BASE_URL}/senas/${id}/`);
 
-// Servicio para entrenamiento e inferencia de IA (landmarks de la mano)
 export const predecirSena = (landmarks) =>
     axios.post(`${API_BASE_URL}/predecir/`, { landmarks });
+
+// --- MÓDULO DE GESTIÓN DE USUARIOS (Commit 4) ---
+export const getUsuarios = () => axios.get(`${API_BASE_URL}/usuarios/`);
+
+export const toggleEstadoUsuario = (id, is_active) =>
+    axios.patch(`${API_BASE_URL}/usuarios/${id}/`, { is_active });

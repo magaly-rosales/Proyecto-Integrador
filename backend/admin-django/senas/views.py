@@ -2,8 +2,9 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.decorators import api_view
+from django.contrib.auth.models import User
 from .models import Sena
-from .serializers import SenaSerializer
+from .serializers import SenaSerializer, UserSerializer
 from .services import KeypointProcessorService
 
 class SenaViewSet(viewsets.ModelViewSet):
@@ -51,6 +52,24 @@ class SenaViewSet(viewsets.ModelViewSet):
             "exito": True,
             "mensaje": "Seña eliminada correctamente del sistema."
         }, status=status.HTTP_200_OK)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all().order_by('-date_joined')
+    serializer_class = UserSerializer
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        is_active = request.data.get('is_active', None)
+        if is_active is not None:
+            instance.is_active = is_active
+            instance.save()
+            return Response({
+                "exito": True,
+                "mensaje": f"Estado del usuario {'activado' if is_active else 'desactivado'} correctamente.",
+                "data": self.get_serializer(instance).data
+            }, status=status.HTTP_200_OK)
+        return super().partial_update(request, *args, **kwargs)
 
 
 @api_view(['POST'])

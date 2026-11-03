@@ -17,7 +17,8 @@ import com.tecsup.usuario_kotlin.data.model.LoginRequest
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.home.HomeScreen
-import com.tecsup.usuario_kotlin.ui.theme.Usuario_kotlinTheme
+import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
+import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
@@ -26,7 +27,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            Usuario_kotlinTheme {
+            UsuariokotlinTheme {
                 var currentScreen by remember { mutableStateOf("login") }
                 var loggedUser by remember { mutableStateOf("") }
 

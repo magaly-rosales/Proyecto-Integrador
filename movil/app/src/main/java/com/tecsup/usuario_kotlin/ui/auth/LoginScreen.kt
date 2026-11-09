@@ -48,7 +48,8 @@ private val CardSubtitleGray = Color(0xFF6A7B84)
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onRegisterClick: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -362,7 +363,7 @@ fun LoginScreen(
                             fontWeight = FontWeight.Bold,
                             textDecoration = TextDecoration.Underline
                         ),
-                        modifier = Modifier.clickable { /* Register navigation if needed */ }
+                        modifier = Modifier.clickable { onRegisterClick() }
                     )
                 }
             }
@@ -372,7 +373,7 @@ fun LoginScreen(
 
 // Custom App Logo Icon (Circular border + Hand gesture inside)
 @Composable
-private fun LogoIcon(modifier: Modifier = Modifier) {
+internal fun LogoIcon(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val diameter = size.minDimension
         val strokeWidthPx = 2.dp.toPx()
@@ -451,7 +452,7 @@ private fun LogoIcon(modifier: Modifier = Modifier) {
 
 // Custom Hand Tracking Skeleton Vector Graphic
 @Composable
-private fun SkeletonHandGraphic(modifier: Modifier = Modifier) {
+internal fun SkeletonHandGraphic(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -554,7 +555,7 @@ private fun SkeletonHandGraphic(modifier: Modifier = Modifier) {
 
 // Eye Icon Composable for password visibility toggle
 @Composable
-private fun EyeToggleIcon(
+internal fun EyeToggleIcon(
     isVisible: Boolean,
     tint: Color,
     modifier: Modifier = Modifier

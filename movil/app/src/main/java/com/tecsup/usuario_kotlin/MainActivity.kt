@@ -7,8 +7,13 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
+import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
 
@@ -21,16 +26,36 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             UsuariokotlinTheme {
+                var currentScreen by remember { mutableStateOf("login") }
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    LoginScreen(
-                        authViewModel = authViewModel,
-                        onLoginSuccess = {
-                            // Aquí puedes navegar a la pantalla principal (Home) cuando el login sea exitoso
+                    when (currentScreen) {
+                        "login" -> {
+                            LoginScreen(
+                                authViewModel = authViewModel,
+                                onLoginSuccess = {
+                                    // Navegar a Home cuando el login sea exitoso
+                                },
+                                onRegisterClick = {
+                                    currentScreen = "register"
+                                }
+                            )
                         }
-                    )
+                        "register" -> {
+                            RegisterScreen(
+                                authViewModel = authViewModel,
+                                onRegisterSuccess = {
+                                    currentScreen = "login"
+                                },
+                                onLoginClick = {
+                                    currentScreen = "login"
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }

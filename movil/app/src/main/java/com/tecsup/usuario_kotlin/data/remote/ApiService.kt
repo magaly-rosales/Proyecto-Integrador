@@ -7,6 +7,6 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 interface ApiService {
-    @POST("auth/login")
+    @POST("api/auth/login") // Ajusta la ruta según tu backend
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
 }

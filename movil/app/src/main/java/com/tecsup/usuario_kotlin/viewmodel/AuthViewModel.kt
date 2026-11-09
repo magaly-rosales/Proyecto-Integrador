@@ -1,38 +1,37 @@
-package com.tecsup.usuario_kotlin.viewmodel
+package com.tecsup.usuario_kotlin.ui.viewmodel
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tecsup.usuario_kotlin.data.model.LoginRequest
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-// Estados posibles para el inicio de sesión
-sealed class AuthState {
-    object Idle : AuthState()
-    object Loading : AuthState()
-    data class Success(val username: String) : AuthState()
-    data class Error(val message: String) : AuthState()
-}
-
 class AuthViewModel : ViewModel() {
-    private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
-    val authState: StateFlow<AuthState> = _authState
+    var isLoading by mutableStateOf(false)
+        private set
+    var errorMessage by mutableStateOf<String?>(null)
+        private set
+    var loginSuccess by mutableStateOf(false)
+        private set
 
-    fun login(email: String, pass: String) {
+    fun login(usernameOrEmail: String, password: String) {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
+            isLoading = true
+            errorMessage = null
             try {
-                val response = RetrofitClient.apiService.login(LoginRequest(email, pass))
+                val response = RetrofitClient.apiService.login(LoginRequest(usernameOrEmail, password))
                 if (response.isSuccessful && response.body() != null) {
-                    val username = response.body()!!.username
-                    _authState.value = AuthState.Success(username)
+                    loginSuccess = true
                 } else {
-                    _authState.value = AuthState.Error("Correo o contraseña incorrectos")
+                    errorMessage = "Credenciales incorrectas o error en el servidor"
                 }
             } catch (e: Exception) {
-                _authState.value = AuthState.Error("Error de conexión: ${e.localizedMessage}")
+                errorMessage = "Error de conexión: ${e.localizedMessage}"
+            } finally {
+                isLoading = false
             }
         }
     }

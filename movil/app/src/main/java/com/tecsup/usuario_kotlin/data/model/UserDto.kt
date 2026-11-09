@@ -20,3 +20,12 @@ data class RegisterResponse(
     val message: String? = null,
     val success: Boolean = true
 )
+
+data class ForgotPasswordRequest(
+    val email: String
+)
+
+data class ForgotPasswordResponse(
+    val message: String? = null,
+    val success: Boolean = true
+)

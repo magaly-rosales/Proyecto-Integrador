@@ -49,7 +49,8 @@ private val CardSubtitleGray = Color(0xFF6A7B84)
 fun LoginScreen(
     authViewModel: AuthViewModel,
     onLoginSuccess: () -> Unit,
-    onRegisterClick: () -> Unit = {}
+    onRegisterClick: () -> Unit = {},
+    onForgotPasswordClick: () -> Unit = {}
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -292,7 +293,7 @@ fun LoginScreen(
                             fontWeight = FontWeight.Bold,
                             textDecoration = TextDecoration.Underline
                         ),
-                        modifier = Modifier.clickable { /* Forgotten password logic if needed */ }
+                        modifier = Modifier.clickable { onForgotPasswordClick() }
                     )
                 }
 

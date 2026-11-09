@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
@@ -41,6 +42,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onRegisterClick = {
                                     currentScreen = "register"
+                                },
+                                onForgotPasswordClick = {
+                                    currentScreen = "forgot_password"
                                 }
                             )
                         }
@@ -51,6 +55,14 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "login"
                                 },
                                 onLoginClick = {
+                                    currentScreen = "login"
+                                }
+                            )
+                        }
+                        "forgot_password" -> {
+                            ForgotPasswordScreen(
+                                authViewModel = authViewModel,
+                                onBackClick = {
                                     currentScreen = "login"
                                 }
                             )

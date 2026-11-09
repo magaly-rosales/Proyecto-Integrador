@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tecsup.usuario_kotlin.data.model.LoginRequest
+import com.tecsup.usuario_kotlin.data.model.RegisterRequest
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
 import kotlinx.coroutines.launch
 
@@ -15,6 +16,8 @@ class AuthViewModel : ViewModel() {
     var errorMessage by mutableStateOf<String?>(null)
         private set
     var loginSuccess by mutableStateOf(false)
+        private set
+    var registerSuccess by mutableStateOf(false)
         private set
 
     fun login(usernameOrEmail: String, password: String) {
@@ -34,5 +37,28 @@ class AuthViewModel : ViewModel() {
                 isLoading = false
             }
         }
+    }
+
+    fun register(username: String, email: String, password: String) {
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+            try {
+                val response = RetrofitClient.apiService.register(RegisterRequest(username, email, password))
+                if (response.isSuccessful) {
+                    registerSuccess = true
+                } else {
+                    errorMessage = "Error al registrar usuario o datos ya existentes"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Error de conexión: ${e.localizedMessage}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    fun resetRegisterSuccess() {
+        registerSuccess = false
     }
 }

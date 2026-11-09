@@ -7,18 +7,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.tecsup.usuario_kotlin.viewmodel.AuthState
-import com.tecsup.usuario_kotlin.viewmodel.AuthViewModel
+import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
 
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel,
-    onLoginSuccess: (String) -> Unit
+    onLoginSuccess: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    val authState by authViewModel.authState.collectAsState()
+    if (authViewModel.loginSuccess) {
+        LaunchedEffect(Unit) {
+            onLoginSuccess()
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -32,7 +35,7 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Bienvenido de nuevo",
+                text = "Bienvenido a SeñasApp",
                 style = MaterialTheme.typography.headlineLarge
             )
 
@@ -41,8 +44,9 @@ fun LoginScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Correo electrónico") },
-                modifier = Modifier.fillMaxWidth()
+                label = { Text("Usuario o correo") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -52,36 +56,36 @@ fun LoginScreen(
                 onValueChange = { password = it },
                 label = { Text("Contraseña") },
                 visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = { authViewModel.login(email, password) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                enabled = !authViewModel.isLoading
             ) {
-                Text("Iniciar sesión")
+                if (authViewModel.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Iniciar sesión")
+                }
             }
 
-            // Manejo de estados reactivos
-            when (authState) {
-                is AuthState.Loading -> {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    CircularProgressIndicator()
-                }
-                is AuthState.Success -> {
-                    val username = (authState as AuthState.Success).username
-                    LaunchedEffect(username) {
-                        onLoginSuccess(username)
-                    }
-                }
-                is AuthState.Error -> {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    val errorMsg = (authState as AuthState.Error).message
-                    Text(text = errorMsg, color = MaterialTheme.colorScheme.error)
-                }
-                else -> {}
+            authViewModel.errorMessage?.let { error ->
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }

@@ -54,7 +54,12 @@ fun TranslationScreen(
         bottomBar = {
             BottomNavigationBar(
                 selectedIndex = viewModel.selectedNavTab,
-                onTabSelected = { viewModel.selectTab(it) }
+                onTabSelected = { index ->
+                    viewModel.selectTab(index)
+                    if (index == 2) {
+                        onProfileClick()
+                    }
+                }
             )
         },
         containerColor = ScreenBg

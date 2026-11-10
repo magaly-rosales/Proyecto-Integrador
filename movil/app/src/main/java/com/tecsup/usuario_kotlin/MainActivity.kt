@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
+import com.tecsup.usuario_kotlin.ui.profile.ProfileScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
@@ -29,7 +30,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             UsuariokotlinTheme {
-                var currentScreen by remember { mutableStateOf("home") } // "home" para vista directa del traductor
+                var currentScreen by remember { mutableStateOf("home") }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -70,10 +71,25 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         "home" -> {
+                            translationViewModel.selectTab(0)
                             TranslationScreen(
                                 viewModel = translationViewModel,
                                 onProfileClick = {
+                                    currentScreen = "profile"
+                                }
+                            )
+                        }
+                        "profile" -> {
+                            translationViewModel.selectTab(2)
+                            ProfileScreen(
+                                authViewModel = authViewModel,
+                                onLogoutClick = {
                                     currentScreen = "login"
+                                },
+                                onNavigateToTab = { tabIndex ->
+                                    if (tabIndex == 0) {
+                                        currentScreen = "home"
+                                    }
                                 }
                             )
                         }

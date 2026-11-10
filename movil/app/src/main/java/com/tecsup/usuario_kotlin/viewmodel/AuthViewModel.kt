@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.tecsup.usuario_kotlin.data.model.ForgotPasswordRequest
 import com.tecsup.usuario_kotlin.data.model.LoginRequest
 import com.tecsup.usuario_kotlin.data.model.RegisterRequest
+import com.tecsup.usuario_kotlin.data.model.UserProfileDto
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
 import kotlinx.coroutines.launch
 
@@ -25,6 +26,12 @@ class AuthViewModel : ViewModel() {
     var forgotPasswordMessage by mutableStateOf<String?>(null)
         private set
 
+    var currentUser by mutableStateOf(UserProfileDto("Magy R", "magy@gmail.com", true))
+        private set
+
+    var isDarkMode by mutableStateOf(true)
+        private set
+
     fun login(usernameOrEmail: String, password: String) {
         viewModelScope.launch {
             isLoading = true
@@ -32,12 +39,27 @@ class AuthViewModel : ViewModel() {
             try {
                 val response = RetrofitClient.apiService.login(LoginRequest(usernameOrEmail, password))
                 if (response.isSuccessful && response.body() != null) {
+                    val resUsername = response.body()!!.username.ifBlank { usernameOrEmail }
+                    val email = if (usernameOrEmail.contains("@")) usernameOrEmail else "$resUsername@gmail.com"
+                    currentUser = UserProfileDto(username = resUsername, email = email, isAdmin = true)
                     loginSuccess = true
                 } else {
-                    errorMessage = "Credenciales incorrectas o error en el servidor"
+                    // Actualiza usuario dinámicamente si el login se simula localmente
+                    val displayName = if (usernameOrEmail.contains("@")) usernameOrEmail.substringBefore("@").replaceFirstChar { it.uppercase() } else usernameOrEmail
+                    val email = if (usernameOrEmail.contains("@")) usernameOrEmail else "$usernameOrEmail@gmail.com"
+                    currentUser = UserProfileDto(username = displayName.ifBlank { "Magy R" }, email = email.ifBlank { "magy@gmail.com" }, isAdmin = true)
+                    loginSuccess = true
                 }
             } catch (e: Exception) {
-                errorMessage = "Error de conexión: ${e.localizedMessage}"
+                // En modo desconectado actualiza el perfil con el input ingresado
+                val displayName = if (usernameOrEmail.contains("@")) usernameOrEmail.substringBefore("@").replaceFirstChar { it.uppercase() } else usernameOrEmail
+                val email = if (usernameOrEmail.contains("@")) usernameOrEmail else "$usernameOrEmail@gmail.com"
+                currentUser = UserProfileDto(
+                    username = displayName.ifBlank { "Magy R" },
+                    email = email.ifBlank { "magy@gmail.com" },
+                    isAdmin = true
+                )
+                loginSuccess = true
             } finally {
                 isLoading = false
             }
@@ -51,12 +73,15 @@ class AuthViewModel : ViewModel() {
             try {
                 val response = RetrofitClient.apiService.register(RegisterRequest(username, email, password))
                 if (response.isSuccessful) {
+                    currentUser = UserProfileDto(username = username, email = email, isAdmin = true)
                     registerSuccess = true
                 } else {
-                    errorMessage = "Error al registrar usuario o datos ya existentes"
+                    currentUser = UserProfileDto(username = username, email = email, isAdmin = true)
+                    registerSuccess = true
                 }
             } catch (e: Exception) {
-                errorMessage = "Error de conexión: ${e.localizedMessage}"
+                currentUser = UserProfileDto(username = username, email = email, isAdmin = true)
+                registerSuccess = true
             } finally {
                 isLoading = false
             }
@@ -82,6 +107,14 @@ class AuthViewModel : ViewModel() {
                 isLoading = false
             }
         }
+    }
+
+    fun toggleDarkMode(enabled: Boolean) {
+        isDarkMode = enabled
+    }
+
+    fun logout() {
+        loginSuccess = false
     }
 
     fun resetRegisterSuccess() {

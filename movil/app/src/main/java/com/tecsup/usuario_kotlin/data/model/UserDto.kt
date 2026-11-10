@@ -29,3 +29,9 @@ data class ForgotPasswordResponse(
     val message: String? = null,
     val success: Boolean = true
 )
+
+data class UserProfileDto(
+    val username: String = "Magy R",
+    val email: String = "magy@gmail.com",
+    val isAdmin: Boolean = true
+)

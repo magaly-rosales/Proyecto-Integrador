@@ -16,18 +16,20 @@ import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
+import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
+import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
 
 class MainActivity : ComponentActivity() {
 
-    // Inicializamos el AuthViewModel usando la librería de Jetpack
     private val authViewModel: AuthViewModel by viewModels()
+    private val translationViewModel: TranslationViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             UsuariokotlinTheme {
-                var currentScreen by remember { mutableStateOf("login") }
+                var currentScreen by remember { mutableStateOf("home") } // "home" para vista directa del traductor
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -38,7 +40,7 @@ class MainActivity : ComponentActivity() {
                             LoginScreen(
                                 authViewModel = authViewModel,
                                 onLoginSuccess = {
-                                    // Navegar a Home cuando el login sea exitoso
+                                    currentScreen = "home"
                                 },
                                 onRegisterClick = {
                                     currentScreen = "register"
@@ -63,6 +65,14 @@ class MainActivity : ComponentActivity() {
                             ForgotPasswordScreen(
                                 authViewModel = authViewModel,
                                 onBackClick = {
+                                    currentScreen = "login"
+                                }
+                            )
+                        }
+                        "home" -> {
+                            TranslationScreen(
+                                viewModel = translationViewModel,
+                                onProfileClick = {
                                     currentScreen = "login"
                                 }
                             )

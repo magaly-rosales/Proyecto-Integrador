@@ -25,7 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
+import com.tecsup.usuario_kotlin.viewmodel.AuthViewModel
 
 // Colors
 private val ScreenBg = Color(0xFF06141B)

@@ -6,8 +6,12 @@ import com.tecsup.usuario_kotlin.data.model.LoginRequest
 import com.tecsup.usuario_kotlin.data.model.LoginResponse
 import com.tecsup.usuario_kotlin.data.model.RegisterRequest
 import com.tecsup.usuario_kotlin.data.model.RegisterResponse
+import com.tecsup.usuario_kotlin.data.model.SignTranslationRequest
+import com.tecsup.usuario_kotlin.data.model.SignTranslationResponse
+import com.tecsup.usuario_kotlin.data.model.TranslationHistoryDto
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface ApiService {
@@ -19,4 +23,10 @@ interface ApiService {
 
     @POST("api/auth/forgot-password")
     suspend fun forgotPassword(@Body request: ForgotPasswordRequest): Response<ForgotPasswordResponse>
+
+    @GET("api/translations/recent")
+    suspend fun getRecentTranslations(): Response<List<TranslationHistoryDto>>
+
+    @POST("api/translations/translate")
+    suspend fun translateSign(@Body request: SignTranslationRequest): Response<SignTranslationResponse>
 }

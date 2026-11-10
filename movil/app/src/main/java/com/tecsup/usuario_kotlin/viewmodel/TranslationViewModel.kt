@@ -1,5 +1,6 @@
 package com.tecsup.usuario_kotlin.viewmodel
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -7,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.tecsup.usuario_kotlin.data.local.DatabaseHelper
 import com.tecsup.usuario_kotlin.data.model.TranslationHistoryDto
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class TranslationViewModel : ViewModel() {
+
+    private var dbHelper: DatabaseHelper? = null
 
     var currentPhrase by mutableStateOf("Necesito ayuda")
         private set
@@ -39,15 +43,28 @@ class TranslationViewModel : ViewModel() {
     )
     val recentPhrases: StateFlow<List<TranslationHistoryDto>> = _recentPhrases
 
+    fun initDatabase(context: Context) {
+        if (dbHelper == null) {
+            dbHelper = DatabaseHelper(context.applicationContext)
+            fetchRecentTranslations()
+        }
+    }
+
     fun fetchRecentTranslations() {
         viewModelScope.launch {
             try {
+                val dbTranslations = dbHelper?.getAllTranslations()
+                if (!dbTranslations.isNullOrEmpty()) {
+                    _recentPhrases.value = dbTranslations
+                    return@launch
+                }
+
                 val response = RetrofitClient.apiService.getRecentTranslations()
                 if (response.isSuccessful && response.body() != null) {
                     _recentPhrases.value = response.body()!!
                 }
             } catch (e: Exception) {
-                // Mantiene los datos locales/mock si falla la conexión
+                // Mantiene los datos locales de SQLite
             }
         }
     }
@@ -55,7 +72,6 @@ class TranslationViewModel : ViewModel() {
     fun speakPhrase() {
         if (currentPhrase.isNotBlank()) {
             isSpeaking = true
-            // Simulación o llamada a TextToSpeech de Android
         }
     }
 
@@ -76,5 +92,9 @@ class TranslationViewModel : ViewModel() {
         currentPhrase = newSign
         confidence = newConfidence
         handDetected = true
+        if (newSign.isNotBlank()) {
+            dbHelper?.insertTranslation(newSign, "Ahora", newConfidence)
+            fetchRecentTranslations()
+        }
     }
 }

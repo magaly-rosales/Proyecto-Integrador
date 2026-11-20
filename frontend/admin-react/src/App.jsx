@@ -1,23 +1,23 @@
 import { useState } from 'react';
 import { GestionSenas } from './components/GestionSenas';
-
+import { loginAdmin } from './services/senasService';
 function App() {
     const [isAuthenticated, setIsAuthenticated] = useState(() => {
-        return localStorage.getItem('admin_token') === 'true';
+        return Boolean(localStorage.getItem('admin_token'));
     });
-    const [username, setUsername] = useState('');
+    const [username, setUsername] = useState(() => new URLSearchParams(window.location.search).get('email') || '');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
-        // Validación de credenciales del administrador
-        if (username === 'admin' && password === 'admin123') {
-            localStorage.setItem('admin_token', 'true');
+        try {
+            const { data } = await loginAdmin(username, password);
+            localStorage.setItem('admin_token', data.token);
             setIsAuthenticated(true);
             setError('');
-        } else {
-            setError('Credenciales incorrectas. (Credenciales demo: admin / admin123)');
+        } catch (err) {
+            setError(err.response?.data?.error || 'No se pudo conectar con el servidor.');
         }
     };
 
@@ -67,10 +67,10 @@ function App() {
                     )}
 
                     <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '14px', color: '#cbd5e1' }}>Usuario</label>
+                        <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '14px', color: '#cbd5e1' }}>Correo</label>
                         <input
-                            type="text"
-                            placeholder="admin"
+                            type="email"
+                            placeholder="correo@ejemplo.com"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             style={{

@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import Acceso from "./auth/Acceso";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 import RutaProtegida from "./components/RutaProtegida";
@@ -7,13 +8,15 @@ import Configuracion from "./pages/Configuracion";
 
 import Entrenamiento from "./pages/Entrenamiento";
 import Inicio from "./pages/Inicio";
-import Login from "./pages/Login";
-import Registro from "./pages/Registro";
 import Traducir from "./pages/Traducir";
 import "./App.css";
 import Perfil from "./pages/Perfil";
 export default function App() {
   const { usuario } = useAuth();
+  const { pathname } = useLocation();
+
+  // Sin sesión, la raíz muestra solo el acceso (sin menú ni pie de página)
+  if (!usuario && pathname === "/") return <Acceso />;
 
   return (
     <div className="sa-app">
@@ -21,10 +24,13 @@ export default function App() {
 
       <main className="sa-contenido">
         <Routes>
-          {/* Públicas */}
-          <Route path="/" element={<Inicio />} />
-          <Route path="/login" element={usuario ? <Navigate to="/traducir" replace /> : <Login />} />
-          <Route path="/registro" element={usuario ? <Navigate to="/traducir" replace /> : <Registro />} />
+          {/* Con sesión, la raíz lleva a traducir */}
+          <Route path="/" element={<Navigate to="/traducir" replace />} />
+          <Route path="/inicio" element={<Inicio />} />
+
+          {/* Rutas antiguas: ahora todo está en la pantalla de acceso */}
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="/registro" element={<Navigate to="/?registro" replace />} />
 
           {/* Solo con sesión */}
           <Route path="/traducir" element={<RutaProtegida><Traducir /></RutaProtegida>} />

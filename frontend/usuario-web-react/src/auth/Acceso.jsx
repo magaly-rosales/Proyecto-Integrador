@@ -69,9 +69,14 @@ export default function Acceso() {
     setCargando(true);
     try {
       const datos = await login(email, password, recordar);
-      if (String(datos.rol).toLowerCase() === "admin") {
-        // El administrador usa su propio panel (solo habla con Django)
-        window.location.href = `${import.meta.env.VITE_ADMIN_URL}?email=${encodeURIComponent(datos.email)}`;
+      if (datos.tokenAdmin) {
+        // El administrador pasa a su panel (solo habla con Django) con la sesión que entregó Django
+        const sesion = new URLSearchParams({
+          token: datos.tokenAdmin,
+          nombre: datos.nombre,
+          email: datos.email,
+        });
+        window.location.href = `${import.meta.env.VITE_ADMIN_URL}/#${sesion}`;
         return;
       }
       navegar(ubicacion.state?.desde || "/traducir", { replace: true });

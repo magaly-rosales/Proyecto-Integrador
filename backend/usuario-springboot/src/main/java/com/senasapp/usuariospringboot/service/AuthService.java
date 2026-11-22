@@ -1,6 +1,7 @@
 package com.senasapp.usuariospringboot.service;
 
 import com.senasapp.usuariospringboot.dto.LoginRequest;
+import com.senasapp.usuariospringboot.dto.LoginRespuesta;
 import com.senasapp.usuariospringboot.dto.RegistroRequest;
 import com.senasapp.usuariospringboot.dto.UsuarioRespuesta;
 import com.senasapp.usuariospringboot.model.Usuario;
@@ -15,10 +16,13 @@ public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AdminTokenService adminTokenService;
 
-    public AuthService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder,
+                       AdminTokenService adminTokenService) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.adminTokenService = adminTokenService;
     }
 
     public UsuarioRespuesta registrar(RegistroRequest req) {
@@ -53,13 +57,26 @@ public class AuthService {
         return aRespuesta(usuarioRepository.save(usuario));
     }
 
-    public Optional<UsuarioRespuesta> login(LoginRequest req) {
+    public Optional<LoginRespuesta> login(LoginRequest req) {
         String email = limpiar(req.email()).toLowerCase();
         String password = req.password() == null ? "" : req.password();
 
-        return usuarioRepository.findByEmail(email)
-                .filter(u -> passwordEncoder.matches(password, u.getPasswordHash()))
-                .map(this::aRespuesta);
+        Optional<Usuario> encontrado = usuarioRepository.findByEmail(email)
+                .filter(u -> passwordEncoder.matches(password, u.getPasswordHash()));
+
+        if (encontrado.isPresent() && !encontrado.get().isActivo()) {
+            throw new IllegalStateException("Tu cuenta está desactivada. Contacta al administrador.");
+        }
+        // Si es administrador, Spring le pide su sesión a Django para que entre directo al panel
+        return encontrado.map(u -> {
+            String tokenAdmin = esAdmin(u) ? adminTokenService.pedirToken(email, password) : null;
+            return LoginRespuesta.de(aRespuesta(u), tokenAdmin);
+        });
+    }
+
+    private boolean esAdmin(Usuario u) {
+        String rol = u.getRol() == null ? "" : u.getRol().trim();
+        return rol.equalsIgnoreCase("admin") || rol.equalsIgnoreCase("administrador");
     }
 
     private String limpiar(String texto) {

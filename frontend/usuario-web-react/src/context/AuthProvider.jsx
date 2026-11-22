@@ -36,7 +36,7 @@ export default function AuthProvider({ children }) {
   // el admin entra por su propio panel (Django).
   const login = async (email, password, recordar = true) => {
     const datos = await iniciarSesion({ email, password });
-    if (String(datos.rol).toLowerCase() !== "admin") guardar(datos, recordar);
+    if (!datos.tokenAdmin) guardar(datos, recordar);
     return datos;
   };
 

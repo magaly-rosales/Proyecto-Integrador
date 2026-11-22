@@ -36,6 +36,8 @@ INSTALLED_APPS = [
         # Aplicación del proyecto
     'senas',
     'categorias',
+    'usuarios',
+    'estadisticas',
 ]
 
 MIDDLEWARE = [

@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import Categoria, RegistroUso, Sena, Usuario
+from .models import Categoria, RegistroUso, Sena
 from .progreso import META_MOVIMIENTOS, META_MUESTRAS, esta_entrenada
 
 
@@ -105,22 +105,6 @@ class SenaSerializer(serializers.ModelSerializer):
             # Spring Boot todavía lee el texto antiguo sena.categoria
             attrs['categoria'] = categoria.nombre
         return attrs
-
-
-class UserSerializer(serializers.ModelSerializer):
-    # Nombres que ya usa el frontend, leídos de la tabla usuario
-    id = serializers.IntegerField(source='id_usuario', read_only=True)
-    username = serializers.CharField(source='nombre', read_only=True)
-    is_active = serializers.BooleanField(source='activo')
-    is_staff = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Usuario
-        fields = ['id', 'username', 'email', 'is_active', 'is_staff']
-        read_only_fields = ['email']
-
-    def get_is_staff(self, obj):
-        return obj.rol.upper() in ('ADMIN', 'ADMINISTRADOR')
 
 
 class RegistroUsoSerializer(serializers.ModelSerializer):

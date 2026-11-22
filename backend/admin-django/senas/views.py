@@ -12,7 +12,7 @@ from .auth import crear_token, es_admin, verificar_password
 from .entrenamiento import puntos_a_texto, secuencia_a_texto
 from .models import MuestraSena, MuestraSecuencia, RegistroUso, Sena, Usuario, validar_video
 from .progreso import META_MOVIMIENTOS, META_MUESTRAS
-from .serializers import RegistroUsoSerializer, SenaSerializer, UserSerializer
+from .serializers import RegistroUsoSerializer, SenaSerializer
 from .services import KeypointProcessorService
 
 
@@ -127,48 +127,9 @@ class SenaViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
 
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.all().order_by('-id_usuario')
-    serializer_class = UserSerializer
-    http_method_names = ['get', 'patch', 'head', 'options']
-
-    def partial_update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        is_active = request.data.get('is_active', None)
-        if is_active is None:
-            return Response({"exito": False, "error": "Falta el campo is_active."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        instance.activo = bool(is_active)
-        instance.save(update_fields=['activo'])
-        return Response({
-            "exito": True,
-            "mensaje": f"Estado del usuario {'activado' if instance.activo else 'desactivado'} correctamente.",
-            "data": self.get_serializer(instance).data
-        }, status=status.HTTP_200_OK)
-
-
 class RegistroUsoViewSet(viewsets.ModelViewSet):
     queryset = RegistroUso.objects.all().order_by('-fecha_hora')
     serializer_class = RegistroUsoSerializer
-
-
-@api_view(['GET'])
-def estadisticas_uso(request):
-    total_traducciones = RegistroUso.objects.count()
-    top = (
-        RegistroUso.objects.values('nombre_sena')
-        .annotate(total=Count('id_registro'))
-        .order_by('-total')[:5]
-    )
-    top_senas = [
-        {"nombre_sena_consultada": t['nombre_sena'], "total": t['total']} for t in top
-    ]
-
-    return Response({
-        "exito": True,
-        "total_traducciones": total_traducciones,
-        "top_senas": top_senas
-    }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

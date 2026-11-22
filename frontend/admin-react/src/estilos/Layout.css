@@ -1,0 +1,365 @@
+/* Estructura del panel: menú lateral, cabecera y contenido */
+.app {
+    display: flex;
+    min-height: 100vh;
+    background: var(--fondo);
+}
+
+/* ---------- Menú lateral ---------- */
+.lateral {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    flex: 0 0 256px;
+    width: 256px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--tarjeta);
+    border-right: 1px solid var(--borde-suave);
+}
+
+.lateral-marca {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 96px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--borde-suave);
+}
+
+.lateral-marca img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.lateral-marca strong {
+    display: block;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+}
+
+.lateral-marca span {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.6px;
+    color: var(--texto-suave);
+}
+
+.lateral-perfil {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 28px 16px 20px;
+    color: inherit;
+    text-decoration: none;
+}
+
+.lateral-avatar {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: 800;
+    color: #fff;
+    background: #0b0b0b;
+    border-radius: 50%;
+    border: 3px solid var(--borde);
+}
+
+:root[data-theme='dark'] .lateral-avatar {
+    background: #2a2a2e;
+}
+
+.lateral-avatar i {
+    position: absolute;
+    right: 2px;
+    bottom: 4px;
+    width: 14px;
+    height: 14px;
+    background: #1fa24a;
+    border: 2px solid var(--tarjeta);
+    border-radius: 50%;
+}
+
+.lateral-correo {
+    max-width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lateral-menu {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 22px;
+    overflow-y: auto;
+}
+
+.lateral-enlace {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 44px;
+    padding: 0 14px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--texto);
+    text-decoration: none;
+    border-radius: 8px;
+}
+
+.lateral-enlace:hover {
+    background: var(--activo-fondo);
+}
+
+.lateral-enlace.activo {
+    font-weight: 700;
+    background: var(--activo-fondo);
+}
+
+.lateral-enlace.activo::before {
+    content: '';
+    position: absolute;
+    left: -22px;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--texto);
+    border-radius: 0 4px 4px 0;
+}
+
+.lateral-enlace span {
+    flex: 1;
+}
+
+.lateral-contador {
+    min-width: 32px;
+    padding: 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 22px;
+    text-align: center;
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+}
+
+.lateral-pie {
+    padding: 16px 12px;
+    border-top: 1px solid var(--borde-suave);
+}
+
+.lateral-salir {
+    width: 100%;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--error-texto);
+    background: transparent;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.lateral-salir:hover {
+    background: var(--activo-fondo);
+}
+
+/* ---------- Contenido ---------- */
+.app-contenido {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.cabecera {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 96px;
+    padding: 0 32px;
+    background: var(--tarjeta);
+    border-bottom: 1px solid var(--borde-suave);
+}
+
+.cabecera-textos {
+    flex: 1;
+    min-width: 0;
+}
+
+.cabecera h1 {
+    margin: 0;
+    font-family: 'Montserrat', var(--sans);
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.5px;
+}
+
+.cabecera p {
+    margin: 2px 0 0;
+    font-size: 15px;
+    color: var(--texto-suave);
+}
+
+.cabecera-menu {
+    display: none;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    color: var(--texto);
+    background: var(--fondo);
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* Interruptor claro / oscuro */
+.tema {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 10px 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--texto);
+    background: var(--fondo);
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.tema-interruptor {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    background: var(--borde-suave);
+    border-radius: 999px;
+    transition: background 0.2s;
+}
+
+.tema-interruptor i {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.tema[aria-checked='true'] .tema-interruptor {
+    background: var(--texto-suave);
+}
+
+.tema[aria-checked='true'] .tema-interruptor i {
+    transform: translateX(16px);
+}
+
+.app-principal {
+    flex: 1;
+    padding: 24px 32px 40px;
+}
+
+.en-construccion {
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--texto-suave);
+    background: var(--tarjeta);
+    border: 1px dashed var(--borde);
+    border-radius: 10px;
+}
+
+.en-construccion strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 20px;
+    color: var(--texto);
+}
+
+.en-construccion p {
+    margin: 0;
+}
+
+.app-velo {
+    display: none;
+}
+
+/* ---------- Móvil: el menú pasa a ser un panel que se abre con el botón ---------- */
+@media (max-width: 900px) {
+    .lateral {
+        position: fixed;
+        inset: 0 auto 0 0;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: var(--sombra);
+    }
+
+    .menu-abierto .lateral {
+        transform: translateX(0);
+    }
+
+    .menu-abierto .app-velo {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        background: rgba(0, 0, 0, 0.45);
+    }
+
+    .cabecera {
+        min-height: 76px;
+        padding: 0 16px;
+    }
+
+    .cabecera-menu {
+        display: flex;
+    }
+
+    .cabecera h1 {
+        font-size: 24px;
+    }
+
+    .cabecera p {
+        display: none;
+    }
+
+    .tema-texto {
+        display: none;
+    }
+
+    .app-principal {
+        padding: 16px 16px 32px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lateral,
+    .tema-interruptor,
+    .tema-interruptor i {
+        transition: none;
+    }
+}

@@ -1,0 +1,47 @@
+// Secciones del panel: ruta, textos de la cabecera y contador del menú lateral
+export const SECCIONES = [
+    {
+        ruta: '/senas',
+        etiqueta: 'Señas',
+        titulo: 'Señas',
+        subtitulo: 'Agrega, edita y elimina las señas que ven la web y la app móvil.',
+        icono: 'mano',
+        contador: (r) => r.senas.total,
+    },
+    {
+        ruta: '/categorias',
+        etiqueta: 'Categorías',
+        titulo: 'Categorías',
+        subtitulo: 'Ordena las señas por tema, con su color e ícono.',
+        icono: 'categorias',
+        contador: (r) => r.categorias.total,
+    },
+    {
+        ruta: '/usuarios',
+        etiqueta: 'Usuarios',
+        titulo: 'Usuarios',
+        subtitulo: 'Revisa los usuarios de la web y la app, y activa o desactiva sus cuentas.',
+        icono: 'usuarios',
+        contador: (r) => r.usuarios.total,
+    },
+    {
+        ruta: '/estadisticas',
+        etiqueta: 'Estadísticas',
+        titulo: 'Estadísticas de uso',
+        subtitulo: 'Qué señas se traducen más y cómo usan la app.',
+        icono: 'grafico',
+    },
+    {
+        ruta: '/entrenamiento',
+        etiqueta: 'Entrenamiento',
+        titulo: 'Entrenamiento',
+        subtitulo: 'Captura ejemplos para que la app reconozca cada seña.',
+        icono: 'objetivo',
+    },
+];
+
+export const PERFIL = {
+    ruta: '/perfil',
+    titulo: 'Mi perfil',
+    subtitulo: 'Tus datos y la contraseña de administrador.',
+};

@@ -1,0 +1,84 @@
+.modal-fondo {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+    width: 100%;
+    max-height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+    color: var(--texto);
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    box-shadow: var(--sombra);
+    outline: none;
+}
+
+.modal-cabecera {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 8px;
+}
+
+.modal-cabecera h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.modal-cerrar {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--texto);
+    background: transparent;
+    border: 1px solid var(--borde-suave);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.modal-cuerpo {
+    padding: 8px 20px 20px;
+    overflow-y: auto;
+}
+
+.modal-texto {
+    margin: 0 0 16px;
+    color: var(--texto-suave);
+}
+
+.modal-error {
+    margin: 0 0 16px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--error-texto);
+    background: var(--error-fondo);
+    border-radius: 8px;
+}
+
+.modal-acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal-video {
+    width: 100%;
+    max-height: 70vh;
+    background: #000;
+    border-radius: 8px;
+}

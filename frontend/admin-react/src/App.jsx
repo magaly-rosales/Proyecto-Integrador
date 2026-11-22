@@ -1,20 +1,30 @@
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import AuthProvider from './auth/AuthProvider';
-import { useAuth } from './auth/AuthContext';
 import RutaProtegida from './auth/RutaProtegida';
-import { GestionSenas } from './components/GestionSenas';
-
-// Por ahora el panel sigue siendo la pantalla de Señas; el layout nuevo viene en el paso 6b
-function Panel() {
-    const { cerrarSesion } = useAuth();
-    return <GestionSenas onLogout={cerrarSesion} />;
-}
+import Layout from './layout/Layout';
+import EnConstruccion from './paginas/EnConstruccion';
+import Senas from './paginas/Senas';
+import './estilos/Escala.css';
 
 export default function App() {
     return (
         <AuthProvider>
-            <RutaProtegida>
-                <Panel />
-            </RutaProtegida>
+            <BrowserRouter>
+                <RutaProtegida>
+                    <Routes>
+                        <Route element={<Layout />}>
+                            <Route index element={<Navigate to="/senas" replace />} />
+                            <Route path="senas" element={<Senas />} />
+                            <Route path="categorias" element={<EnConstruccion nombre="Categorías" />} />
+                            <Route path="usuarios" element={<EnConstruccion nombre="Usuarios" />} />
+                            <Route path="estadisticas" element={<EnConstruccion nombre="Estadísticas" />} />
+                            <Route path="entrenamiento" element={<EnConstruccion nombre="Entrenamiento" />} />
+                            <Route path="perfil" element={<EnConstruccion nombre="Mi perfil" />} />
+                            <Route path="*" element={<Navigate to="/senas" replace />} />
+                        </Route>
+                    </Routes>
+                </RutaProtegida>
+            </BrowserRouter>
         </AuthProvider>
     );
 }

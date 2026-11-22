@@ -1,0 +1,121 @@
+/* Tamaños del panel de administración (se carga al final para ajustar el resto de estilos) */
+
+/* Menú lateral */
+.lateral {
+    flex-basis: 288px;
+    width: 288px;
+}
+
+.lateral-marca {
+    gap: 14px;
+    height: 112px;
+    padding: 0 20px;
+}
+
+.lateral-marca img {
+    width: 64px;
+    height: 64px;
+}
+
+.lateral-marca strong {
+    font-size: 28px;
+}
+
+.lateral-marca span {
+    font-size: 12px;
+}
+
+.lateral-avatar {
+    width: 96px;
+    height: 96px;
+    font-size: 36px;
+}
+
+.lateral-correo {
+    font-size: 15px;
+}
+
+.lateral-enlace {
+    height: 50px;
+    font-size: 17px;
+}
+
+.lateral-contador {
+    font-size: 14px;
+}
+
+.lateral-pie {
+    padding: 18px 22px 36px;
+}
+
+.lateral-salir {
+    height: 50px;
+    font-size: 16px;
+}
+
+/* Cabecera */
+.cabecera {
+    min-height: 112px;
+}
+
+.cabecera h1 {
+    font-size: 36px;
+}
+
+.cabecera p {
+    font-size: 17px;
+}
+
+.tema {
+    height: 44px;
+    font-size: 15px;
+}
+
+/* Contenido */
+.texto-suave {
+    font-size: 15px;
+}
+
+.pildora {
+    font-size: 14px;
+}
+
+.resumen-tarjeta h3 {
+    font-size: 15px;
+}
+
+.resumen-tarjeta strong {
+    font-size: 38px;
+}
+
+.resumen-tarjeta p {
+    font-size: 13px;
+}
+
+.filtros-buscar input,
+.filtros-categoria,
+.filtros-categoria select {
+    font-size: 16px;
+}
+
+.tabla th {
+    font-size: 13px;
+}
+
+.tabla td {
+    font-size: 16px;
+}
+
+.boton-ver {
+    font-size: 15px;
+}
+
+@media (max-width: 900px) {
+    .cabecera {
+        min-height: 80px;
+    }
+
+    .cabecera h1 {
+        font-size: 26px;
+    }
+}

@@ -1,34 +1,45 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Montserrat:wght@900&display=swap');
 
 :root {
-    --fondo: #f4f8fa;
+    --fondo: #ececec;
     --tarjeta: #ffffff;
-    --texto: #16313a;
-    --texto-suave: #5b7580;
-    --borde: #d9e6ea;
-    --primario: #2bbcc9;
-    --primario-texto: #137985;
-    --sobre-primario: #062a30;
+    --texto: #0b0b0b;
+    --texto-suave: #5a5a5a;
+    --borde: #2a2a2a;
+    --borde-suave: #d6d6d6;
+    --boton: #0b0b0b;
+    --sobre-boton: #ffffff;
+    --activo-fondo: #ececec;
+    --exito-fondo: #d9f5e3;
+    --exito-texto: #0f6b34;
+    --aviso-fondo: #fdf0c2;
+    --aviso-texto: #7a5a00;
     --error-fondo: #fdecec;
     --error-texto: #b42318;
-    --sombra: 0 10px 25px -8px rgba(22, 49, 58, 0.18);
+    --primario: #2bbcc9;
+    --sombra: 0 10px 25px -8px rgba(0, 0, 0, 0.18);
 
     --sans: 'Outfit', system-ui, 'Segoe UI', Roboto, sans-serif;
     color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-    --fondo: #0e1b20;
-    --tarjeta: #15262d;
-    --texto: #e6f2f5;
-    --texto-suave: #8fa9b2;
-    --borde: #25414b;
-    --primario: #2bbcc9;
-    --primario-texto: #5fd3de;
-    --sobre-primario: #062a30;
+    --fondo: #0b0b0c;
+    --tarjeta: #151517;
+    --texto: #f4f4f5;
+    --texto-suave: #a0a0a8;
+    --borde: #3b3b41;
+    --borde-suave: #27272b;
+    --boton: #f4f4f5;
+    --sobre-boton: #0b0b0c;
+    --activo-fondo: #232326;
+    --exito-fondo: #12351f;
+    --exito-texto: #6ee7a0;
+    --aviso-fondo: #3a2f0a;
+    --aviso-texto: #f6d36b;
     --error-fondo: #3a1517;
     --error-texto: #fda29b;
-    --sombra: 0 10px 25px -8px rgba(0, 0, 0, 0.6);
+    --sombra: 0 10px 25px -8px rgba(0, 0, 0, 0.7);
     color-scheme: dark;
 }
 

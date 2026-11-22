@@ -1,0 +1,107 @@
+/* Piezas compartidas por varias pantallas: botones, píldoras y textos */
+.texto-suave {
+    font-size: 14px;
+    color: var(--texto-suave);
+}
+
+.solo-lector {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.boton-principal,
+.boton-contorno,
+.boton-peligro {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 18px;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.boton-principal {
+    color: var(--sobre-boton);
+    background: var(--boton);
+    border: 1px solid var(--boton);
+}
+
+.boton-contorno {
+    color: var(--texto);
+    background: transparent;
+    border: 1px solid var(--borde);
+}
+
+.boton-peligro {
+    color: #fff;
+    background: #c2281d;
+    border: 1px solid #c2281d;
+}
+
+.boton-principal:disabled,
+.boton-contorno:disabled,
+.boton-peligro:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.boton-icono {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--texto);
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--primario);
+    outline-offset: 2px;
+}
+
+.pildora {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: 999px;
+}
+
+.pildora i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.pildora-categoria {
+    border: 1px solid var(--borde);
+}
+
+.pildora-exito {
+    color: var(--exito-texto);
+    background: var(--exito-fondo);
+}
+
+.pildora-aviso {
+    color: var(--aviso-texto);
+    background: var(--aviso-fondo);
+}

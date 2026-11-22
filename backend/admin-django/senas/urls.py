@@ -8,7 +8,7 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r'senas', SenaViewSet)
+router.register(r'senas', SenaViewSet, basename='sena')
 router.register(r'usuarios', UserViewSet, basename='usuario')
 router.register(r'registro-uso', RegistroUsoViewSet, basename='registrouso')
 

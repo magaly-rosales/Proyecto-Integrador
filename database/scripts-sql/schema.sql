@@ -22,6 +22,7 @@ CREATE TABLE usuario (
     password_hash VARCHAR(255) NOT NULL,
     rol VARCHAR(30) NOT NULL,
     foto TEXT,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT usuario_email_unico UNIQUE (email)
 );
 

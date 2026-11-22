@@ -33,8 +33,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
 
-    # Aplicación del proyecto
+        # Aplicación del proyecto
     'senas',
+    'categorias',
 ]
 
 MIDDLEWARE = [
@@ -69,13 +70,19 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
+from dotenv import load_dotenv
+load_dotenv(BASE_DIR / '.env')
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'senasapp_db'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
-
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -101,7 +108,7 @@ TIME_ZONE = 'America/Lima'
 
 USE_I18N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -128,3 +135,16 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800
 CORS_ALLOW_ALL_ORIGINS = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+    'DEFAULT_PERMISSION_CLASSES': ['senas.auth.EsAdmin'],
+}
+
+
+
+
+
+
+

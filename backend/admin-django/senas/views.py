@@ -1,49 +1,92 @@
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from rest_framework.decorators import api_view
-from django.contrib.auth.models import User
+import uuid
+from .entrenamiento import puntos_a_texto, secuencia_a_texto
+from .models import MuestraSena, MuestraSecuencia
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
+from django.db import transaction
 from django.db.models import Count
-from .models import Sena, RegistroUso
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework.response import Response
+
+from .models import Sena, RegistroUso, VideoReferencia, Usuario, validar_video
 from .serializers import SenaSerializer, UserSerializer, RegistroUsoSerializer
 from .services import KeypointProcessorService
 
+from rest_framework.permissions import AllowAny
+from rest_framework.decorators import permission_classes
+from .auth import crear_token, es_admin, verificar_password
+
+
+
+
 class SenaViewSet(viewsets.ModelViewSet):
-    queryset = Sena.objects.all().order_by('-fecha_creacion')
+    queryset = Sena.objects.all().order_by('-fecha_registro')
     serializer_class = SenaSerializer
     parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+    def _guardar_video(self, sena, archivo):
+        # El archivo va a /media y su ruta se guarda en la tabla video_referencia
+        ruta = default_storage.save(f"videos_senas/{uuid.uuid4()}.mp4", archivo)
+        VideoReferencia.objects.create(
+            sena=sena,
+            url_video=settings.MEDIA_URL + ruta,
+            formato='mp4',
+            tamano_mb=round(archivo.size / (1024 * 1024), 2),
+        )
+
+    def _error(self, errores):
+        return Response({"exito": False, "errores": errores}, status=status.HTTP_400_BAD_REQUEST)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
-            return Response({
-                "exito": False,
-                "errores": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return self._error(serializer.errors)
 
-        self.perform_create(serializer)
+        archivo = request.FILES.get('video')
+        if archivo:
+            try:
+                validar_video(archivo)
+            except ValidationError as e:
+                return self._error({"video": e.messages})
+
+        with transaction.atomic():
+            sena = serializer.save()
+            if archivo:
+                self._guardar_video(sena, archivo)
+
         return Response({
             "exito": True,
             "mensaje": "Seña registrada correctamente en el sistema.",
-            "data": serializer.data
+            "data": self.get_serializer(sena).data
         }, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
-
         if not serializer.is_valid():
-            return Response({
-                "exito": False,
-                "errores": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return self._error(serializer.errors)
 
-        self.perform_update(serializer)
+        archivo = request.FILES.get('video')
+        if archivo:
+            try:
+                validar_video(archivo)
+            except ValidationError as e:
+                return self._error({"video": e.messages})
+
+        with transaction.atomic():
+            sena = serializer.save()
+            if archivo:
+                sena.videos.all().delete()  # el nuevo video reemplaza al anterior
+                self._guardar_video(sena, archivo)
+
         return Response({
             "exito": True,
             "mensaje": "Seña actualizada correctamente.",
-            "data": serializer.data
+            "data": self.get_serializer(sena).data
         }, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
@@ -56,41 +99,45 @@ class SenaViewSet(viewsets.ModelViewSet):
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all().order_by('-date_joined')
+    queryset = Usuario.objects.all().order_by('-id_usuario')
     serializer_class = UserSerializer
+    http_method_names = ['get', 'patch', 'head', 'options']
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         is_active = request.data.get('is_active', None)
-        if is_active is not None:
-            instance.is_active = is_active
-            instance.save()
-            return Response({
-                "exito": True,
-                "mensaje": f"Estado del usuario {'activado' if is_active else 'desactivado'} correctamente.",
-                "data": self.get_serializer(instance).data
-            }, status=status.HTTP_200_OK)
-        return super().partial_update(request, *args, **kwargs)
-
+        if is_active is None:
+            return Response({"exito": False, "error": "Falta el campo is_active."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        instance.activo = bool(is_active)
+        instance.save(update_fields=['activo'])
+        return Response({
+            "exito": True,
+            "mensaje": f"Estado del usuario {'activado' if instance.activo else 'desactivado'} correctamente.",
+            "data": self.get_serializer(instance).data
+        }, status=status.HTTP_200_OK)
 
 class RegistroUsoViewSet(viewsets.ModelViewSet):
-    queryset = RegistroUso.objects.all().order_by('-fecha_consulta')
+    queryset = RegistroUso.objects.all().order_by('-fecha_hora')
     serializer_class = RegistroUsoSerializer
 
 
 @api_view(['GET'])
 def estadisticas_uso(request):
     total_traducciones = RegistroUso.objects.count()
-    top_senas = (
-        RegistroUso.objects.values('nombre_sena_consultada')
-        .annotate(total=Count('id'))
+    top = (
+        RegistroUso.objects.values('nombre_sena')
+        .annotate(total=Count('id_registro'))
         .order_by('-total')[:5]
     )
+    top_senas = [
+        {"nombre_sena_consultada": t['nombre_sena'], "total": t['total']} for t in top
+    ]
 
     return Response({
         "exito": True,
         "total_traducciones": total_traducciones,
-        "top_senas": list(top_senas)
+        "top_senas": top_senas
     }, status=status.HTTP_200_OK)
 
 
@@ -108,21 +155,100 @@ def predecir_sena(request):
         vector_features = KeypointProcessorService.preprocesar_landmarks(landmarks)
         resultado = KeypointProcessorService.predecir_sena(vector_features)
 
-        # Registro automático en RegistroUso para la analítica del Dashboard
         nombre_detectado = resultado.get("sena_detectada", "Desconocido")
         sena_obj = Sena.objects.filter(nombre__iexact=nombre_detectado).first()
-        RegistroUso.objects.create(
-            sena=sena_obj,
-            nombre_sena_consultada=nombre_detectado
-        )
+        RegistroUso.objects.create(sena=sena_obj, nombre_sena=nombre_detectado)
 
-        return Response({
-            "exito": True,
-            "data": resultado
-        }, status=status.HTTP_200_OK)
+        return Response({"exito": True, "data": resultado}, status=status.HTTP_200_OK)
 
     except Exception as e:
-        return Response({
-            "exito": False,
-            "error": str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"exito": False, "error": str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+        
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_admin(request):
+    email = (request.data.get('email') or '').strip()
+    password = request.data.get('password') or ''
+
+    usuario = Usuario.objects.filter(email__iexact=email).first()
+    if not usuario or not verificar_password(password, usuario.password_hash):
+        return Response({"exito": False, "error": "Correo o contraseña incorrectos"},
+                        status=status.HTTP_401_UNAUTHORIZED)
+    if not usuario.activo:
+        return Response({"exito": False, "error": "Tu cuenta está desactivada."},
+                        status=status.HTTP_403_FORBIDDEN)
+    if not es_admin(usuario):
+        return Response({"exito": False, "error": "Esta cuenta no tiene permisos de administrador."},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    return Response({
+        "exito": True,
+        "token": crear_token(usuario),
+        "usuario": {"nombre": usuario.nombre, "email": usuario.email}
+    })
+    
+    
+def _puntos_validos(puntos):
+    return (
+        isinstance(puntos, list) and len(puntos) in (21, 42)
+        and all(isinstance(p, dict) and {'x', 'y', 'z'} <= p.keys() for p in puntos)
+    )
+
+
+@api_view(['POST'])
+def guardar_muestra(request, id_sena):
+    sena = Sena.objects.filter(pk=id_sena).first()
+    if not sena:
+        return Response({"exito": False, "error": "La seña no existe."}, status=status.HTTP_404_NOT_FOUND)
+    puntos = request.data
+    if not _puntos_validos(puntos):
+        return Response({"exito": False, "error": "Se esperan 21 puntos (una mano) o 42 (dos manos)."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    MuestraSena.objects.create(sena=sena, puntos=puntos_a_texto(puntos))
+    return Response({"exito": True, "mensaje": "Muestra guardada."}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+def guardar_secuencia(request, id_sena):
+    sena = Sena.objects.filter(pk=id_sena).first()
+    if not sena:
+        return Response({"exito": False, "error": "La seña no existe."}, status=status.HTTP_404_NOT_FOUND)
+    cuadros = request.data
+    if not isinstance(cuadros, list) or not 8 <= len(cuadros) <= 80:
+        return Response({"exito": False, "error": "Se esperan entre 8 y 80 cuadros."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if not all(_puntos_validos(c) and len(c) == len(cuadros[0]) for c in cuadros):
+        return Response({"exito": False, "error": "Todos los cuadros deben tener 21 o 42 puntos, del mismo tamaño."},
+                        status=status.HTTP_400_BAD_REQUEST)
+    MuestraSecuencia.objects.create(sena=sena, cuadros=secuencia_a_texto(cuadros), num_cuadros=len(cuadros))
+    return Response({"exito": True, "mensaje": "Movimiento guardado."}, status=status.HTTP_201_CREATED)
+        
+@api_view(['GET'])
+def resumen_entrenamiento(request):
+    senas = Sena.objects.annotate(
+        n_muestras=Count('muestras', distinct=True),
+        n_secuencias=Count('secuencias', distinct=True),
+    ).order_by('nombre')
+    return Response([
+        {"id": s.id_sena, "nombre": s.nombre,
+         "muestras": s.n_muestras, "secuencias": s.n_secuencias}
+        for s in senas
+    ])
+
+
+@api_view(['DELETE'])
+def borrar_entrenamiento(request, id_sena):
+    sena = Sena.objects.filter(pk=id_sena).first()
+    if not sena:
+        return Response({"exito": False, "error": "La seña no existe."},
+                        status=status.HTTP_404_NOT_FOUND)
+    tipo = request.query_params.get('tipo', 'todas')  # muestras | secuencias | todas
+    if tipo in ('muestras', 'todas'):
+        sena.muestras.all().delete()
+    if tipo in ('secuencias', 'todas'):
+        sena.secuencias.all().delete()
+    return Response({"exito": True, "mensaje": "Muestras eliminadas correctamente."})        
+        

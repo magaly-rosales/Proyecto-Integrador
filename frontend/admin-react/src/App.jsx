@@ -5,6 +5,7 @@ import Layout from './layout/Layout';
 import EnConstruccion from './paginas/EnConstruccion';
 import Senas from './paginas/Senas';
 import './estilos/Escala.css';
+import Categorias from './paginas/Categorias';
 
 export default function App() {
     return (
@@ -15,7 +16,7 @@ export default function App() {
                         <Route element={<Layout />}>
                             <Route index element={<Navigate to="/senas" replace />} />
                             <Route path="senas" element={<Senas />} />
-                            <Route path="categorias" element={<EnConstruccion nombre="Categorías" />} />
+                            <Route path="categorias" element={<Categorias />} />
                             <Route path="usuarios" element={<EnConstruccion nombre="Usuarios" />} />
                             <Route path="estadisticas" element={<EnConstruccion nombre="Estadísticas" />} />
                             <Route path="entrenamiento" element={<EnConstruccion nombre="Entrenamiento" />} />

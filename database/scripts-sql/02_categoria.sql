@@ -33,3 +33,4 @@ UPDATE sena s
 SET id_categoria = c.id_categoria
 FROM categoria c
 WHERE s.categoria = c.nombre AND s.id_categoria IS NULL;
+ALTER TABLE categoria ADD COLUMN IF NOT EXISTS imagen VARCHAR(255);

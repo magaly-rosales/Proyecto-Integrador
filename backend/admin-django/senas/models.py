@@ -15,6 +15,7 @@ class Categoria(models.Model):
     nombre = models.CharField(max_length=50, unique=True)
     color = models.CharField(max_length=7, default='#2BBCC9')
     icono = models.CharField(max_length=30, default='hand')
+    imagen = models.CharField(max_length=255, blank=True, null=True)
     fecha_registro = models.DateTimeField(auto_now_add=True)
 
     class Meta:

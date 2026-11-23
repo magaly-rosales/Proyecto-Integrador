@@ -4,20 +4,21 @@ from rest_framework import serializers
 
 from senas.models import Categoria, Sena
 
-# Íconos que el panel sabe dibujar (se pueden ir agregando)
-ICONOS = (
-    'hand', 'heart', 'star', 'zap', 'message', 'map-pin', 'users', 'hash',
-    'alert', 'home', 'book', 'clock', 'smile', 'utensils', 'bus', 'briefcase',
-)
-
 
 class CategoriaSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(source='id_categoria', read_only=True)
+    imagen = serializers.SerializerMethodField()   # solo lectura: se sube aparte (multipart)
     total_senas = serializers.SerializerMethodField()
 
     class Meta:
         model = Categoria
-        fields = ['id', 'nombre', 'color', 'icono', 'total_senas']
+        fields = ['id', 'nombre', 'color', 'imagen', 'total_senas']
+
+    def get_imagen(self, obj):
+        if not obj.imagen:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.imagen) if request else obj.imagen
 
     def get_total_senas(self, obj):
         total = getattr(obj, '_total', None)
@@ -38,11 +39,6 @@ class CategoriaSerializer(serializers.ModelSerializer):
         if not re.fullmatch(r'#[0-9A-Fa-f]{6}', value or ''):
             raise serializers.ValidationError('El color debe tener el formato #RRGGBB.')
         return value.upper()
-
-    def validate_icono(self, value):
-        if value not in ICONOS:
-            raise serializers.ValidationError('Ícono no válido.')
-        return value
 
 
 class SenaDeCategoriaSerializer(serializers.ModelSerializer):

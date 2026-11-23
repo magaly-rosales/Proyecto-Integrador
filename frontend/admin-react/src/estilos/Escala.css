@@ -2,19 +2,19 @@
 
 /* Menú lateral */
 .lateral {
-    flex-basis: 288px;
-    width: 288px;
+    flex-basis: 340px;
+    width: 340px;
 }
 
 .lateral-marca {
     gap: 14px;
-    height: 112px;
+    height: 150px;
     padding: 0 20px;
 }
 
 .lateral-marca img {
-    width: 64px;
-    height: 64px;
+    width: 100px;
+    height: 100px;
 }
 
 .lateral-marca strong {
@@ -55,7 +55,7 @@
 
 /* Cabecera */
 .cabecera {
-    min-height: 112px;
+    min-height: 150px;
 }
 
 .cabecera h1 {

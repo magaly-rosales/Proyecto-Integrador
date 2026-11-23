@@ -21,7 +21,7 @@ function Aviso({ icono, titulo, texto, accion }) {
 }
 
 // Tabla en pantallas grandes y tarjetas en el móvil (mismos datos, dos presentaciones)
-export default function TablaSenas({ senas, cargando, error, hayFiltro, onReintentar, onVer, onEliminar }) {
+export default function TablaSenas({ senas, cargando, error, hayFiltro, onReintentar, onVer, onVerImagen, onEditar, onEliminar }) {
     if (cargando) return <section className="tabla-caja"><Esqueleto /></section>;
 
     if (error) {
@@ -68,7 +68,7 @@ export default function TablaSenas({ senas, cargando, error, hayFiltro, onReinte
                             <td className="texto-suave">{s.id}</td>
                             <td>
                                 <span className="sena-nombre">
-                                    <Miniatura sena={s} />
+                                    <Miniatura sena={s} onVer={onVerImagen} />
                                     <strong>{s.nombre}</strong>
                                     {s.es_nueva && <i className="punto-nueva" title="Nueva esta semana" />}
                                 </span>
@@ -77,7 +77,7 @@ export default function TablaSenas({ senas, cargando, error, hayFiltro, onReinte
                             <td className="celda-descripcion" title={s.descripcion}>{s.descripcion}</td>
                             <td><BotonVideo sena={s} onVer={onVer} /></td>
                             <td><PildoraEntrenamiento sena={s} /></td>
-                            <td className="celda-acciones"><MenuAcciones sena={s} onEliminar={onEliminar} /></td>
+                            <td className="celda-acciones"><MenuAcciones sena={s} onEditar={onEditar} onEliminar={onEliminar} /></td>
                         </tr>
                     ))}
                 </tbody>
@@ -92,7 +92,7 @@ export default function TablaSenas({ senas, cargando, error, hayFiltro, onReinte
                                 <strong>{s.nombre}</strong>
                                 <PildoraCategoria sena={s} />
                             </div>
-                            <MenuAcciones sena={s} onEliminar={onEliminar} />
+                            <MenuAcciones sena={s} onEditar={onEditar} onEliminar={onEliminar} />
                         </div>
                         <p>{s.descripcion}</p>
                         <div className="sena-tarjeta-pie">

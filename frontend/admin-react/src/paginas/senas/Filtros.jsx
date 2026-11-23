@@ -1,7 +1,7 @@
-import { IconoBuscar } from '../../components/ui/IconosUi';
+import { IconoBuscar, IconoMas } from '../../components/ui/IconosUi';
 
-// Buscador por nombre/descripción y filtro por categoría
-export default function Filtros({ texto, onTexto, categoria, onCategoria, categorias }) {
+// Buscador por nombre/descripción, filtro por categoría y botón de nueva seña
+export default function Filtros({ texto, onTexto, categoria, onCategoria, categorias, onNueva }) {
     return (
         <div className="filtros">
             <label className="filtros-buscar">
@@ -24,6 +24,10 @@ export default function Filtros({ texto, onTexto, categoria, onCategoria, catego
                     ))}
                 </select>
             </label>
+
+            <button type="button" className="boton-principal filtros-nueva" onClick={onNueva}>
+                <IconoMas /> Nueva seña
+            </button>
         </div>
     );
 }

@@ -37,3 +37,12 @@ export const IconoCerrar = (p) => (
 export const IconoAlerta = (p) => (
     <Icono {...p}><path d="M12 3l10 18H2zM12 10v5M12 18v.5" /></Icono>
 );
+export const IconoMas = (p) => (
+    <Icono {...p}><path d="M12 5v14M5 12h14" /></Icono>
+);
+export const IconoEditar = (p) => (
+    <Icono {...p}><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" /></Icono>
+);
+export const IconoSubir = (p) => (
+    <Icono {...p}><path d="M12 16V4M7 9l5-5 5 5M4 20h16" /></Icono>
+);

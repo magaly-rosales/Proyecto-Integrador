@@ -165,8 +165,8 @@
 
 .sena-miniatura {
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
+    width: 100px;
+    height: 100px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -174,7 +174,7 @@
     color: var(--texto-suave);
     background: var(--fondo);
     border: 1px solid var(--borde);
-    border-radius: 6px;
+    border-radius: 8px;
 }
 
 .sena-miniatura img {
@@ -213,8 +213,6 @@
 
 .menu-lista {
     position: absolute;
-    right: 0;
-    top: calc(100% + 4px);
     z-index: 10;
     min-width: 150px;
     margin: 0;
@@ -224,6 +222,8 @@
     border: 1px solid var(--borde);
     border-radius: 8px;
     box-shadow: var(--sombra);
+    position: fixed;   /* antes: absolute */
+    z-index: 50;       /* antes: 10 */
 }
 
 .menu-lista button {
@@ -361,3 +361,11 @@
         animation: none;
     }
 }
+
+.sena-miniatura-boton {
+    padding: 0;
+    cursor: zoom-in;
+}
+
+
+

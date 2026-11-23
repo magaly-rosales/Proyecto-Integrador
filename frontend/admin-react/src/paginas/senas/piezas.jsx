@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
-import { IconoImagen, IconoPapelera, IconoPlay, IconoPuntos } from '../../components/ui/IconosUi';
+import { IconoEditar, IconoImagen, IconoPapelera, IconoPlay, IconoPuntos } from '../../components/ui/IconosUi';
 
-export function Miniatura({ sena }) {
+export function Miniatura({ sena, onVer }) {
+    if (!sena.imagen) {
+        return <span className="sena-miniatura"><IconoImagen /></span>;
+    }
     return (
-        <span className="sena-miniatura">
-            {sena.imagen ? <img src={sena.imagen} alt="" loading="lazy" /> : <IconoImagen />}
-        </span>
+        <button
+            type="button"
+            className="sena-miniatura sena-miniatura-boton"
+            onClick={() => onVer(sena)}
+            aria-label={`Ver imagen de ${sena.nombre}`}
+        >
+            <img src={sena.imagen} alt="" loading="lazy" />
+        </button>
     );
 }
 
@@ -42,43 +50,75 @@ export function BotonVideo({ sena, onVer }) {
 }
 
 // Menú de tres puntos con las acciones de cada fila
-export function MenuAcciones({ sena, onEliminar }) {
-    const [abierto, setAbierto] = useState(false);
+export function MenuAcciones({ sena, onEditar, onEliminar }) {
+    const [pos, setPos] = useState(null); // null = cerrado
     const caja = useRef(null);
+    const boton = useRef(null);
+
+    const cerrar = () => setPos(null);
+
+    const alternar = () => {
+        if (pos) return cerrar();
+        const r = boton.current.getBoundingClientRect();
+        const alto = 110; // alto aproximado del menú (2 opciones)
+        const abajoCabe = window.innerHeight - r.bottom > alto + 8;
+        setPos({
+            right: window.innerWidth - r.right,
+            ...(abajoCabe ? { top: r.bottom + 4 } : { bottom: window.innerHeight - r.top + 4 }),
+        });
+        return undefined;
+    };
 
     useEffect(() => {
-        if (!abierto) return undefined;
-        const fuera = (e) => !caja.current?.contains(e.target) && setAbierto(false);
-        const esc = (e) => e.key === 'Escape' && setAbierto(false);
+        if (!pos) return undefined;
+        const fuera = (e) => !caja.current?.contains(e.target) && cerrar();
+        const esc = (e) => e.key === 'Escape' && cerrar();
         document.addEventListener('mousedown', fuera);
         document.addEventListener('keydown', esc);
+        window.addEventListener('scroll', cerrar, true);
+        window.addEventListener('resize', cerrar);
         return () => {
             document.removeEventListener('mousedown', fuera);
             document.removeEventListener('keydown', esc);
+            window.removeEventListener('scroll', cerrar, true);
+            window.removeEventListener('resize', cerrar);
         };
-    }, [abierto]);
+    }, [pos]);
 
     return (
         <div className="menu-acciones" ref={caja}>
             <button
+                ref={boton}
                 type="button"
                 className="boton-icono"
                 aria-haspopup="menu"
-                aria-expanded={abierto}
+                aria-expanded={Boolean(pos)}
                 aria-label={`Acciones de ${sena.nombre}`}
-                onClick={() => setAbierto((a) => !a)}
+                onClick={alternar}
             >
                 <IconoPuntos />
             </button>
-            {abierto && (
-                <ul className="menu-lista" role="menu">
+            {pos && (
+                <ul className="menu-lista" role="menu" style={pos}>
+                    <li role="none">
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                                cerrar();
+                                onEditar(sena);
+                            }}
+                        >
+                            <IconoEditar /> Editar
+                        </button>
+                    </li>
                     <li role="none">
                         <button
                             type="button"
                             role="menuitem"
                             className="menu-peligro"
                             onClick={() => {
-                                setAbierto(false);
+                                cerrar();
                                 onEliminar(sena);
                             }}
                         >

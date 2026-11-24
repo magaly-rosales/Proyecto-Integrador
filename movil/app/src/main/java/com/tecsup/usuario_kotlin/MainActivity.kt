@@ -15,12 +15,13 @@ import androidx.compose.ui.Modifier
 import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
+import com.tecsup.usuario_kotlin.ui.home.HomeScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
-import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
+import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
+import com.tecsup.usuario_kotlin.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
 
-    // Inicializamos el AuthViewModel usando la librería de Jetpack
     private val authViewModel: AuthViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             UsuariokotlinTheme {
                 var currentScreen by remember { mutableStateOf("login") }
+                var loggedUsername by remember { mutableStateOf("Usuario") }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -38,7 +40,7 @@ class MainActivity : ComponentActivity() {
                             LoginScreen(
                                 authViewModel = authViewModel,
                                 onLoginSuccess = {
-                                    // Navegar a Home cuando el login sea exitoso
+                                    currentScreen = "home"
                                 },
                                 onRegisterClick = {
                                     currentScreen = "register"
@@ -66,6 +68,17 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "login"
                                 }
                             )
+                        }
+                        "home" -> {
+                            HomeScreen(
+                                username = loggedUsername,
+                                onNavigateToTranslator = {
+                                    currentScreen = "translation"
+                                }
+                            )
+                        }
+                        "translation" -> {
+                            TranslationScreen()
                         }
                     }
                 }

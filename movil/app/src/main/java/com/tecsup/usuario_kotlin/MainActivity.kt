@@ -96,13 +96,15 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         "perfil" -> {
-                            // Pantalla temporal conectada al botón Perfil hasta crear ProfileScreen
-                            HomeScreen(
-                                username = userName,
-                                onNavigateToTranslator = {
-                                    currentScreen = "translation"
-                                },
-                                viewModel = translationViewModel
+                            ProfileScreen(
+                                userName = authViewModel.loggedUserName,
+                                userEmail = authViewModel.loggedUserEmail,
+                                onNavigateToTraducir = { currentScreen = "translation" },
+                                onNavigateToSenas = { currentScreen = "home" },
+                                onLogout = {
+                                    authViewModel.logout()
+                                    currentScreen = "login"
+                                }
                             )
                         }
                     }

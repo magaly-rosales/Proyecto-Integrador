@@ -2,8 +2,10 @@ package com.tecsup.usuario_kotlin.ui.translation
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -17,10 +19,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.rounded.Cameraswitch
 import androidx.compose.material.icons.rounded.PanTool
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
@@ -42,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.tecsup.usuario_kotlin.camera.CameraPreview
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
+import java.util.Locale
 
 private val BgDark = Color(0xFF08141A)
 private val CardDark = Color(0xFF0F2129)
@@ -68,9 +71,8 @@ fun TranslationScreen(
     val currentSign by viewModel.translatedSign.collectAsState()
     val context = LocalContext.current
 
-    var cameraError by remember {
-        mutableStateOf<String?>(null)
-    }
+    var cameraError by remember { mutableStateOf<String?>(null) }
+    var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -90,6 +92,21 @@ fun TranslationScreen(
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    // Motor de voz nativo en español
+    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+    DisposableEffect(context) {
+        val textToSpeech = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts?.language = Locale("es", "PE")
+            }
+        }
+        tts = textToSpeech
+        onDispose {
+            textToSpeech.stop()
+            textToSpeech.shutdown()
         }
     }
 
@@ -131,17 +148,23 @@ fun TranslationScreen(
                     hasCameraPermission = hasCameraPermission,
                     cameraError = cameraError,
                     onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                    onSwitchCamera = {
+                        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+                            CameraSelector.LENS_FACING_FRONT
+                        } else {
+                            CameraSelector.LENS_FACING_BACK
+                        }
+                    },
                     detectedLabel = if (currentSign.isBlank() || currentSign == "Esperando seña...") {
-                        "AYUDA · 92%"
+                        "BUSCANDO SEÑA..."
                     } else {
                         currentSign.uppercase()
                     },
                     cameraPreview = {
                         CameraPreview(
                             modifier = Modifier.fillMaxSize(),
-                            onError = { error ->
-                                cameraError = error
-                            }
+                            lensFacing = lensFacing,
+                            onError = { error -> cameraError = error }
                         )
                     }
                 )
@@ -152,6 +175,10 @@ fun TranslationScreen(
                 TranslationResultCard(
                     translatedText = displaySign,
                     onSpeakClick = {
+                        tts?.speak(displaySign, TextToSpeech.QUEUE_FLUSH, null, null)
+                        if (displaySign.isNotBlank() && frasesRecientes.none { it.texto == displaySign }) {
+                            frasesRecientes.add(0, FraseReciente(displaySign, "Ahora"))
+                        }
                         onSpeakText(displaySign)
                     },
                     onClearClick = {
@@ -176,6 +203,7 @@ fun TranslationScreen(
                     frase = item,
                     onRepeatClick = {
                         viewModel.updateTranslation(item.texto)
+                        tts?.speak(item.texto, TextToSpeech.QUEUE_FLUSH, null, null)
                         onSpeakText(item.texto)
                     }
                 )
@@ -278,6 +306,7 @@ private fun CameraDetectionCard(
     hasCameraPermission: Boolean,
     cameraError: String?,
     onRequestPermission: () -> Unit,
+    onSwitchCamera: () -> Unit,
     detectedLabel: String,
     cameraPreview: @Composable () -> Unit
 ) {
@@ -345,18 +374,18 @@ private fun CameraDetectionCard(
                 )
             }
 
-            Box(
+            IconButton(
+                onClick = onSwitchCamera,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(36.dp)
+                    .size(38.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(CardElevated.copy(alpha = 0.85f)),
-                contentAlignment = Alignment.Center
+                    .background(CardElevated.copy(alpha = 0.85f))
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Fullscreen,
-                    contentDescription = "Expandir cámara",
-                    tint = TextSecondary,
+                    imageVector = Icons.Rounded.Cameraswitch,
+                    contentDescription = "Cambiar cámara frontal/trasera",
+                    tint = AccentCyan,
                     modifier = Modifier.size(20.dp)
                 )
             }

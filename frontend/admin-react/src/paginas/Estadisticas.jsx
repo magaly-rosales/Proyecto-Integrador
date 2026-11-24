@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { IconoAlerta } from '../components/ui/IconosUi';
 import useEstadisticas from '../hooks/useEstadisticas';
 import Periodo from './estadisticas/Periodo';
-import { textoPeriodo } from './estadisticas/periodo';
+import { textoPeriodo } from './estadisticas/textoPeriodo';
 import RankingSenas from './estadisticas/RankingSenas';
 import TarjetasUso from './estadisticas/TarjetasUso';
 import UsuariosEstado from './estadisticas/UsuariosEstado';

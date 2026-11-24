@@ -8,6 +8,7 @@ import './estilos/Escala.css';
 import Categorias from './paginas/Categorias';
 import Usuarios from './paginas/Usuarios';
 import Estadisticas from './paginas/Estadisticas';
+import Entrenamiento from './paginas/Entrenamiento';
 
 export default function App() {
     return (
@@ -21,7 +22,7 @@ export default function App() {
                             <Route path="categorias" element={<Categorias />} />
                             <Route path="usuarios" element={<Usuarios />} />
                             <Route path="estadisticas" element={<Estadisticas />} />
-                            <Route path="entrenamiento" element={<EnConstruccion nombre="Entrenamiento" />} />
+                            <Route path="entrenamiento" element={<Entrenamiento />} />
                             <Route path="perfil" element={<EnConstruccion nombre="Mi perfil" />} />
                             <Route path="*" element={<Navigate to="/senas" replace />} />
                         </Route>

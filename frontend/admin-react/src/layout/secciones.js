@@ -35,7 +35,7 @@ export const SECCIONES = [
         ruta: '/entrenamiento',
         etiqueta: 'Entrenamiento',
         titulo: 'Entrenamiento',
-        subtitulo: 'Captura ejemplos para que la app reconozca cada seña.',
+        subtitulo: 'Captura ejemplos para que el modelo reconozca cada seña.',
         icono: 'objetivo',
     },
 ];

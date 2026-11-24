@@ -4,7 +4,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Categoria, RegistroUso, Sena
-from .progreso import META_MOVIMIENTOS, META_MUESTRAS, esta_entrenada
+from .progreso import META_MOVIMIENTOS, META_MUESTRAS, esta_entrenada, faltan
 
 
 class SenaSerializer(serializers.ModelSerializer):
@@ -25,6 +25,7 @@ class SenaSerializer(serializers.ModelSerializer):
     muestras = serializers.SerializerMethodField()
     movimientos = serializers.SerializerMethodField()
     entrenada = serializers.SerializerMethodField()
+    faltan = serializers.SerializerMethodField()
     es_nueva = serializers.SerializerMethodField()
 
     class Meta:
@@ -33,7 +34,7 @@ class SenaSerializer(serializers.ModelSerializer):
             'id', 'nombre', 'descripcion',
             'categoria', 'categoria_id', 'categoria_color', 'categoria_icono',
             'imagen', 'video',
-            'muestras', 'movimientos', 'entrenada', 'es_nueva',
+            'muestras', 'movimientos', 'entrenada', 'faltan', 'es_nueva',
             'fecha_creacion',
         ]
 
@@ -73,6 +74,9 @@ class SenaSerializer(serializers.ModelSerializer):
 
     def get_entrenada(self, obj):
         return esta_entrenada(self._n_muestras(obj), self._n_movimientos(obj))
+
+    def get_faltan(self, obj):
+        return faltan(self._n_muestras(obj), self._n_movimientos(obj))
 
     def get_es_nueva(self, obj):
         return obj.fecha_registro >= timezone.now() - timedelta(days=7)

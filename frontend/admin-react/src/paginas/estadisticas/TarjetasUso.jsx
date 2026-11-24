@@ -1,4 +1,4 @@
-import { textoPeriodo } from './periodo';
+import { textoPeriodo } from './textoPeriodo';
 
 function Tarjeta({ titulo, valor, nota }) {
     return (

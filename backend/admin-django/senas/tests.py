@@ -22,7 +22,7 @@ from .archivos import validar_imagen
 from .auth import SAL, crear_token, es_admin, verificar_password
 from .entrenamiento import N_CUADROS, puntos_a_texto, secuencia_a_texto
 from .models import MuestraSena, MuestraSecuencia, Sena, Usuario, validar_video
-from .progreso import META_MOVIMIENTOS, META_MUESTRAS, esta_entrenada
+from .progreso import META_MOVIMIENTOS, META_MUESTRAS, esta_entrenada, faltan
 
 Archivo = namedtuple('Archivo', 'name size')  # archivo falso: solo nombre y tamaño
 MB = 1024 * 1024
@@ -45,8 +45,14 @@ class ProgresoUnitTests(SimpleTestCase):
     def test_la_meta_de_movimientos_basta(self):
         self.assertTrue(esta_entrenada(0, META_MOVIMIENTOS))
 
-    def test_las_metas_son_20_muestras_y_10_movimientos(self):
-        self.assertEqual((META_MUESTRAS, META_MOVIMIENTOS), (20, 10))
+    def test_faltan_resta_lo_guardado_de_cada_meta(self):
+        self.assertEqual(faltan(1, 0), {'muestras': META_MUESTRAS - 1, 'movimientos': META_MOVIMIENTOS})
+
+    def test_faltan_nunca_es_negativo(self):
+        self.assertEqual(faltan(50, 99), {'muestras': 0, 'movimientos': 0})
+
+    def test_las_metas_son_2_muestras_y_2_movimientos(self):
+        self.assertEqual((META_MUESTRAS, META_MOVIMIENTOS), (2, 2))
 
 
 class ValidarImagenUnitTests(SimpleTestCase):
@@ -231,10 +237,17 @@ class SenasApiTests(CarpetaMediaTemporal, APITestCase):
         crear_sena('Hola', self.cat, imagen='/media/imagenes_senas/x.png')
         sena = self.cliente.get('/api/senas/').json()[0]
         for campo in ('id', 'nombre', 'categoria', 'categoria_color', 'imagen', 'video',
-                      'muestras', 'movimientos', 'entrenada', 'es_nueva'):
+                      'muestras', 'movimientos', 'entrenada', 'faltan', 'es_nueva'):
             self.assertIn(campo, sena)
         self.assertEqual(sena['categoria'], 'Saludos')
         self.assertTrue(sena['imagen'].startswith('http'))  # dirección completa
+
+    def test_lista_indica_cuanto_falta_para_entrenar(self):
+        hola = crear_sena('Hola', self.cat)
+        MuestraSena.objects.create(sena=hola, puntos='0')
+        MuestraSecuencia.objects.create(sena=hola, cuadros='0', num_cuadros=10)
+        sena = self.cliente.get('/api/senas/').json()[0]
+        self.assertEqual(sena['faltan'], {'muestras': META_MUESTRAS - 1, 'movimientos': META_MOVIMIENTOS - 1})
 
     def test_filtra_por_texto(self):
         crear_sena('Hola', self.cat, descripcion='saludo simple')
@@ -268,7 +281,7 @@ class SenasApiTests(CarpetaMediaTemporal, APITestCase):
         self.assertEqual(data['nombre'], 'Buenos días')
         self.assertEqual(data['categoria'], 'Saludos')
         self.assertFalse(data['entrenada'])
-        self.assertEqual(data['muestras'], {'actual': 0, 'meta': 20})
+        self.assertEqual(data['muestras'], {'actual': 0, 'meta': META_MUESTRAS})
         self.assertTrue(os.path.exists(ruta_en_disco(Sena.objects.get().imagen)))
 
     def test_crear_guarda_el_texto_de_la_categoria_para_spring(self):

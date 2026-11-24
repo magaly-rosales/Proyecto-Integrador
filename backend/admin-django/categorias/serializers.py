@@ -44,7 +44,14 @@ class CategoriaSerializer(serializers.ModelSerializer):
 class SenaDeCategoriaSerializer(serializers.ModelSerializer):
     """Seña resumida, para la pantalla 'señas de una categoría'."""
     id = serializers.IntegerField(source='id_sena', read_only=True)
+    imagen = serializers.SerializerMethodField()
 
     class Meta:
         model = Sena
         fields = ['id', 'nombre', 'descripcion', 'imagen']
+
+    def get_imagen(self, obj):
+        if not obj.imagen:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.imagen) if request else obj.imagen

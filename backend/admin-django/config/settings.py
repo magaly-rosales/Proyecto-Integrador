@@ -144,6 +144,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ['senas.auth.EsAdmin'],
 }
 
+# Pruebas: crea las tablas (managed = False) en una base temporal test_senasapp_db
+TEST_RUNNER = 'config.test_runner.PruebasRunner'
+
 
 
 

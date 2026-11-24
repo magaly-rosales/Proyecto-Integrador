@@ -46,3 +46,7 @@ export const IconoEditar = (p) => (
 export const IconoSubir = (p) => (
     <Icono {...p}><path d="M12 16V4M7 9l5-5 5 5M4 20h16" /></Icono>
 );
+
+export const IconoDerecha = (p) => (
+    <Icono {...p}><path d="M9 6l6 6-6 6" /></Icono>
+);

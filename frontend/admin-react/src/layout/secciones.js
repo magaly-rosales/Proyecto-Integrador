@@ -12,7 +12,7 @@ export const SECCIONES = [
         ruta: '/categorias',
         etiqueta: 'Categorías',
         titulo: 'Categorías',
-        subtitulo: 'Ordena las señas por tema, con su color e ícono.',
+                subtitulo: 'Ordena las señas por tema, con su imagen y su color.',
         icono: 'categorias',
         contador: (r) => r.categorias.total,
     },

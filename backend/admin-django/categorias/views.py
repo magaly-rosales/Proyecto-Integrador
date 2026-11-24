@@ -80,4 +80,4 @@ class CategoriaViewSet(viewsets.ModelViewSet):
         """GET /api/categorias/<id>/senas/ -> señas de esa categoría."""
         categoria = self.get_object()
         senas = categoria.senas.order_by('nombre')
-        return Response(SenaDeCategoriaSerializer(senas, many=True).data)
+        return Response(SenaDeCategoriaSerializer(senas, many=True, context={'request': request}).data)

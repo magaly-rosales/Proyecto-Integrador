@@ -4,16 +4,19 @@ import useCategorias from '../hooks/useCategorias';
 import { useResumen } from '../layout/ResumenContext';
 import ConfirmarEliminarCategoria from './categorias/ConfirmarEliminarCategoria';
 import FormularioCategoria from './categorias/FormularioCategoria';
+import VerSenasCategoria from './categorias/VerSenasCategoria';
 import { MenuAcciones } from './senas/piezas';
+import TarjetasResumen from './senas/TarjetasResumen';
 import '../estilos/Comun.css';
 import '../estilos/Senas.css';
 import '../estilos/Categorias.css';
 
 export default function Categorias() {
-    const { recargar } = useResumen();
+    const { resumen, recargar } = useResumen();
     const { categorias, cargando, error, reintentar, refrescar } = useCategorias();
     const [formulario, setFormulario] = useState(null); // { categoria: null } = nueva
     const [aEliminar, setAEliminar] = useState(null);
+    const [verSenas, setVerSenas] = useState(null); // categoría cuyas señas se muestran
 
     // Tras crear, editar o eliminar: se cierra la ventana y se actualizan lista y contadores
     const tras = () => {
@@ -23,8 +26,20 @@ export default function Categorias() {
         recargar();
     };
 
+    // Vista de las señas de una categoría (en la misma página)
+    if (verSenas) {
+        return (
+            <>
+                <TarjetasResumen resumen={resumen} />
+                <VerSenasCategoria categoria={verSenas} onVolver={() => setVerSenas(null)} />
+            </>
+        );
+    }
+
     return (
         <>
+            <TarjetasResumen resumen={resumen} />
+
             <div className="barra-pagina">
                 <p className="texto-suave">
                     {cargando ? 'Cargando…' : `${categorias.length} categoría${categorias.length === 1 ? '' : 's'}`}
@@ -83,6 +98,13 @@ export default function Categorias() {
                                 <span className="texto-suave">
                                     {c.total_senas} seña{c.total_senas === 1 ? '' : 's'}
                                 </span>
+                                <button
+                                    type="button"
+                                    className="boton-contorno categoria-ver"
+                                    onClick={() => setVerSenas(c)}
+                                >
+                                    Ver señas
+                                </button>
                             </div>
                         </li>
                     ))}

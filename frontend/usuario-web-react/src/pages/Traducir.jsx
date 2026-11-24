@@ -3,8 +3,8 @@ import CamaraMano from "../components/CamaraMano";
 import ModoSalida from "../components/ModoSalida";
 import ResultadoSena from "../components/ResultadoSena";
 import { usePreferencias } from "../context/usePreferencias";
-import { enviarPuntos, enviarSecuencia } from "../services/api";
 import { hablar } from "../services/voz";
+import { enviarPuntos, enviarSecuencia, registrarTraduccion } from "../services/api";
 
 const INTERVALO_ENVIO_MS = 250; 
 const CONFIRMACIONES = 3; 
@@ -63,10 +63,11 @@ export default function Traducir() {
     setFrase([]);
   }
 
-  function agregarPalabra(palabra) {
+    function agregarPalabra(palabra) {
     fraseRef.current = [...fraseRef.current, palabra];
     habladaRef.current = false;
     setFrase(fraseRef.current);
+    registrarTraduccion(palabra).catch(() => {});
   }
 
   // Señas estáticas (un solo cuadro)

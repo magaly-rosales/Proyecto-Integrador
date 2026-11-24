@@ -22,6 +22,8 @@ public class Usuario {
     private String rol;
     @Column(columnDefinition = "TEXT")
     private String foto;
+    @Column(nullable = false)
+    private boolean activo = true;
 
     public String getFoto() { return foto; }
     public void setFoto(String foto) { this.foto = foto; }
@@ -34,4 +36,10 @@ public class Usuario {
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getRol() { return rol; }
     public void setRol(String rol) { this.rol = rol; }
+    public boolean isActivo() { return activo; }
+    public void setActivo(boolean activo) { this.activo = activo; }
 }
+
+
+
+

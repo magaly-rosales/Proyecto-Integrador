@@ -82,3 +82,12 @@ export function enviarSecuencia(cuadros) {
     body: JSON.stringify(cuadros.map(aPuntos)),
   });
 }
+
+// POST /api/traducciones -> anota la palabra traducida para las estadísticas
+export function registrarTraduccion(nombre) {
+  return peticion("/api/traducciones", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sena: nombre }),
+  });
+}

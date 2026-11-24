@@ -20,6 +20,8 @@ class AuthViewModel : ViewModel() {
         private set
     var loggedUserName by mutableStateOf("Usuario")
         private set
+    var loggedUserEmail by mutableStateOf("")
+        private set
     var registerSuccess by mutableStateOf(false)
         private set
     var forgotPasswordSuccess by mutableStateOf(false)
@@ -36,6 +38,7 @@ class AuthViewModel : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     val user = response.body()!!
                     loggedUserName = user.nombre ?: user.email ?: "Usuario"
+                    loggedUserEmail = user.email ?: if (usernameOrEmail.contains("@")) usernameOrEmail else ""
                     loginSuccess = true
                 } else {
                     errorMessage = "Correo o contraseña incorrectos"
@@ -86,6 +89,13 @@ class AuthViewModel : ViewModel() {
                 isLoading = false
             }
         }
+    }
+
+    fun logout() {
+        loggedUserName = "Usuario"
+        loggedUserEmail = ""
+        loginSuccess = false
+        errorMessage = null
     }
 
     fun resetRegisterSuccess() {

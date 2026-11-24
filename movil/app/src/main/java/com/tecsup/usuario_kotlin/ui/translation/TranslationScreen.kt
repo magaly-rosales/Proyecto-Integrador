@@ -3,8 +3,10 @@ package com.tecsup.usuario_kotlin.ui.translation
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -18,10 +20,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Videocam
+import androidx.compose.material.icons.rounded.Cameraswitch
 import androidx.compose.material.icons.rounded.PanTool
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
@@ -43,12 +45,14 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.tecsup.usuario_kotlin.camera.CameraPreview
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
+import java.util.Locale
 
+// Colores de la interfaz del equipo
 private val BgDark = Color(0xFF08141A)
 private val CardDark = Color(0xFF0F2129)
 private val CardElevated = Color(0xFF132A34)
 private val AccentCyan = Color(0xFF22B8CF)
-private val TextPrimary = Color(0xFFFFFFFF)
+private val TextPrimary = Color.White
 private val TextSecondary = Color(0xFF8A9BA8)
 private val BadgeYellow = Color(0xFFF5B82E)
 
@@ -69,11 +73,16 @@ fun TranslationScreen(
     val currentSign by viewModel.translatedSign.collectAsState()
     val context = LocalContext.current
 
+    // Estado de la cámara
     var cameraError by remember {
         mutableStateOf<String?>(null)
     }
 
-    // MediaPipe entrega 21 puntos por cada mano detectada.
+    var lensFacing by remember {
+        mutableIntStateOf(CameraSelector.LENS_FACING_BACK)
+    }
+
+    // Resultados reales de MediaPipe
     var handCount by remember {
         mutableIntStateOf(0)
     }
@@ -83,11 +92,12 @@ fun TranslationScreen(
     }
 
     val handStatus = when (handCount) {
-        0 -> "Sin manos"
+        0 -> "Sin manos detectadas"
         1 -> "1 mano detectada"
         else -> "2 manos detectadas"
     }
 
+    // Permiso de cámara
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -105,10 +115,33 @@ fun TranslationScreen(
 
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
+            permissionLauncher.launch(
+                Manifest.permission.CAMERA
+            )
         }
     }
 
+    // Motor de voz del compañero
+    var tts by remember {
+        mutableStateOf<TextToSpeech?>(null)
+    }
+
+    DisposableEffect(context) {
+        val textToSpeech = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts?.language = Locale("es", "PE")
+            }
+        }
+
+        tts = textToSpeech
+
+        onDispose {
+            textToSpeech.stop()
+            textToSpeech.shutdown()
+        }
+    }
+
+    // Datos de ejemplo de la interfaz
     val frasesRecientes = remember {
         mutableStateListOf(
             FraseReciente(
@@ -156,24 +189,39 @@ fun TranslationScreen(
             )
         ) {
 
-            // CÁMARA CON MEDIAPIPE
+            // CÁMARA Y MEDIAPIPE
             item {
                 CameraDetectionCard(
                     hasCameraPermission = hasCameraPermission,
                     cameraError = cameraError,
+
                     onRequestPermission = {
                         permissionLauncher.launch(
                             Manifest.permission.CAMERA
                         )
                     },
-                    handStatus = handStatus,
-                    detectedLabel = when (handCount) {
-                        0 -> "Sin puntos"
-                        else -> "$pointCount puntos"
+
+                    onSwitchCamera = {
+                        lensFacing = if (
+                            lensFacing ==
+                            CameraSelector.LENS_FACING_BACK
+                        ) {
+                            CameraSelector.LENS_FACING_FRONT
+                        } else {
+                            CameraSelector.LENS_FACING_BACK
+                        }
+
+                        handCount = 0
+                        pointCount = 0
                     },
+
+                    handStatus = handStatus,
+                    detectedLabel = "$pointCount puntos",
+
                     cameraPreview = {
                         CameraPreview(
                             modifier = Modifier.fillMaxSize(),
+                            lensFacing = lensFacing,
 
                             onHandsDetected = { manos ->
                                 handCount = manos.size
@@ -190,22 +238,52 @@ fun TranslationScreen(
                 )
             }
 
-            // RESULTADO DE LA TRADUCCIÓN
+            // TEXTO RECONOCIDO Y VOZ
             item {
-                val displaySign = currentSign
+                val displaySign =
+                    if (currentSign == "Esperando seña...") {
+                        ""
+                    } else {
+                        currentSign
+                    }
 
                 TranslationResultCard(
                     translatedText = displaySign,
+
                     onSpeakClick = {
-                        onSpeakText(displaySign)
+                        if (displaySign.isNotBlank()) {
+                            tts?.speak(
+                                displaySign,
+                                TextToSpeech.QUEUE_FLUSH,
+                                null,
+                                null
+                            )
+
+                            if (
+                                frasesRecientes.none {
+                                    it.texto == displaySign
+                                }
+                            ) {
+                                frasesRecientes.add(
+                                    0,
+                                    FraseReciente(
+                                        displaySign,
+                                        "Ahora"
+                                    )
+                                )
+                            }
+
+                            onSpeakText(displaySign)
+                        }
                     },
+
                     onClearClick = {
                         viewModel.updateTranslation("")
                     }
                 )
             }
 
-            // FRASES RECIENTES
+            // HISTORIAL VISUAL
             item {
                 Text(
                     text = "FRASES RECIENTES",
@@ -222,6 +300,14 @@ fun TranslationScreen(
                     frase = item,
                     onRepeatClick = {
                         viewModel.updateTranslation(item.texto)
+
+                        tts?.speak(
+                            item.texto,
+                            TextToSpeech.QUEUE_FLUSH,
+                            null,
+                            null
+                        )
+
                         onSpeakText(item.texto)
                     }
                 )
@@ -230,6 +316,7 @@ fun TranslationScreen(
     }
 }
 
+// BARRA SUPERIOR
 @Composable
 private fun SenasTopBar(
     userInitial: String,
@@ -250,7 +337,6 @@ private fun SenasTopBar(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Box(
                 modifier = Modifier
                     .size(38.dp)
@@ -271,13 +357,10 @@ private fun SenasTopBar(
                 )
             }
 
-            Spacer(
-                modifier = Modifier.width(10.dp)
-            )
+            Spacer(modifier = Modifier.width(10.dp))
 
             Text(
                 text = buildAnnotatedString {
-
                     withStyle(
                         SpanStyle(
                             color = TextPrimary,
@@ -303,11 +386,9 @@ private fun SenasTopBar(
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Box(
                 modifier = Modifier.padding(end = 12.dp)
             ) {
-
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
                     contentDescription = "Notificaciones",
@@ -316,7 +397,6 @@ private fun SenasTopBar(
                 )
 
                 if (notificationCount > 0) {
-
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -329,7 +409,6 @@ private fun SenasTopBar(
                             .background(BadgeYellow),
                         contentAlignment = Alignment.Center
                     ) {
-
                         Text(
                             text = notificationCount.toString(),
                             color = BgDark,
@@ -347,7 +426,6 @@ private fun SenasTopBar(
                     .background(AccentCyan),
                 contentAlignment = Alignment.Center
             ) {
-
                 Text(
                     text = userInitial,
                     color = BgDark,
@@ -359,16 +437,17 @@ private fun SenasTopBar(
     }
 }
 
+// TARJETA DE CÁMARA
 @Composable
 private fun CameraDetectionCard(
     hasCameraPermission: Boolean,
     cameraError: String?,
     onRequestPermission: () -> Unit,
+    onSwitchCamera: () -> Unit,
     handStatus: String,
     detectedLabel: String,
     cameraPreview: @Composable () -> Unit
 ) {
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -381,13 +460,10 @@ private fun CameraDetectionCard(
                 RoundedCornerShape(20.dp)
             )
     ) {
-
         if (hasCameraPermission) {
-
             cameraPreview()
 
             cameraError?.let { error ->
-
                 Text(
                     text = error,
                     color = MaterialTheme.colorScheme.error,
@@ -396,14 +472,11 @@ private fun CameraDetectionCard(
                         .padding(12.dp)
                 )
             }
-
         } else {
-
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-
                 Button(
                     onClick = onRequestPermission,
                     colors = ButtonDefaults.buttonColors(
@@ -411,7 +484,6 @@ private fun CameraDetectionCard(
                         contentColor = BgDark
                     )
                 ) {
-
                     Text(
                         text = "Permitir acceso a la cámara",
                         fontWeight = FontWeight.Bold
@@ -420,14 +492,13 @@ private fun CameraDetectionCard(
             }
         }
 
-        // ELEMENTOS VISUALES DE LA CÁMARA
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(14.dp)
         ) {
 
-            // ESTADO REAL DE LAS MANOS
+            // CONTADOR REAL DE MANOS
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -441,7 +512,6 @@ private fun CameraDetectionCard(
                     ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Box(
                     modifier = Modifier
                         .size(8.dp)
@@ -449,9 +519,7 @@ private fun CameraDetectionCard(
                         .background(AccentCyan)
                 )
 
-                Spacer(
-                    modifier = Modifier.width(6.dp)
-                )
+                Spacer(modifier = Modifier.width(6.dp))
 
                 Text(
                     text = handStatus,
@@ -461,22 +529,22 @@ private fun CameraDetectionCard(
                 )
             }
 
-            // ÍCONO DE PANTALLA COMPLETA
-            Box(
+            // CAMBIAR CÁMARA
+            IconButton(
+                onClick = onSwitchCamera,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .size(36.dp)
+                    .size(38.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(
                         CardElevated.copy(alpha = 0.85f)
-                    ),
-                contentAlignment = Alignment.Center
+                    )
             ) {
-
                 Icon(
-                    imageVector = Icons.Outlined.Fullscreen,
-                    contentDescription = "Expandir cámara",
-                    tint = TextSecondary,
+                    imageVector = Icons.Rounded.Cameraswitch,
+                    contentDescription =
+                        "Cambiar cámara frontal/trasera",
+                    tint = AccentCyan,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -490,11 +558,9 @@ private fun CameraDetectionCard(
                     .height(185.dp),
                 contentAlignment = Alignment.Center
             ) {
-
                 Canvas(
                     modifier = Modifier.fillMaxSize()
                 ) {
-
                     drawRoundRect(
                         color = AccentCyan.copy(alpha = 0.75f),
                         style = Stroke(
@@ -511,7 +577,6 @@ private fun CameraDetectionCard(
                     )
                 }
 
-                // CANTIDAD DE PUNTOS DETECTADOS
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -523,7 +588,6 @@ private fun CameraDetectionCard(
                             vertical = 3.dp
                         )
                 ) {
-
                     Text(
                         text = detectedLabel,
                         color = BgDark,
@@ -536,28 +600,23 @@ private fun CameraDetectionCard(
     }
 }
 
+// RESULTADO Y BOTÓN DE VOZ
 @Composable
 private fun TranslationResultCard(
     translatedText: String,
     onSpeakClick: () -> Unit,
     onClearClick: () -> Unit
 ) {
-
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         color = CardDark,
-        border = BorderStroke(
-            1.dp,
-            CardElevated
-        )
+        border = BorderStroke(1.dp, CardElevated)
     ) {
-
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
             Text(
                 text = "TRADUCCIÓN",
                 color = TextSecondary,
@@ -569,17 +628,15 @@ private fun TranslationResultCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
+                    imageVector =
+                        Icons.AutoMirrored.Rounded.VolumeUp,
                     contentDescription = null,
                     tint = AccentCyan,
                     modifier = Modifier.size(22.dp)
                 )
 
-                Spacer(
-                    modifier = Modifier.width(10.dp)
-                )
+                Spacer(modifier = Modifier.width(10.dp))
 
                 Text(
                     text = translatedText.ifBlank {
@@ -593,11 +650,10 @@ private fun TranslationResultCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement =
+                    Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
-                // BOTÓN DE VOZ
                 Button(
                     onClick = onSpeakClick,
                     modifier = Modifier
@@ -609,16 +665,14 @@ private fun TranslationResultCard(
                         contentColor = BgDark
                     )
                 ) {
-
                     Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
+                        imageVector =
+                            Icons.AutoMirrored.Rounded.VolumeUp,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
 
-                    Spacer(
-                        modifier = Modifier.width(8.dp)
-                    )
+                    Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
                         text = "Decir en voz alta",
@@ -627,7 +681,6 @@ private fun TranslationResultCard(
                     )
                 }
 
-                // LIMPIAR TRADUCCIÓN
                 OutlinedButton(
                     onClick = onClearClick,
                     modifier = Modifier.size(48.dp),
@@ -637,16 +690,16 @@ private fun TranslationResultCard(
                         1.dp,
                         CardElevated
                     ),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = CardElevated.copy(
-                            alpha = 0.5f
-                        ),
-                        contentColor = AccentCyan
-                    )
+                    colors =
+                        ButtonDefaults.outlinedButtonColors(
+                            containerColor =
+                                CardElevated.copy(alpha = 0.5f),
+                            contentColor = AccentCyan
+                        )
                 ) {
-
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Backspace,
+                        imageVector =
+                            Icons.AutoMirrored.Outlined.Backspace,
                         contentDescription = "Borrar texto",
                         modifier = Modifier.size(20.dp)
                     )
@@ -656,22 +709,18 @@ private fun TranslationResultCard(
     }
 }
 
+// FRASES RECIENTES
 @Composable
 private fun RecentPhraseItem(
     frase: FraseReciente,
     onRepeatClick: () -> Unit
 ) {
-
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         color = CardDark,
-        border = BorderStroke(
-            1.dp,
-            CardElevated
-        )
+        border = BorderStroke(1.dp, CardElevated)
     ) {
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -680,13 +729,12 @@ private fun RecentPhraseItem(
                     vertical = 14.dp
                 ),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement =
+                Arrangement.SpaceBetween
         ) {
-
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-
                 Text(
                     text = frase.texto,
                     color = TextPrimary,
@@ -694,9 +742,7 @@ private fun RecentPhraseItem(
                     fontWeight = FontWeight.SemiBold
                 )
 
-                Spacer(
-                    modifier = Modifier.height(2.dp)
-                )
+                Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
                     text = frase.tiempo,
@@ -705,10 +751,7 @@ private fun RecentPhraseItem(
                 )
             }
 
-            IconButton(
-                onClick = onRepeatClick
-            ) {
-
+            IconButton(onClick = onRepeatClick) {
                 Icon(
                     imageVector = Icons.Rounded.Refresh,
                     contentDescription = "Repetir frase",
@@ -719,6 +762,7 @@ private fun RecentPhraseItem(
     }
 }
 
+// NAVEGACIÓN INFERIOR
 @Composable
 fun SenasBottomBar(
     selectedTab: Int,
@@ -726,12 +770,10 @@ fun SenasBottomBar(
     onSelectSenas: () -> Unit,
     onSelectPerfil: () -> Unit
 ) {
-
     NavigationBar(
         containerColor = BgDark,
         tonalElevation = 0.dp
     ) {
-
         NavigationBarItem(
             selected = selectedTab == 0,
             onClick = onSelectTraducir,
@@ -742,10 +784,7 @@ fun SenasBottomBar(
                 )
             },
             label = {
-                Text(
-                    "Traducir",
-                    fontSize = 12.sp
-                )
+                Text("Traducir", fontSize = 12.sp)
             },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = AccentCyan,
@@ -766,10 +805,7 @@ fun SenasBottomBar(
                 )
             },
             label = {
-                Text(
-                    "Señas",
-                    fontSize = 12.sp
-                )
+                Text("Señas", fontSize = 12.sp)
             },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = AccentCyan,
@@ -790,10 +826,7 @@ fun SenasBottomBar(
                 )
             },
             label = {
-                Text(
-                    "Perfil",
-                    fontSize = 12.sp
-                )
+                Text("Perfil", fontSize = 12.sp)
             },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = AccentCyan,

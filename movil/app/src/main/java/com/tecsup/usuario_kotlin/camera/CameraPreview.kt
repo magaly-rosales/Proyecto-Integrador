@@ -6,6 +6,7 @@ import android.os.Looper
 
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -16,6 +17,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -31,7 +33,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 @Composable
 fun CameraPreview(
     modifier: Modifier = Modifier,
+
+    // Cámara seleccionada por el usuario
+    lensFacing: Int = CameraSelector.LENS_FACING_BACK,
+
+    // Resultados de MediaPipe
     onHandsDetected: (List<List<PuntoManoDto>>) -> Unit = {},
+
+    // Análisis adicional de fotogramas (opcional)
+    onFrameAnalyzed: ((ImageProxy) -> Unit)? = null,
+
+    // Mensajes de error
     onError: (String?) -> Unit = {}
 ) {
 
@@ -39,9 +51,10 @@ fun CameraPreview(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val handsCallback by rememberUpdatedState(onHandsDetected)
+    val frameCallback by rememberUpdatedState(onFrameAnalyzed)
     val errorCallback by rememberUpdatedState(onError)
 
-    // Vista previa de la webcam
+    // Crear la vista de la cámara una sola vez
     val previewView = remember(context) {
         PreviewView(context).apply {
             implementationMode =
@@ -52,7 +65,13 @@ fun CameraPreview(
         }
     }
 
-    DisposableEffect(lifecycleOwner, previewView) {
+    // Reiniciar CameraX cuando cambia la cámara frontal/trasera
+    DisposableEffect(
+        lifecycleOwner,
+        previewView,
+        lensFacing,
+        onFrameAnalyzed != null
+    ) {
 
         val active = AtomicBoolean(true)
         val executor = Executors.newSingleThreadExecutor()
@@ -60,7 +79,7 @@ fun CameraPreview(
 
         var provider: ProcessCameraProvider? = null
 
-        // Vista previa de CameraX
+        // 1. Crear la vista previa de CameraX
         val preview = Preview.Builder()
             .build()
             .apply {
@@ -69,15 +88,14 @@ fun CameraPreview(
                 )
             }
 
-        // Analizador de imágenes
+        // 2. Crear analizador de imágenes
         val imageAnalysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(
                 ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST
             )
             .build()
 
-        // Inicializar MediaPipe sin cerrar la aplicación
-        // si una biblioteca nativa no es compatible.
+        // 3. Inicializar detector de manos de MediaPipe
         val helper: HandLandmarkerHelper? = try {
 
             HandLandmarkerHelper(context)
@@ -85,7 +103,7 @@ fun CameraPreview(
         } catch (e: LinkageError) {
 
             errorCallback(
-                "No se pudo cargar la biblioteca de MediaPipe: " +
+                "Biblioteca de MediaPipe incompatible: " +
                         (e.localizedMessage ?: "error nativo")
             )
 
@@ -101,9 +119,15 @@ fun CameraPreview(
             null
         }
 
-        if (helper != null) {
+        // Evitar mostrar el mismo error muchas veces
+        val errorDetectado = AtomicBoolean(false)
 
-            val errorDetectado = AtomicBoolean(false)
+        // 4. Analizar fotogramas si MediaPipe está disponible
+        // o si existe un analizador adicional
+        val usarAnalisis =
+            helper != null || onFrameAnalyzed != null
+
+        if (usarAnalisis) {
 
             imageAnalysis.setAnalyzer(executor) { imageProxy ->
 
@@ -111,21 +135,34 @@ fun CameraPreview(
 
                     if (active.get()) {
 
-                        // Detectar manos y extraer sus 21 puntos
-                        val manos = helper.detectar(imageProxy)
+                        // Callback adicional del equipo.
+                        // No debe cerrar imageProxy ni usarlo
+                        // después de retornar.
+                        frameCallback?.invoke(imageProxy)
 
-                        // Enviar resultados a Compose
-                        mainHandler.post {
+                        if (helper != null) {
 
-                            if (active.get()) {
-                                handsCallback(manos)
+                            // MediaPipe detecta las manos
+                            val manos = helper.detectar(imageProxy)
+
+                            // Actualizar Compose en el hilo principal
+                            mainHandler.post {
+
+                                if (active.get()) {
+                                    handsCallback(manos)
+                                }
                             }
                         }
                     }
 
                 } catch (e: LinkageError) {
 
-                    if (errorDetectado.compareAndSet(false, true)) {
+                    if (
+                        errorDetectado.compareAndSet(
+                            false,
+                            true
+                        )
+                    ) {
 
                         mainHandler.post {
 
@@ -140,13 +177,18 @@ fun CameraPreview(
 
                 } catch (e: Exception) {
 
-                    if (errorDetectado.compareAndSet(false, true)) {
+                    if (
+                        errorDetectado.compareAndSet(
+                            false,
+                            true
+                        )
+                    ) {
 
                         mainHandler.post {
 
                             if (active.get()) {
                                 errorCallback(
-                                    "Error al detectar manos: " +
+                                    "Error analizando cámara: " +
                                             (e.localizedMessage ?: "error")
                                 )
                             }
@@ -161,7 +203,7 @@ fun CameraPreview(
             }
         }
 
-        // Obtener proveedor de CameraX
+        // 5. Obtener proveedor de CameraX
         val cameraFuture =
             ProcessCameraProvider.getInstance(context)
 
@@ -173,16 +215,36 @@ fun CameraPreview(
 
                     val cameraProvider = cameraFuture.get()
 
-                    // Priorizar cámara trasera del emulador
+                    // Cámara solicitada desde TranslationScreen
+                    val preferred = if (
+                        lensFacing ==
+                        CameraSelector.LENS_FACING_FRONT
+                    ) {
+                        CameraSelector.DEFAULT_FRONT_CAMERA
+                    } else {
+                        CameraSelector.DEFAULT_BACK_CAMERA
+                    }
+
+                    // Cámara alternativa
+                    val alternative = if (
+                        lensFacing ==
+                        CameraSelector.LENS_FACING_FRONT
+                    ) {
+                        CameraSelector.DEFAULT_BACK_CAMERA
+                    } else {
+                        CameraSelector.DEFAULT_FRONT_CAMERA
+                    }
+
+                    // 6. Elegir cámara disponible
                     val selector = when {
 
-                        cameraProvider.hasCamera(
-                            CameraSelector.DEFAULT_BACK_CAMERA
-                        ) -> CameraSelector.DEFAULT_BACK_CAMERA
+                        cameraProvider.hasCamera(preferred) -> {
+                            preferred
+                        }
 
-                        cameraProvider.hasCamera(
-                            CameraSelector.DEFAULT_FRONT_CAMERA
-                        ) -> CameraSelector.DEFAULT_FRONT_CAMERA
+                        cameraProvider.hasCamera(alternative) -> {
+                            alternative
+                        }
 
                         else -> null
                     }
@@ -190,14 +252,14 @@ fun CameraPreview(
                     if (selector == null) {
 
                         errorCallback(
-                            "No hay ninguna cámara disponible"
+                            "No hay cámaras disponibles"
                         )
 
                     } else {
 
-                        if (helper != null) {
+                        // 7. Asociar los casos de uso al ciclo de vida
+                        if (usarAnalisis) {
 
-                            // Cámara + MediaPipe
                             cameraProvider.bindToLifecycle(
                                 lifecycleOwner,
                                 selector,
@@ -205,11 +267,9 @@ fun CameraPreview(
                                 imageAnalysis
                             )
 
-                            errorCallback(null)
-
                         } else {
 
-                            // Mantener webcam aunque MediaPipe falle
+                            // Mostrar webcam aunque MediaPipe falle
                             cameraProvider.bindToLifecycle(
                                 lifecycleOwner,
                                 selector,
@@ -218,12 +278,25 @@ fun CameraPreview(
                         }
 
                         provider = cameraProvider
+
+                        // Limpiar el error solamente si
+                        // MediaPipe inició correctamente
+                        if (helper != null) {
+                            errorCallback(null)
+                        }
+
+                        // Reiniciar el contador de manos
+                        mainHandler.post {
+                            if (active.get()) {
+                                handsCallback(emptyList())
+                            }
+                        }
                     }
 
                 } catch (e: Exception) {
 
                     errorCallback(
-                        "Error de cámara: " +
+                        "Error al abrir la cámara: " +
                                 (e.localizedMessage ?: "error")
                     )
                 }
@@ -231,15 +304,15 @@ fun CameraPreview(
 
         }, ContextCompat.getMainExecutor(context))
 
+        // 8. Liberar recursos al salir o cambiar de cámara
         onDispose {
 
-            // Detener actualizaciones
             active.set(false)
 
-            // Desactivar análisis
+            // Detener análisis
             imageAnalysis.clearAnalyzer()
 
-            // Liberar usos de CameraX de esta pantalla
+            // Liberar únicamente los usos de esta pantalla
             provider?.let { cameraProvider ->
 
                 runCatching {
@@ -250,12 +323,15 @@ fun CameraPreview(
                 }
             }
 
-            // Cerrar detector en el hilo de análisis
+            // Cerrar MediaPipe después de los análisis pendientes
             executor.execute {
+
                 try {
                     helper?.cerrar()
                 } catch (_: Exception) {
-                    // Evitar fallos al liberar el detector
+                    // Evitar errores al liberar recursos
+                } catch (_: LinkageError) {
+                    // Evitar errores nativos durante el cierre
                 }
             }
 
@@ -263,7 +339,7 @@ fun CameraPreview(
         }
     }
 
-    // Mostrar cámara en Compose
+    // 9. Mostrar cámara en Jetpack Compose
     AndroidView(
         factory = { previewView },
         modifier = modifier.fillMaxSize()

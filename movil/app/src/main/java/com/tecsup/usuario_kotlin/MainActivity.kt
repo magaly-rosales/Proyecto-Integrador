@@ -16,6 +16,7 @@ import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
 import com.tecsup.usuario_kotlin.ui.home.HomeScreen
+import com.tecsup.usuario_kotlin.ui.home.ProfileScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
@@ -96,13 +97,15 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         "perfil" -> {
-                            // Pantalla temporal conectada al botón Perfil hasta crear ProfileScreen
-                            HomeScreen(
-                                username = userName,
-                                onNavigateToTranslator = {
-                                    currentScreen = "translation"
-                                },
-                                viewModel = translationViewModel
+                            ProfileScreen(
+                                userName = authViewModel.loggedUserName,
+                                userEmail = authViewModel.loggedUserEmail,
+                                onNavigateToTraducir = { currentScreen = "translation" },
+                                onNavigateToSenas = { currentScreen = "home" },
+                                onLogout = {
+                                    authViewModel.logout()
+                                    currentScreen = "login"
+                                }
                             )
                         }
                     }

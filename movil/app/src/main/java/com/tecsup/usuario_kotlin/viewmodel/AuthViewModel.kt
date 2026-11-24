@@ -18,6 +18,8 @@ class AuthViewModel : ViewModel() {
         private set
     var loginSuccess by mutableStateOf(false)
         private set
+    var loggedUserName by mutableStateOf("Usuario")
+        private set
     var registerSuccess by mutableStateOf(false)
         private set
     var forgotPasswordSuccess by mutableStateOf(false)
@@ -32,9 +34,11 @@ class AuthViewModel : ViewModel() {
             try {
                 val response = RetrofitClient.apiService.login(LoginRequest(usernameOrEmail, password))
                 if (response.isSuccessful && response.body() != null) {
+                    val user = response.body()!!
+                    loggedUserName = user.nombre ?: user.email ?: "Usuario"
                     loginSuccess = true
                 } else {
-                    errorMessage = "Credenciales incorrectas o error en el servidor"
+                    errorMessage = "Correo o contraseña incorrectos"
                 }
             } catch (e: Exception) {
                 errorMessage = "Error de conexión: ${e.localizedMessage}"
@@ -53,7 +57,7 @@ class AuthViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     registerSuccess = true
                 } else {
-                    errorMessage = "Error al registrar usuario o datos ya existentes"
+                    errorMessage = "Error al registrar usuario o correo ya existente"
                 }
             } catch (e: Exception) {
                 errorMessage = "Error de conexión: ${e.localizedMessage}"

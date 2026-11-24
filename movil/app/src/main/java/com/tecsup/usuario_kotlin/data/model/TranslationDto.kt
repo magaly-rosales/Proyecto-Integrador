@@ -1,18 +1,47 @@
 package com.tecsup.usuario_kotlin.data.model
 
-import com.google.gson.annotations.SerializedName
-
-data class SenaDto(
-    val id: Int,
-    val nombre: String,
-    val categoria: CategoriaDto?, // Si el backend devuelve solo el texto, cámbialo a String?
-    val descripcion: String?,
-    @SerializedName("video_url") // Ajustaremos este nombre exacto cuando revisemos el backend
-    val videoUrl: String?,
-    val entrenado: Boolean = false
+// Respuesta completa de GET /api/catalogo
+data class CatalogoResponse(
+    val total: Int,
+    val categorias: List<CategoriaCatalogoDto>,
+    val senas: List<SenaCatalogoDto>
 )
 
-data class CategoriaDto(
+data class CategoriaCatalogoDto(
+    val id: Int?,
+    val nombre: String,
+    val color: String?,
+    val icono: String?,
+    val imagen: String?,
+    val total: Int,
+    val hayNuevas: Boolean
+)
+
+data class SenaCatalogoDto(
     val id: Int,
-    val nombre: String
+    val nombre: String,
+    val descripcion: String?,
+    val imagen: String?,
+    val fecha: String?,
+    val nueva: Boolean,
+    val idCategoria: Int?,
+    val categoria: String?,
+    val color: String?,
+    val icono: String?,
+    val imagenCategoria: String?,
+    val video: String?
+)
+
+// DTO para enviar los 21 o 42 landmarks de la mano a /api/reconocimiento/puntos
+data class PuntoManoDto(
+    val x: Float,
+    val y: Float,
+    val z: Float
+)
+
+data class ReconocimientoResponse(
+    val sena: String? = null,
+    val nombre: String? = null,
+    val confianza: Double? = null,
+    val mensaje: String? = null
 )

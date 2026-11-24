@@ -31,7 +31,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             UsuariokotlinTheme {
                 var currentScreen by remember { mutableStateOf("login") }
-                var loggedUsername by remember { mutableStateOf("Usuario") }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -73,7 +72,7 @@ class MainActivity : ComponentActivity() {
                         }
                         "home" -> {
                             HomeScreen(
-                                username = loggedUsername,
+                                username = authViewModel.loggedUserName,
                                 onNavigateToTranslator = {
                                     currentScreen = "translation"
                                 },

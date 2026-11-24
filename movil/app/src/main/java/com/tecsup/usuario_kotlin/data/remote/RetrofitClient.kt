@@ -4,9 +4,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-    // Si usas EMULADOR: "http://10.0.2.2:8080/"
-    // Si usas CELULAR FÍSICO (SM-A075M): pon la IPv4 de tu PC (ej. "http://10.200.168.XX:8080/")
-    private const val BASE_URL = "http://10.0.2.2:8080/"
+    // Emulador: "http://10.0.2.2:8081/"
+    // Celular físico (SM-A075M): reemplaza por tu IPv4 (ej. "http://10.200.168.XX:8081/")
+    private const val BASE_URL = "http://10.0.2.2:8081/"
 
     val apiService: ApiService by lazy {
         Retrofit.Builder()

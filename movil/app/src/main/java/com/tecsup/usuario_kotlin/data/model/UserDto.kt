@@ -6,19 +6,25 @@ data class LoginRequest(
 )
 
 data class LoginResponse(
-    val token: String,
-    val username: String
+    val idUsuario: Int? = null,
+    val nombre: String? = null,
+    val email: String? = null,
+    val rol: String? = null,
+    val foto: String? = null,
+    val tokenAdmin: String? = null
 )
 
 data class RegisterRequest(
-    val username: String,
+    val nombre: String,
     val email: String,
     val password: String
 )
 
 data class RegisterResponse(
-    val message: String? = null,
-    val success: Boolean = true
+    val idUsuario: Int? = null,
+    val nombre: String? = null,
+    val email: String? = null,
+    val error: String? = null
 )
 
 data class ForgotPasswordRequest(

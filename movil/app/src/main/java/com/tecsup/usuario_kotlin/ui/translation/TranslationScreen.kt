@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.tecsup.usuario_kotlin.camera.CameraPreview
+import com.tecsup.usuario_kotlin.camera.HandSkeletonOverlay
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
 import java.util.Locale
 
@@ -69,6 +70,9 @@ fun TranslationScreen(
     onSpeakText: (String) -> Unit = {}
 ) {
     val currentSign by viewModel.translatedSign.collectAsState()
+    val confidence by viewModel.confidence.collectAsState()
+    val handLandmarks by viewModel.handLandmarks.collectAsState()
+    val handDetected = handLandmarks.isNotEmpty()
     val context = LocalContext.current
 
     var cameraError by remember { mutableStateOf<String?>(null) }
@@ -144,9 +148,16 @@ fun TranslationScreen(
             contentPadding = PaddingValues(top = 8.dp, bottom = 20.dp)
         ) {
             item {
+                val badgeText = when {
+                    currentSign.isBlank() || currentSign == "Esperando seña..." -> "BUSCANDO SEÑA..."
+                    confidence != null -> "${currentSign.uppercase()} · $confidence%"
+                    else -> currentSign.uppercase()
+                }
+
                 CameraDetectionCard(
                     hasCameraPermission = hasCameraPermission,
                     cameraError = cameraError,
+                    handDetected = handDetected,
                     onRequestPermission = { permissionLauncher.launch(Manifest.permission.CAMERA) },
                     onSwitchCamera = {
                         lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
@@ -155,17 +166,20 @@ fun TranslationScreen(
                             CameraSelector.LENS_FACING_BACK
                         }
                     },
-                    detectedLabel = if (currentSign.isBlank() || currentSign == "Esperando seña...") {
-                        "BUSCANDO SEÑA..."
-                    } else {
-                        currentSign.uppercase()
-                    },
+                    detectedLabel = badgeText,
                     cameraPreview = {
-                        CameraPreview(
-                            modifier = Modifier.fillMaxSize(),
-                            lensFacing = lensFacing,
-                            onError = { error -> cameraError = error }
-                        )
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            CameraPreview(
+                                modifier = Modifier.fillMaxSize(),
+                                lensFacing = lensFacing,
+                                onError = { error -> cameraError = error }
+                            )
+                            HandSkeletonOverlay(
+                                landmarks = handLandmarks,
+                                isFrontCamera = lensFacing == CameraSelector.LENS_FACING_FRONT,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 )
             }
@@ -305,6 +319,7 @@ private fun SenasTopBar(
 private fun CameraDetectionCard(
     hasCameraPermission: Boolean,
     cameraError: String?,
+    handDetected: Boolean,
     onRequestPermission: () -> Unit,
     onSwitchCamera: () -> Unit,
     detectedLabel: String,
@@ -363,11 +378,11 @@ private fun CameraDetectionCard(
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(AccentCyan)
+                        .background(if (handDetected) AccentCyan else TextSecondary)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Mano detectada",
+                    text = if (handDetected) "Mano detectada" else "Buscando mano...",
                     color = TextPrimary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium

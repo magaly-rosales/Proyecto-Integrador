@@ -78,9 +78,8 @@ class MainActivity : ComponentActivity() {
                         "home" -> {
                             HomeScreen(
                                 username = userName,
-                                onNavigateToTranslator = {
-                                    currentScreen = "translation"
-                                },
+                                onNavigateToTranslator = { currentScreen = "translation" },
+                                onNavigateToPerfil = { currentScreen = "perfil" },
                                 viewModel = translationViewModel
                             )
                         }

@@ -1,3 +1,4 @@
+
 package com.tecsup.usuario_kotlin.ui.translation
 
 import android.Manifest
@@ -19,17 +20,21 @@ import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
 fun TranslationScreen(
     viewModel: TranslationViewModel
 ) {
-
-    // Resultado actual del traductor
     val currentSign by viewModel.translatedSign.collectAsState()
     val context = LocalContext.current
 
-    // Mensaje de error de la cámara
     var cameraError by remember {
         mutableStateOf<String?>(null)
     }
 
-    // Comprobar permiso de cámara
+    var handCount by remember {
+        mutableIntStateOf(0)
+    }
+
+    var pointCount by remember {
+        mutableIntStateOf(0)
+    }
+
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -39,7 +44,6 @@ fun TranslationScreen(
         )
     }
 
-    // Solicitar permiso al usuario
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -48,59 +52,58 @@ fun TranslationScreen(
 
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
-            permissionLauncher.launch(
-                Manifest.permission.CAMERA
-            )
+            permissionLauncher.launch(Manifest.permission.CAMERA)
         }
+    }
+
+    val handStatus = when (handCount) {
+        0 -> "No se detectan manos"
+        1 -> "1 mano detectada ($pointCount puntos)"
+        else -> "2 manos detectadas ($pointCount puntos)"
     }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp),
-
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            // TÍTULO
             Text(
                 text = "Traductor de Señas en Vivo",
                 style = MaterialTheme.typography.headlineMedium
             )
 
-            // ÁREA DE CÁMARA
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(400.dp),
-
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 4.dp
                 )
             ) {
-
                 if (hasCameraPermission) {
-
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-
-                        // Cámara real mediante CameraX
                         CameraPreview(
                             modifier = Modifier.fillMaxSize(),
+                            onHandsDetected = { manos ->
+                                handCount = manos.size
+                                pointCount = manos.sumOf {
+                                    it.size
+                                }
+                            },
                             onError = { error ->
                                 cameraError = error
                             }
                         )
 
-                        // Mostrar errores si ocurren
                         cameraError?.let { error ->
                             Text(
                                 text = error,
@@ -109,15 +112,11 @@ fun TranslationScreen(
                             )
                         }
                     }
-
                 } else {
-
-                    // Mostrar botón si falta el permiso
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-
                         Button(
                             onClick = {
                                 permissionLauncher.launch(
@@ -131,13 +130,16 @@ fun TranslationScreen(
                 }
             }
 
-            // RESULTADO DE RECONOCIMIENTO
             Text(
-                text = "Seña detectada: $currentSign",
-                style = MaterialTheme.typography.titleLarge
+                text = handStatus,
+                style = MaterialTheme.typography.titleMedium
             )
 
-            // BOTÓN TEMPORAL DE PRUEBA
+            Text(
+                text = "Seña detectada: $currentSign",
+                style = MaterialTheme.typography.bodyLarge
+            )
+
             Button(
                 onClick = {
                     viewModel.updateTranslation("¡Hola!")

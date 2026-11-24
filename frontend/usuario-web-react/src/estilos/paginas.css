@@ -1,0 +1,350 @@
+/* Perfil y Configuración: letras grandes, tarjetas con el diseño de la web y animaciones suaves.
+   Se carga después de diseno.css. */
+
+@keyframes sa-subir {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes sa-aro {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(58, 166, 174, 0.35); }
+  50% { box-shadow: 0 0 0 10px rgba(58, 166, 174, 0.1); }
+}
+
+:root[data-tema] .sa-perfil {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 36px 32px 56px;
+  gap: 24px;
+  color: var(--t-texto);
+}
+
+/* Entrada escalonada de cada bloque */
+:root[data-tema] .sa-perfil > *,
+:root[data-tema] .sa-perfil-grid > * {
+  animation: sa-subir 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+:root[data-tema] .sa-perfil > :nth-child(2) { animation-delay: 0.08s; }
+:root[data-tema] .sa-perfil > :nth-child(3) { animation-delay: 0.16s; }
+:root[data-tema] .sa-perfil > :nth-child(4) { animation-delay: 0.24s; }
+:root[data-tema] .sa-perfil > :nth-child(5) { animation-delay: 0.32s; }
+:root[data-tema] .sa-perfil-grid > :nth-child(2) { animation-delay: 0.12s; }
+
+/* Título */
+:root[data-tema] .sa-perfil .sa-titulo-pagina h1 {
+  font-size: 2.8rem;
+  letter-spacing: -0.5px;
+  color: var(--t-texto);
+}
+
+:root[data-tema] .sa-perfil .sa-titulo-pagina p {
+  margin-top: 8px;
+  font-size: 1.3rem;
+  color: var(--t-tenue);
+}
+
+/* Tarjetas */
+:root[data-tema] .sa-perfil-tarjeta,
+:root[data-tema] .sa-perfil-cabeza {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px 32px;
+  color: var(--t-texto);
+  background: var(--t-sup);
+  border: 1px solid var(--t-borde);
+  border-radius: 20px;
+  box-shadow: var(--t-sombra);
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+:root[data-tema] .sa-perfil-tarjeta:hover {
+  border-color: var(--t-acento);
+}
+
+:root[data-tema] .sa-perfil-tarjeta h3 {
+  margin: 0 0 4px;
+  padding-bottom: 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--t-acento-texto);
+  border-bottom: 1px solid var(--t-borde);
+}
+
+:root[data-tema] .sa-perfil-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+/* Cabeza del perfil: foto grande + datos */
+:root[data-tema] .sa-perfil-cabeza {
+  flex-direction: row;
+  align-items: center;
+  gap: 32px;
+  border-top: 4px solid var(--t-acento);
+}
+
+:root[data-tema] .sa-perfil .sa-avatar-grande {
+  flex: none;
+  width: 150px;
+  height: 150px;
+  font-size: 4rem;
+  animation: sa-aro 3.2s ease-in-out infinite;
+  transition: transform 0.25s;
+}
+
+:root[data-tema] .sa-perfil .sa-avatar-grande:hover {
+  transform: scale(1.05) rotate(-2deg);
+}
+
+:root[data-tema] .sa-perfil-info h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+}
+
+:root[data-tema] .sa-perfil-info p {
+  margin: 6px 0 12px;
+  font-size: 1.3rem;
+  color: var(--t-tenue);
+}
+
+:root[data-tema] .sa-rol {
+  display: inline-block;
+  padding: 6px 16px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--t-acento-texto);
+  background: var(--t-chip);
+  border-radius: 999px;
+}
+
+:root[data-tema] .sa-perfil-acciones {
+  gap: 12px;
+  margin: 18px 0 4px;
+}
+
+/* Campos */
+:root[data-tema] .sa-perfil .campo {
+  display: grid;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--t-suave);
+}
+
+:root[data-tema] .sa-perfil .campo input {
+  width: 100%;
+  height: 60px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--t-texto);
+  background: var(--t-item);
+  border: 1px solid var(--t-borde);
+  border-radius: 14px;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+:root[data-tema] .sa-perfil .campo input:focus {
+  outline: none;
+  border-color: var(--t-acento);
+  box-shadow: 0 0 0 4px rgba(58, 166, 174, 0.22);
+}
+
+:root[data-tema] .sa-perfil .campo-password .ojo {
+  right: 14px;
+  color: var(--t-tenue);
+}
+
+:root[data-tema] .sa-perfil .campo-password .ojo:hover {
+  color: var(--t-acento-texto);
+}
+
+/* Botones */
+:root[data-tema] .sa-perfil .sa-pbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 26px;
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--t-acento);
+  background: var(--t-boton);
+  border: 1px solid var(--t-acento);
+  border-radius: 14px;
+  box-shadow: none;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+:root[data-tema] .sa-perfil .sa-pbtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: none;
+  background: var(--t-boton);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-tema] .sa-perfil .sa-pbtn.sec {
+  color: var(--t-texto);
+  background: transparent;
+  border-color: var(--t-borde);
+}
+
+:root[data-tema] .sa-perfil .sa-pbtn.sec:hover:not(:disabled) {
+  background: var(--t-chip);
+  border-color: var(--t-acento);
+}
+
+:root[data-tema] .sa-perfil form .sa-pbtn {
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* Mensajes */
+:root[data-tema] .sa-perfil .sa-msg {
+  padding: 14px 16px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 12px;
+  animation: sa-subir 0.3s both;
+}
+
+/* Configuración: cuenta */
+:root[data-tema] .sa-datos-cuenta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 28px;
+}
+
+:root[data-tema] .sa-datos-cuenta .sa-avatar-grande {
+  width: 96px;
+  height: 96px;
+  font-size: 2.4rem;
+}
+
+:root[data-tema] .sa-datos-cuenta dl {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 18px 40px;
+  margin: 0;
+}
+
+:root[data-tema] .sa-datos-cuenta dt {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t-mini);
+}
+
+:root[data-tema] .sa-datos-cuenta dd {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--t-texto);
+}
+
+/* Configuración: filas de preferencias */
+:root[data-tema] .sa-perfil .sa-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  background: var(--t-item);
+  border: 1px solid var(--t-borde);
+  border-radius: 14px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+:root[data-tema] .sa-perfil .sa-fila:hover {
+  border-color: var(--t-acento);
+  transform: translateX(4px);
+}
+
+:root[data-tema] .sa-perfil .sa-fila strong {
+  display: block;
+  font-size: 1.3rem;
+}
+
+:root[data-tema] .sa-perfil .sa-fila small {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.05rem;
+  color: var(--t-tenue);
+}
+
+:root[data-tema] .sa-perfil .sa-opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:root[data-tema] .sa-perfil .sa-opcion {
+  min-width: 96px;
+  height: 52px;
+  padding: 0 20px;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--t-texto);
+  background: var(--t-sup);
+  border: 1px solid var(--t-borde);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+}
+
+:root[data-tema] .sa-perfil .sa-opcion:hover:not(.activo) {
+  color: var(--t-texto);
+  background: var(--t-chip);
+  border-color: var(--t-acento);
+  transform: translateY(-2px);
+}
+
+:root[data-tema] .sa-perfil .sa-opcion.activo {
+  color: #0f181d;
+  background: var(--t-acento);
+  border-color: var(--t-acento);
+}
+
+/* Los tres tamaños de "A" se ven distintos */
+:root[data-tema] .sa-perfil .sa-opcion.t-peq { font-size: 1rem; }
+:root[data-tema] .sa-perfil .sa-opcion.t-med { font-size: 1.3rem; }
+:root[data-tema] .sa-perfil .sa-opcion.t-gra { font-size: 1.7rem; }
+
+@media (max-width: 900px) {
+  :root[data-tema] .sa-perfil {
+    padding: 20px 16px 40px;
+  }
+
+  :root[data-tema] .sa-perfil-grid {
+    grid-template-columns: 1fr;
+  }
+
+  :root[data-tema] .sa-perfil-cabeza {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-tema] .sa-perfil > *,
+  :root[data-tema] .sa-perfil-grid > *,
+  :root[data-tema] .sa-perfil .sa-avatar-grande {
+    animation: none;
+  }
+}

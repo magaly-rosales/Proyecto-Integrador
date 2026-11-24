@@ -83,6 +83,21 @@ export function enviarSecuencia(cuadros) {
   });
 }
 
+// GET /api/catalogo -> { total, categorias: [...], senas: [...] } (solo señas entrenadas)
+export function obtenerCatalogo() {
+  return peticion("/api/catalogo");
+}
+
+// Imágenes y videos los sirve el panel de administrador (Django) en /media/
+const MEDIA_URL = import.meta.env.VITE_MEDIA_URL || "http://localhost:8000/media/";
+
+// Convierte la ruta guardada en la base de datos en una dirección que el navegador pueda abrir
+export function urlMedia(ruta) {
+  if (!ruta) return "";
+  if (/^https?:\/\//i.test(ruta)) return ruta;
+  return MEDIA_URL + ruta.replace(/^\/+/, "").replace(/^media\//, "");
+}
+
 // POST /api/traducciones -> anota la palabra traducida para las estadísticas
 export function registrarTraduccion(nombre) {
   return peticion("/api/traducciones", {

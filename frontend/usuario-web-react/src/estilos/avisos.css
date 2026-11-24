@@ -1,0 +1,320 @@
+/* Notificaciones (campana) y página de guía. Se carga al final. */
+
+:root[data-tema] .sa-avisos {
+  position: relative;
+}
+
+:root[data-tema] .sa-avisos-btn {
+  position: relative;
+  cursor: pointer;
+}
+
+:root[data-tema] .sa-avisos-punto {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+  background: #e5675d;
+  border: 2px solid #031a27;
+  border-radius: 999px;
+  animation: sa-latido 1.6s ease-in-out infinite;
+}
+
+:root[data-tema] .sa-avisos-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 18px;
+  color: var(--t-texto);
+  background: var(--t-sup);
+  border: 1px solid var(--t-borde);
+  border-radius: 18px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
+  animation: sa-subir 0.2s ease both;
+}
+
+:root[data-tema] .sa-avisos-panel h3 {
+  margin: 0 0 12px;
+  font-size: 1.4rem;
+}
+
+:root[data-tema] .sa-avisos-vacio {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--t-tenue);
+}
+
+:root[data-tema] .sa-avisos-panel ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-tema] .sa-avisos-panel a {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  color: var(--t-texto);
+  text-decoration: none;
+  background: var(--t-item);
+  border: 1px solid var(--t-borde);
+  border-radius: 12px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+:root[data-tema] .sa-avisos-panel a:hover {
+  border-color: var(--t-acento);
+  transform: translateX(4px);
+}
+
+:root[data-tema] .sa-avisos-panel a:active {
+  color: #0f181d;
+  background: var(--t-acento);
+}
+
+:root[data-tema] .sa-avisos-panel strong {
+  font-size: 1.15rem;
+}
+
+:root[data-tema] .sa-avisos-panel small {
+  font-size: 0.95rem;
+  color: var(--t-mini);
+}
+
+/* ---------- Traducir: letras grandes en el panel derecho ---------- */
+:root[data-tema] .sa-t-tarjeta {
+  gap: 18px;
+  padding: 24px 26px;
+  border-radius: 20px;
+}
+
+:root[data-tema] .sa-t-etiqueta {
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
+}
+
+:root[data-tema] .sa-t-tarjeta-cabeza small {
+  font-size: 1rem;
+}
+
+:root[data-tema] .sa-t-selector > button {
+  height: 52px;
+  gap: 10px;
+  padding: 0 20px;
+  font-size: 1.2rem;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+:root[data-tema] .sa-t-selector > button:hover {
+  border-color: var(--t-acento);
+}
+
+:root[data-tema] .sa-t-selector-menu {
+  min-width: 270px;
+  padding: 8px;
+  border-radius: 16px;
+  animation: sa-subir 0.18s ease both;
+}
+
+:root[data-tema] .sa-t-selector-menu button {
+  gap: 14px;
+  padding: 14px 16px;
+  font-size: 1.3rem;
+  border-radius: 12px;
+  transition: background 0.15s, color 0.15s;
+}
+
+:root[data-tema] .sa-t-selector-menu button:active {
+  color: #0f181d;
+  background: var(--t-acento);
+}
+
+:root[data-tema] .sa-t-frase-vacia {
+  font-size: 1.5rem;
+}
+
+:root[data-tema] .sa-t-palabra {
+  font-size: 2.6rem;
+}
+
+:root[data-tema] .sa-t-aviso {
+  font-size: 1.1rem;
+}
+
+:root[data-tema] .sa-t-hablar {
+  height: 68px;
+  font-size: 1.3rem;
+  border-radius: 16px;
+}
+
+:root[data-tema] .sa-t-icono {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+}
+
+:root[data-tema] .sa-t-icono:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+:root[data-tema] .sa-t-icono:active:not(:disabled),
+:root[data-tema] .sa-t-hablar:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+:root[data-tema] .sa-t-recientes {
+  gap: 10px;
+}
+
+:root[data-tema] .sa-t-reciente {
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+
+:root[data-tema] .sa-t-reciente:active {
+  background: var(--t-chip);
+  border-color: var(--t-acento);
+}
+
+:root[data-tema] .sa-t-reciente strong {
+  font-size: 1.3rem;
+}
+
+:root[data-tema] .sa-t-reciente small {
+  font-size: 1.05rem;
+}
+
+:root[data-tema] .sa-t-reciente i {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+
+:root[data-tema] .sa-t-vacio {
+  font-size: 1.2rem;
+}
+
+:root[data-tema] .sa-t-atajos {
+  font-size: 1.1rem;
+  line-height: 2;
+}
+
+:root[data-tema] .sa-t kbd,
+:root[data-tema] .sa-t-atajos kbd {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 1rem;
+  border-radius: 8px;
+}
+
+:root[data-tema] .sa-t-chip {
+  height: 48px;
+  padding: 0 20px;
+  font-size: 1.15rem;
+}
+
+/* ---------- Página de guía ---------- */
+:root[data-tema] .sa-guia-pagina {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 24px 56px;
+  color: var(--t-texto);
+  animation: sa-subir 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+:root[data-tema] .sa-guia-titulo h1 {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 8px;
+  font-size: 2.6rem;
+}
+
+:root[data-tema] .sa-guia-titulo h1 svg {
+  color: var(--t-acento);
+}
+
+:root[data-tema] .sa-guia-titulo p {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--t-tenue);
+}
+
+:root[data-tema] .sa-guia-pasos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-tema] .sa-guia-pasos li {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: var(--t-guia-fondo);
+  color: var(--t-guia-texto);
+  border: 2px solid var(--t-borde-fuerte);
+  border-radius: 18px;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+:root[data-tema] .sa-guia-pasos li:hover {
+  transform: translateY(-4px);
+  border-color: var(--t-acento);
+}
+
+:root[data-tema] .sa-guia-pasos li > span {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f181d;
+  background: var(--t-acento);
+  border-radius: 50%;
+}
+
+:root[data-tema] .sa-guia-pasos strong {
+  display: block;
+  font-size: 1.5rem;
+}
+
+:root[data-tema] .sa-guia-pasos p {
+  margin: 6px 0 0;
+  font-size: 1.2rem;
+  color: #cfe3ea;
+}
+
+:root[data-tema] .sa-guia-ir {
+  align-self: flex-start;
+}

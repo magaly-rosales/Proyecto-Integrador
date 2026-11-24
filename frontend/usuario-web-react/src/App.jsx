@@ -11,6 +11,13 @@ import Inicio from "./pages/Inicio";
 import Traducir from "./pages/Traducir";
 import "./App.css";
 import Perfil from "./pages/Perfil";
+import Senas from "./pages/Senas";
+import Guia from "./pages/Guia";
+import "./estilos/diseno.css";
+import "./estilos/paginas.css";
+import "./estilos/interaccion.css";
+import "./estilos/pie.css";
+import "./estilos/avisos.css";
 export default function App() {
   const { usuario } = useAuth();
   const { pathname } = useLocation();
@@ -34,12 +41,14 @@ export default function App() {
 
           {/* Solo con sesión */}
           <Route path="/traducir" element={<RutaProtegida><Traducir /></RutaProtegida>} />
+          <Route path="/guia" element={<RutaProtegida><Guia /></RutaProtegida>} />
+          <Route path="/senas" element={<RutaProtegida><Senas /></RutaProtegida>} />
           <Route path="/configuracion" element={<RutaProtegida><Configuracion /></RutaProtegida>} />
           <Route path="/perfil" element={<RutaProtegida><Perfil /></RutaProtegida>} />
           {/* Temporal: sin enlace en el menú. Pasará al panel de administrador. */}
           <Route path="/entrenamiento" element={<RutaProtegida><Entrenamiento /></RutaProtegida>} />
 
-          <Route path="/diccionario" element={<Navigate to="/traducir" replace />} />
+          <Route path="/diccionario" element={<Navigate to="/senas" replace />} />
           <Route path="/reconocer" element={<Navigate to="/traducir" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

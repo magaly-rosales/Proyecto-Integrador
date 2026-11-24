@@ -48,6 +48,37 @@ export const IconoLibro = (p) => (
   </Icono>
 );
 
+export const IconoBorrar = (p) => (
+  <Icono {...p}>
+    <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6" />
+  </Icono>
+);
+
+export const IconoBasura = (p) => (
+  <Icono {...p}>
+    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />
+  </Icono>
+);
+
+export const IconoPantalla = (p) => (
+  <Icono {...p}>
+    <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+  </Icono>
+);
+
+export const IconoRehacer = (p) => (
+  <Icono {...p}>
+    <path d="M1 4v6h6M3.5 15a9 9 0 1 0 2.1-9.4L1 10" />
+  </Icono>
+);
+
+export const IconoAyuda = (p) => (
+  <Icono {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01" />
+  </Icono>
+);
+
 export const IconoAjustes = (p) => (
   <Icono {...p}>
     <circle cx="12" cy="12" r="3" />

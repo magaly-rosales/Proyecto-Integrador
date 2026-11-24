@@ -1,7 +1,60 @@
+import { useEffect, useRef, useState } from "react";
 import OndaVoz from "./OndaVoz";
-import { IconoCheck, IconoVoz } from "./Iconos";
+import { IconoAmbos, IconoBasura, IconoBorrar, IconoChevron, IconoTexto, IconoVoz } from "./Iconos";
 
+const SALIDAS = [
+  { id: "texto", etiqueta: "Solo texto", Icono: IconoTexto },
+  { id: "voz", etiqueta: "Solo voz", Icono: IconoVoz },
+  { id: "ambos", etiqueta: "Texto y voz", Icono: IconoAmbos },
+];
 
+// Menú desplegable para elegir cómo se entrega la traducción
+function SelectorSalida({ modo, onCambiar }) {
+  const [abierto, setAbierto] = useState(false);
+  const caja = useRef(null);
+  const actual = SALIDAS.find((s) => s.id === modo) || SALIDAS[2];
+
+  useEffect(() => {
+    if (!abierto) return undefined;
+    const fuera = (e) => caja.current && !caja.current.contains(e.target) && setAbierto(false);
+    const escape = (e) => e.key === "Escape" && setAbierto(false);
+    document.addEventListener("mousedown", fuera);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("mousedown", fuera);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [abierto]);
+
+  return (
+    <div className="sa-t-selector" ref={caja}>
+      <button type="button" onClick={() => setAbierto(!abierto)} aria-haspopup="menu" aria-expanded={abierto}>
+        <actual.Icono tamano={16} /> {actual.etiqueta} <IconoChevron tamano={14} />
+      </button>
+      {abierto && (
+        <div className="sa-t-selector-menu" role="menu">
+          {SALIDAS.map(({ id, etiqueta, Icono }) => (
+            <button
+              key={id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={modo === id}
+              className={modo === id ? "activo" : ""}
+              onClick={() => {
+                onCambiar(id);
+                setAbierto(false);
+              }}
+            >
+              <Icono tamano={16} /> {etiqueta}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Tarjeta "Traducción": la frase armada y los botones para decirla, borrar o limpiar
 export default function ResultadoSena({
   frase,
   sena,
@@ -9,60 +62,55 @@ export default function ResultadoSena({
   mensajeError,
   mostrarTexto,
   hablando,
+  modo,
+  onCambiarModo,
   onHablar,
   onBorrar,
   onLimpiar,
 }) {
-  let aviso = { tipo: "neutro", texto: "Sin mano a la vista" };
-  if (estado === "error") {
-    aviso = { tipo: "error", texto: mensajeError || "Error de conexión" };
-  } else if (estado === "listo") {
-    if (sena === "desconocida") aviso = { tipo: "aviso", texto: "Seña no reconocida" };
-    else if (sena === "dudosa") aviso = { tipo: "aviso", texto: "No estoy seguro, repite la seña" };
-    else if (sena === "sin_muestras")
-      aviso = { tipo: "aviso", texto: "Aún no hay muestras para este tipo de seña" };
-    else if (sena) aviso = { tipo: "ok", texto: "Seña reconocida" };
+  let aviso = "";
+  if (estado === "error") aviso = mensajeError || "Error de conexión";
+  else if (estado === "listo") {
+    if (sena === "desconocida") aviso = "Seña no reconocida";
+    else if (sena === "dudosa") aviso = "No estoy seguro, repite la seña";
+    else if (sena === "sin_muestras") aviso = "Aún no hay muestras para este tipo de seña";
   }
 
   const hayFrase = frase.length > 0;
 
   return (
-    <section className="tarjeta sa-resultado">
-      <h3>Frase</h3>
+    <section className="sa-t-tarjeta sa-t-traduccion" aria-label="Traducción">
+      <div className="sa-t-tarjeta-cabeza">
+        <span className="sa-t-etiqueta">Traducción</span>
+        <SelectorSalida modo={modo} onCambiar={onCambiarModo} />
+      </div>
 
-      <div className="sa-frase">
+      <div className="sa-t-frase" aria-live="polite">
         {!mostrarTexto ? (
-          <span className="sa-frase-vacia">Solo voz activada</span>
+          <span className="sa-t-frase-vacia">Solo voz activada</span>
         ) : hayFrase ? (
           frase.map((palabra, i) => (
-            <span
-              key={i}
-              className={i === frase.length - 1 ? "sa-palabra nueva" : "sa-palabra"}
-            >
+            <span key={i} className={i === frase.length - 1 ? "sa-t-palabra ultima" : "sa-t-palabra"}>
               {palabra}
             </span>
           ))
         ) : (
-          <span className="sa-frase-vacia">Haz una seña para empezar…</span>
+          <span className="sa-t-frase-vacia">Haz una seña para empezar…</span>
         )}
       </div>
 
       <OndaVoz activa={hablando} />
+      {aviso && <p className="sa-t-aviso" role="status">{aviso}</p>}
 
-      <p className={`estado estado-${aviso.tipo}`}>
-        {aviso.tipo === "ok" && <IconoCheck tamano={16} />}
-        {aviso.texto}
-      </p>
-
-      <div className="sa-frase-botones">
-        <button type="button" className="boton sa-fbtn-hablar" onClick={onHablar} disabled={!hayFrase}>
-          <IconoVoz tamano={18} /> Hablar
+      <div className="sa-t-botones">
+        <button type="button" className="sa-t-hablar" onClick={onHablar} disabled={!hayFrase}>
+          <IconoVoz tamano={20} /> Decir en voz alta
         </button>
-        <button type="button" className="sa-fbtn" onClick={onBorrar} disabled={!hayFrase}>
-          Borrar última
+        <button type="button" className="sa-t-icono" onClick={onBorrar} disabled={!hayFrase} aria-label="Borrar última palabra" title="Borrar última palabra">
+          <IconoBorrar tamano={20} />
         </button>
-        <button type="button" className="sa-fbtn" onClick={onLimpiar} disabled={!hayFrase}>
-          Limpiar
+        <button type="button" className="sa-t-icono peligro" onClick={onLimpiar} disabled={!hayFrase} aria-label="Limpiar la frase" title="Limpiar la frase">
+          <IconoBasura tamano={20} />
         </button>
       </div>
     </section>

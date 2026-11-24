@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import CamaraMano from "../components/CamaraMano";
-import ModoSalida from "../components/ModoSalida";
+import FrasesRecientes from "../components/FrasesRecientes";
+import { IconoPantalla } from "../components/Iconos";
 import ResultadoSena from "../components/ResultadoSena";
 import { usePreferencias } from "../context/usePreferencias";
 import { hablar } from "../services/voz";
@@ -18,8 +19,22 @@ const MOV_CONFIRMACIONES = 2;
 const esSenaValida = (s) =>
   Boolean(s) && s !== "desconocida" && s !== "sin_muestras" && s !== "dudosa";
 
+// Frases recientes y guía: se recuerdan solo en este navegador
+const CLAVE_RECIENTES = "senasapp-recientes";
+
+function leerRecientes() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLAVE_RECIENTES));
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function Traducir() {
   const { prefs, cambiar } = usePreferencias();
+  const camaraRef = useRef(null);
+  const [recientes, setRecientes] = useState(leerRecientes);
   const manosRef = useRef([]);
   const enviandoRef = useRef(false); 
   const modoRef = useRef(prefs.modo); 
@@ -46,8 +61,37 @@ export default function Traducir() {
     cambiar({ modo: nuevo }); // se recuerda la próxima vez
   }
 
+  function guardarReciente(palabras) {
+    if (palabras.length === 0) return;
+    const texto = palabras.join(" ");
+    setRecientes((previas) => {
+      const nuevas = [
+        { palabras: [...palabras], fecha: Date.now() },
+        ...previas.filter((r) => r.palabras.join(" ") !== texto),
+      ].slice(0, 3);
+      try {
+        localStorage.setItem(CLAVE_RECIENTES, JSON.stringify(nuevas));
+      } catch {
+        /* sin almacenamiento: solo se pierde el recuerdo */
+      }
+      return nuevas;
+    });
+  }
+
+  function usarReciente(palabras) {
+    fraseRef.current = [...palabras];
+    habladaRef.current = true;
+    setFrase(fraseRef.current);
+  }
+
+  function pantallaCompleta() {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else camaraRef.current?.requestFullscreen?.();
+  }
+
   function hablarFrase() {
     if (fraseRef.current.length === 0) return;
+    guardarReciente(fraseRef.current);
     habladaRef.current = true;
     hablar(fraseRef.current.join(" "), setHablando);
   }
@@ -58,6 +102,7 @@ export default function Traducir() {
   }
 
   function limpiar() {
+    guardarReciente(fraseRef.current);
     fraseRef.current = [];
     habladaRef.current = true;
     setFrase([]);
@@ -103,6 +148,7 @@ export default function Traducir() {
           fraseRef.current.length > 0
         ) {
           habladaRef.current = true;
+          guardarReciente(fraseRef.current);
           if (modoRef.current !== "texto") hablar(fraseRef.current.join(" "), setHablando);
         }
         setEstado("sin_mano");
@@ -188,25 +234,41 @@ export default function Traducir() {
     return () => clearInterval(temporizador);
   }, []);
 
-  return (
-    <section className="sa-pagina">
-      <header className="sa-titulo-pagina">
-        <h1>Traducir señas</h1>
-        <p>Muestra tus manos a la cámara y elige cómo quieres recibir el resultado.</p>
-      </header>
+  // Atajos: Espacio dice la frase en voz alta y Retroceso borra la última palabra
+  useEffect(() => {
+    function atajo(e) {
+      if (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(e.target.tagName)) return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        hablarFrase();
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        borrarUltima();
+      }
+    }
+    document.addEventListener("keydown", atajo);
+    return () => document.removeEventListener("keydown", atajo);
+  }, []);
 
-      <div className="sa-traducir">
-        <div className="sa-camara-caja">
+  const textoEstado =
+    estado === "error" ? "Sin conexión con el servidor" : estado === "listo" ? "Mano detectada" : "Sin mano a la vista";
+
+  return (
+    <section className="sa-t">
+      <div className="sa-t-grid">
+        <div className="sa-t-camara" ref={camaraRef}>
+          <span className={estado === "listo" ? "sa-t-chip activo" : "sa-t-chip"}>
+            <i aria-hidden="true" /> {textoEstado}
+          </span>
+          <button type="button" className="sa-t-pantalla" onClick={pantallaCompleta} aria-label="Pantalla completa" title="Pantalla completa">
+            <IconoPantalla tamano={22} />
+          </button>
           <div className="sa-escaner">
             <CamaraMano onLandmarks={alDetectar} />
-            <span className="sa-linea" aria-hidden="true" />
           </div>
-          <p className="sa-consejo">
-            Mantén la mano dentro del recuadro. Buena luz y fondo simple ayudan a reconocer mejor.
-          </p>
         </div>
 
-        <div className="sa-lateral">
+        <div className="sa-t-lado">
           <ResultadoSena
             frase={frase}
             sena={sena}
@@ -214,11 +276,16 @@ export default function Traducir() {
             mensajeError={mensajeError}
             mostrarTexto={modo !== "voz"}
             hablando={hablando}
+            modo={modo}
+            onCambiarModo={cambiarModo}
             onHablar={hablarFrase}
             onBorrar={borrarUltima}
             onLimpiar={limpiar}
           />
-          <ModoSalida modo={modo} onCambiar={cambiarModo} />
+          <FrasesRecientes items={recientes} onUsar={usarReciente} />
+          <p className="sa-t-atajos">
+            Atajos: <kbd>Espacio</kbd> decir en voz alta · <kbd>⌫</kbd> borrar última
+          </p>
         </div>
       </div>
     </section>

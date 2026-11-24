@@ -1,0 +1,201 @@
+/* Pie de página con letras grandes y animaciones suaves. Se carga al final. */
+
+:root[data-tema] .sa-pie {
+  display: block;
+  width: 100%;
+}
+
+/* El contenido ocupa todo el ancho y queda centrado en la pantalla */
+:root[data-tema] .sa-pie-in {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1500px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 48px 32px 16px;
+}
+
+/* Traducir: cámara alineada con el logo y panel derecho alineado con el perfil */
+:root[data-tema] .sa-t {
+  box-sizing: border-box;
+  max-width: none;
+  padding: 28px clamp(24px, 9vw, 190px) 40px;
+}
+
+:root[data-tema] .sa-t-grid {
+  flex-wrap: nowrap;
+  gap: 28px;
+}
+
+:root[data-tema] .sa-t-camara {
+  flex: 1 1 0;
+}
+
+:root[data-tema] .sa-t-lado {
+  flex: 0 0 460px;
+  width: 460px;
+  max-width: 460px;
+}
+
+@media (max-width: 1000px) {
+  :root[data-tema] .sa-t {
+    padding: 16px;
+  }
+
+  :root[data-tema] .sa-t-grid {
+    flex-wrap: wrap;
+  }
+
+  :root[data-tema] .sa-t-lado {
+    flex: 1 1 100%;
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* Traducir y Señas disponibles usan todo el ancho de la pantalla */
+:root[data-tema] .sa-contenido:has(.sa-cat, .sa-t) {
+  max-width: none;
+}
+
+:root[data-tema] .sa-pie-grid {
+  grid-template-columns: 1.4fr 1fr 1.1fr 1.3fr;
+  gap: 40px;
+  align-items: start;
+  justify-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+}
+
+/* Todo el contenido del pie va centrado */
+:root[data-tema] .sa-pie-marca {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+:root[data-tema] .sa-pie-marca .sa-logo {
+  justify-content: center;
+}
+
+:root[data-tema] .sa-pie-col {
+  align-items: center;
+}
+
+:root[data-tema] .sa-pie-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+:root[data-tema] .sa-pie-marca .sa-logo {
+  font-size: 3rem;
+  letter-spacing: -1px;
+}
+
+:root[data-tema] .sa-pie-frase {
+  max-width: 440px;
+  text-align: center;
+  font-size: 1.3rem;
+  line-height: 1.5;
+}
+
+:root[data-tema] .sa-pie-hecho {
+  font-size: 1.15rem;
+}
+
+:root[data-tema] .sa-pie-col {
+  gap: 16px;
+}
+
+:root[data-tema] .sa-pie-col h4 {
+  margin-bottom: 6px;
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
+}
+
+:root[data-tema] .sa-pie-col a,
+:root[data-tema] .sa-pie-col span {
+  font-size: 1.3rem;
+  line-height: 1.35;
+}
+
+:root[data-tema] .sa-pie-col a {
+  width: fit-content;
+  border-radius: 8px;
+  transition: color 0.15s, transform 0.15s;
+}
+
+:root[data-tema] .sa-pie-col a:hover {
+  color: var(--t-acento);
+  transform: translateX(6px);
+}
+
+:root[data-tema] .sa-pie-col a:active {
+  color: #0f181d;
+  background: var(--t-acento);
+  padding: 0 8px;
+}
+
+:root[data-tema] .sa-pie-cta {
+  padding: 28px;
+  border-radius: 20px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+:root[data-tema] .sa-pie-cta:hover {
+  border-color: var(--t-acento);
+  transform: translateY(-3px);
+}
+
+:root[data-tema] .sa-pie-cta h4 {
+  font-size: 1.6rem;
+}
+
+:root[data-tema] .sa-pie-cta p {
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+:root[data-tema] .sa-pie-boton {
+  height: 58px;
+  padding: 0 26px;
+  font-size: 1.25rem;
+  border-radius: 14px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+:root[data-tema] .sa-pie-boton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-tema] .sa-pie-boton:active {
+  transform: scale(0.97);
+  filter: brightness(0.9);
+}
+
+:root[data-tema] .sa-pie-base {
+  width: 100%;
+  text-align: center;
+  margin-top: 36px;
+  padding: 20px 0;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 900px) {
+  :root[data-tema] .sa-pie-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  :root[data-tema] .sa-pie-grid {
+    grid-template-columns: 1fr;
+  }
+
+  :root[data-tema] .sa-pie-marca .sa-logo {
+    font-size: 2.2rem;
+  }
+}

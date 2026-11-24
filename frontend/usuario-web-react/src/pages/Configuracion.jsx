@@ -8,6 +8,10 @@ const MODOS = [
   { id: "voz", etiqueta: "Voz" },
   { id: "ambos", etiqueta: "Ambos" },
 ];
+const AVISOS = [
+  { id: "si", etiqueta: "Activados" },
+  { id: "no", etiqueta: "Desactivados" },
+];
 const TEMAS = [
   { id: "claro", etiqueta: "Claro" },
   { id: "oscuro", etiqueta: "Oscuro" },
@@ -40,19 +44,6 @@ function Opciones({ lista, valor, onElegir, nombre }) {
   );
 }
 
-function Interruptor({ activo, onCambiar, nombre }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={activo}
-      aria-label={nombre}
-      className={activo ? "sa-switch activo" : "sa-switch"}
-      onClick={() => onCambiar(!activo)}
-    />
-  );
-}
-
 export default function Configuracion() {
   const { usuario } = useAuth();
   const { prefs, cambiar } = usePreferencias();
@@ -79,22 +70,7 @@ export default function Configuracion() {
       </section>
 
       <section className="sa-perfil-tarjeta">
-        <h3>Notificaciones</h3>
-        <div className="sa-fila">
-          <div>
-            <strong>Recibir notificaciones</strong>
-            <small>Muestra la campana con avisos de nuevas señas y novedades del equipo.</small>
-          </div>
-          <Interruptor
-            activo={prefs.notificaciones}
-            onCambiar={(v) => cambiar({ notificaciones: v })}
-            nombre="Recibir notificaciones"
-          />
-        </div>
-      </section>
-
-      <section className="sa-perfil-tarjeta">
-        <h3>Preferencias generales</h3>
+        <h3>Traducción</h3>
         <div className="sa-fila">
           <div>
             <strong>Modo de salida</strong>
@@ -102,6 +78,21 @@ export default function Configuracion() {
           </div>
           <Opciones lista={MODOS} valor={prefs.modo} onElegir={(modo) => cambiar({ modo })} nombre="Modo de salida" />
         </div>
+      </section>
+
+      <section className="sa-perfil-tarjeta">
+        <h3>Notificaciones</h3>
+        <div className="sa-fila">
+          <div>
+            <strong>Avisos de señas nuevas</strong>
+            <small>Muestra una campana en el menú cuando se agrega una seña nueva.</small>
+          </div>
+          <Opciones lista={AVISOS} valor={prefs.notificaciones ? "si" : "no"} onElegir={(v) => cambiar({ notificaciones: v === "si" })} nombre="Avisos de señas nuevas" />
+        </div>
+      </section>
+
+      <section className="sa-perfil-tarjeta">
+        <h3>Apariencia</h3>
         <div className="sa-fila">
           <div>
             <strong>Tema visual</strong>

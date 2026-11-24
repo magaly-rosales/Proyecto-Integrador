@@ -18,11 +18,13 @@ import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
 import com.tecsup.usuario_kotlin.ui.home.HomeScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
-import com.tecsup.usuario_kotlin.viewmodel.AuthViewModel
+import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
+import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
 
 class MainActivity : ComponentActivity() {
 
     private val authViewModel: AuthViewModel by viewModels()
+    private val translationViewModel: TranslationViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,11 +76,14 @@ class MainActivity : ComponentActivity() {
                                 username = loggedUsername,
                                 onNavigateToTranslator = {
                                     currentScreen = "translation"
-                                }
+                                },
+                                viewModel = translationViewModel
                             )
                         }
                         "translation" -> {
-                            TranslationScreen()
+                            TranslationScreen(
+                                viewModel = translationViewModel
+                            )
                         }
                     }
                 }

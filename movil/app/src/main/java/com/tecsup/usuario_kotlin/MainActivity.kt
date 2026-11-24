@@ -32,6 +32,10 @@ class MainActivity : ComponentActivity() {
             UsuariokotlinTheme {
                 var currentScreen by remember { mutableStateOf("login") }
 
+                // Extrae la inicial real del usuario logueado (ej. "Ana" -> "A")
+                val userName = authViewModel.loggedUserName
+                val userInitial = userName.trim().firstOrNull()?.uppercase() ?: "U"
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -41,7 +45,7 @@ class MainActivity : ComponentActivity() {
                             LoginScreen(
                                 authViewModel = authViewModel,
                                 onLoginSuccess = {
-                                    currentScreen = "home"
+                                    currentScreen = "translation"
                                 },
                                 onRegisterClick = {
                                     currentScreen = "register"
@@ -72,7 +76,7 @@ class MainActivity : ComponentActivity() {
                         }
                         "home" -> {
                             HomeScreen(
-                                username = authViewModel.loggedUserName,
+                                username = userName,
                                 onNavigateToTranslator = {
                                     currentScreen = "translation"
                                 },
@@ -81,6 +85,23 @@ class MainActivity : ComponentActivity() {
                         }
                         "translation" -> {
                             TranslationScreen(
+                                viewModel = translationViewModel,
+                                userInitial = userInitial,
+                                onNavigateToSenas = {
+                                    currentScreen = "home"
+                                },
+                                onNavigateToPerfil = {
+                                    currentScreen = "perfil"
+                                }
+                            )
+                        }
+                        "perfil" -> {
+                            // Pantalla temporal conectada al botón Perfil hasta crear ProfileScreen
+                            HomeScreen(
+                                username = userName,
+                                onNavigateToTranslator = {
+                                    currentScreen = "translation"
+                                },
                                 viewModel = translationViewModel
                             )
                         }

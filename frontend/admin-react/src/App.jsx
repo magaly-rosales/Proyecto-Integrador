@@ -6,6 +6,8 @@ import EnConstruccion from './paginas/EnConstruccion';
 import Senas from './paginas/Senas';
 import './estilos/Escala.css';
 import Categorias from './paginas/Categorias';
+import Usuarios from './paginas/Usuarios';
+import Estadisticas from './paginas/Estadisticas';
 
 export default function App() {
     return (
@@ -17,8 +19,8 @@ export default function App() {
                             <Route index element={<Navigate to="/senas" replace />} />
                             <Route path="senas" element={<Senas />} />
                             <Route path="categorias" element={<Categorias />} />
-                            <Route path="usuarios" element={<EnConstruccion nombre="Usuarios" />} />
-                            <Route path="estadisticas" element={<EnConstruccion nombre="Estadísticas" />} />
+                            <Route path="usuarios" element={<Usuarios />} />
+                            <Route path="estadisticas" element={<Estadisticas />} />
                             <Route path="entrenamiento" element={<EnConstruccion nombre="Entrenamiento" />} />
                             <Route path="perfil" element={<EnConstruccion nombre="Mi perfil" />} />
                             <Route path="*" element={<Navigate to="/senas" replace />} />

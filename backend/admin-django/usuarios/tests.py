@@ -23,6 +23,16 @@ class UsuarioSerializerUnitTests(SimpleTestCase):
     def test_iniciales_de_nombre_vacio(self):
         self.assertEqual(self.serializer.get_iniciales(Usuario(nombre='   ')), '')
 
+    def test_foto_vacia_devuelve_none(self):
+        for valor in (None, '', '   '):
+            self.assertIsNone(self.serializer.get_foto(Usuario(foto=valor)))
+
+    def test_foto_con_ruta_se_devuelve_tal_cual_sin_request(self):
+        self.assertEqual(self.serializer.get_foto(Usuario(foto='/media/fotos/a.png')), '/media/fotos/a.png')
+
+    def test_foto_con_url_completa_no_se_modifica(self):
+        self.assertEqual(self.serializer.get_foto(Usuario(foto='https://x.pe/a.png')), 'https://x.pe/a.png')
+
     def test_is_staff_indica_si_es_administrador(self):
         self.assertTrue(self.serializer.get_is_staff(Usuario(rol='admin')))
         self.assertFalse(self.serializer.get_is_staff(Usuario(rol='usuario')))
@@ -54,6 +64,12 @@ class UsuariosApiTests(APITestCase):
         self.assertEqual(ana['id'], self.ana.pk)
         self.assertEqual((ana['iniciales'], ana['is_active'], ana['is_staff']), ('AT', True, False))
         self.assertNotIn('password_hash', ana)  # nunca se expone la contraseña
+
+    def test_la_lista_incluye_la_foto_con_direccion_completa(self):
+        Usuario.objects.filter(pk=self.ana.pk).update(foto='/media/fotos/ana.png')
+        ana = self.cliente.get('/api/usuarios/', {'q': 'ana'}).json()[0]
+        self.assertTrue(ana['foto'].startswith('http'))
+        self.assertIsNone(self.cliente.get('/api/usuarios/', {'q': 'luis'}).json()[0]['foto'])
 
     def test_busca_por_nombre(self):
         self.assertEqual(self._nombres(q='torres'), ['Ana Torres'])

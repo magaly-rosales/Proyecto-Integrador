@@ -119,3 +119,217 @@
         font-size: 26px;
     }
 }
+
+/* ============================================================
+   LETRA GRANDE: toda la letra del panel se multiplica por --escala-letra.
+   Para cambiar el tamaño de toda la interfaz basta con cambiar este número
+   (2 = el doble, 1.5 = la mitad de lo que crece, 1 = como antes).
+   ============================================================ */
+:root {
+    --escala-letra: 1.75;
+}
+
+body { font-size: calc(16px * var(--escala-letra)); }
+
+/* Menú lateral */
+body .lateral { flex-basis: 400px; width: 400px; }
+body .lateral-marca strong { font-size: 36px; }
+body .lateral-marca span { font-size: calc(12px * var(--escala-letra)); }
+body .lateral-avatar { font-size: 40px; }
+body .lateral-correo { font-size: calc(15px * var(--escala-letra)); }
+body .lateral-enlace { height: auto; min-height: 64px; font-size: calc(17px * var(--escala-letra)); }
+body .lateral-contador { font-size: calc(14px * var(--escala-letra)); line-height: 1.5; }
+body .lateral-salir { height: auto; min-height: 64px; font-size: calc(16px * var(--escala-letra)); }
+
+/* Cabecera */
+body .cabecera h1 { font-size: 30px; }
+body .cabecera p { font-size: 20px; }
+body .tema { height: auto; min-height: 48px; font-size: 18px; }
+body .en-construccion strong { font-size: calc(20px * var(--escala-letra)); }
+
+/* Textos, botones y píldoras */
+body .texto-suave { font-size: calc(15px * var(--escala-letra)); }
+body .pildora { font-size: calc(14px * var(--escala-letra)); }
+body .boton-principal,
+body .boton-contorno,
+body .boton-peligro { height: auto; min-height: 56px; font-size: calc(15px * var(--escala-letra)); }
+body .boton-ver,
+body .boton-estado { height: auto; min-height: 48px; font-size: calc(15px * var(--escala-letra)); }
+
+/* Tarjetas de resumen */
+body .resumen-tarjeta h3 { font-size: 20px; }
+body .resumen-tarjeta strong { font-size: 44px; }
+body .resumen-tarjeta p { font-size: 17px; }
+
+/* Filtros */
+body .filtros-buscar { height: auto; min-height: 58px; }
+body .filtros-buscar input,
+body .filtros-categoria,
+body .filtros-categoria select { font-size: calc(16px * var(--escala-letra)); }
+body .filtros-categoria select { height: 58px; }
+
+/* Tabla */
+body .tabla th { font-size: calc(13px * var(--escala-letra)); }
+body .tabla td { font-size: calc(16px * var(--escala-letra)); }
+body .tabla-aviso strong { font-size: calc(18px * var(--escala-letra)); }
+body .menu-lista button { font-size: calc(14px * var(--escala-letra)); }
+body .sena-tarjeta p { font-size: calc(14px * var(--escala-letra)); }
+
+/* Ventanas y formularios */
+body .modal-cabecera h2 { font-size: calc(20px * var(--escala-letra)); }
+body .modal-error { font-size: calc(14px * var(--escala-letra)); }
+body .campo-etiqueta { font-size: calc(15px * var(--escala-letra)); }
+body .campo input[type='text'],
+body .campo select,
+body .campo textarea { font-size: calc(16px * var(--escala-letra)); }
+body .campo input[type='text'],
+body .campo select { height: 60px; }
+body .campo-ayuda { font-size: calc(13px * var(--escala-letra)); }
+body .campo-error { font-size: calc(14px * var(--escala-letra)); }
+body .campo-nombre { font-size: calc(14px * var(--escala-letra)); }
+body .campo-casilla { font-size: calc(15px * var(--escala-letra)); }
+
+/* Categorías */
+body .barra-pagina p { font-size: calc(16px * var(--escala-letra)); }
+body .categoria-titulo { font-size: calc(20px * var(--escala-letra)); }
+body .categoria-datos strong { font-size: calc(19px * var(--escala-letra)); }
+
+/* Usuarios */
+body .usuario-persona strong { font-size: calc(15px * var(--escala-letra)); }
+body .usuario-correo { font-size: calc(14px * var(--escala-letra)); }
+body .tabla-pie { font-size: calc(13px * var(--escala-letra)); }
+
+/* Móvil: la letra grande no cabe, se usa una escala menor */
+@media (max-width: 900px) {
+    body .lateral { flex-basis: 340px; width: 340px; }
+    body .cabecera h1 { font-size: 32px; }
+    body .tema { min-height: 48px; }
+}
+
+/* ============================================================
+   UN SOLO TAMAÑO DE LETRA: el del filtro "Estado" (16px x 1.75 = 28px)
+   se usa en todo el texto normal del panel. Cambia --letra para ajustarlo.
+   Los títulos (cabecera, marca, números grandes) mantienen su tamaño.
+   ============================================================ */
+:root {
+    --letra: 24px;
+}
+
+body { font-size: var(--letra); }
+
+body .lateral-correo,
+body .lateral-enlace,
+body .lateral-contador,
+body .lateral-salir,
+body .texto-suave,
+body .pildora,
+body .boton-principal,
+body .boton-contorno,
+body .boton-peligro,
+body .boton-ver,
+body .boton-estado,
+body .filtros-buscar input,
+body .filtros-categoria,
+body .filtros-categoria select,
+body .tabla th,
+body .tabla td,
+body .tabla-aviso strong,
+body .menu-lista button,
+body .sena-tarjeta p,
+body .modal-cabecera h2,
+body .modal-error,
+body .campo-etiqueta,
+body .campo input[type='text'],
+body .campo select,
+body .campo textarea,
+body .campo-ayuda,
+body .campo-error,
+body .campo-nombre,
+body .campo-casilla,
+body .barra-pagina p,
+body .categoria-titulo,
+body .categoria-datos strong,
+body .usuario-persona strong,
+body .usuario-correo,
+body .tabla-pie,
+body .en-construccion strong {
+    font-size: var(--letra);
+}
+
+/* Cabecera (título, subtítulo, botón Oscuro) y tarjetas de resumen: 28px */
+body .cabecera h1,
+body .cabecera p,
+body .tema,
+body .resumen-tarjeta h3,
+body .resumen-tarjeta strong,
+body .resumen-tarjeta p {
+    font-size: var(--letra);
+}
+
+/* Título y subtítulo de la cabecera: 25px */
+body .cabecera h1,
+body .cabecera p {
+    font-size: 25px;
+}
+
+/* Tabla (encabezados, filas, estado, botón y pie): 24px */
+:root {
+    --letra-tabla: 24px;
+}
+
+body .tabla th,
+body .tabla td,
+body .tabla .texto-suave,
+body .tabla .pildora,
+body .tabla .boton-estado,
+body .tabla .boton-ver,
+body .tabla-caja .usuario-persona strong,
+body .tabla-caja .usuario-correo,
+body .tabla-caja .pildora,
+body .tabla-caja .boton-estado,
+body .tabla-pie {
+    font-size: var(--letra-tabla);
+}
+
+/* Contenido centrado y con aire: nada pegado al borde de la pantalla ni de los recuadros */
+body .app-principal {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 28px 28px 40px;
+}
+
+body .tabla th,
+body .tabla td {
+    padding: 22px 28px;
+}
+
+body .tabla-usuarios th,
+body .tabla-usuarios td {
+    text-align: left;
+}
+
+/* ID, Estado y Acción van centrados en su columna */
+body .tabla-usuarios th:nth-child(1),
+body .tabla-usuarios td:nth-child(1),
+body .tabla-usuarios th:nth-child(4),
+body .tabla-usuarios td:nth-child(4),
+body .tabla-usuarios th:nth-child(5),
+body .tabla-usuarios td:nth-child(5) {
+    text-align: center;
+}
+
+body .tabla-usuarios td.celda-acciones {
+    width: auto;
+    text-align: center;
+}
+
+body .tabla-pie {
+    padding: 20px 28px;
+}
+
+@media (max-width: 900px) {
+    body .app-principal {
+        padding: 20px 16px 32px;
+    }
+}

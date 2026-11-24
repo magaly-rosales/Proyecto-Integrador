@@ -68,6 +68,7 @@ def resumen_usuarios():
         'activos': activos,
         'inactivos': total - activos,
         'porcentaje_activos': round(activos * 100 / total, 1) if total else 0,
+        'porcentaje_inactivos': round((total - activos) * 100 / total, 1) if total else 0,
     }
 
 

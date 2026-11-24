@@ -1,0 +1,294 @@
+/* Pantalla de Estadísticas (reutiliza cajas, avisos y píldoras de Senas.css y Comun.css) */
+.periodo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.periodo-botones {
+    display: inline-flex;
+    padding: 4px;
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+}
+
+.periodo-boton {
+    padding: 8px 20px;
+    font-size: inherit;
+    font-weight: 700;
+    color: var(--texto);
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.periodo-boton.activo {
+    color: var(--sobre-boton);
+    background: var(--boton);
+}
+
+.periodo-fecha {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--texto-suave);
+}
+
+.periodo-fecha input {
+    height: 52px;
+    padding: 0 12px;
+    font-size: inherit;
+    color: var(--texto);
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+}
+
+/* Tarjetas de resumen */
+.estadisticas-tarjetas {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.estadistica-tarjeta {
+    min-width: 0;
+    padding: 20px 24px;
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+}
+
+.estadistica-tarjeta h3 {
+    margin: 0;
+    font-size: inherit;
+    font-weight: 600;
+    color: var(--texto-suave);
+}
+
+.estadistica-tarjeta strong {
+    display: block;
+    margin: 4px 0;
+    font-family: 'Montserrat', var(--sans);
+    font-size: 44px;
+    font-weight: 900;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+}
+
+.estadistica-tarjeta p {
+    margin: 0;
+    font-size: inherit;
+    color: var(--texto-suave);
+}
+
+/* Paneles */
+.estadisticas-paneles {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 16px;
+    align-items: start;
+    transition: opacity 0.2s;
+}
+
+.estadisticas-paneles.actualizando {
+    opacity: 0.55;
+}
+
+.panel {
+    padding: 24px 28px;
+}
+
+.panel-cabecera {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 16px;
+    margin-bottom: 24px;
+}
+
+.panel-cabecera h2 {
+    margin: 0;
+    font-size: inherit;
+    font-weight: 800;
+}
+
+/* Ranking: nombre | barra | porcentaje */
+.ranking {
+    display: grid;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ranking-fila {
+    display: grid;
+    grid-template-columns: minmax(110px, 190px) 1fr 90px;
+    align-items: center;
+    gap: 16px;
+}
+
+.ranking-nombre {
+    overflow: hidden;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ranking-porcentaje {
+    text-align: right;
+}
+
+.barra {
+    height: 26px;
+    overflow: hidden;
+    background: var(--fondo);
+    border-radius: 8px;
+}
+
+.barra span {
+    display: block;
+    height: 100%;
+    background: var(--texto-suave);
+    border-radius: 8px;
+}
+
+.barra span.barra-primera {
+    background: var(--boton);
+}
+
+/* Gráfico circular */
+.usuarios-estado {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+}
+
+.dona {
+    position: relative;
+    flex-shrink: 0;
+    width: 280px;
+    height: 280px;
+}
+
+.dona svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.dona circle {
+    fill: none;
+    stroke-width: 5;
+}
+
+.dona-inactivos {
+    stroke: #d4202f;
+}
+
+.dona-activos {
+    stroke: #1f8a3b;
+}
+
+.dona-centro {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.dona-centro strong {
+    font-family: 'Montserrat', var(--sans);
+    font-size: 44px;
+    font-weight: 900;
+    line-height: 1.1;
+}
+
+.dona-centro span {
+    color: var(--texto-suave);
+}
+
+.dona-leyenda {
+    display: grid;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dona-leyenda li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+}
+
+.dona-leyenda li div {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.dona-leyenda li div span {
+    color: var(--texto-suave);
+}
+
+.cuadro {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+}
+
+.cuadro-activos {
+    background: #1f8a3b;
+}
+
+.cuadro-inactivos {
+    background: #d4202f;
+}
+
+@media (max-width: 1100px) {
+    .estadisticas-paneles {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .estadisticas-tarjetas {
+        grid-template-columns: 1fr;
+    }
+
+    .panel {
+        padding: 18px;
+    }
+
+    .ranking-fila {
+        grid-template-columns: 90px 1fr 70px;
+    }
+
+    .dona {
+        width: 220px;
+        height: 220px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .estadisticas-paneles {
+        transition: none;
+    }
+}

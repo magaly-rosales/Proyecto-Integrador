@@ -144,4 +144,5 @@ class EstadisticasApiTests(APITestCase):
         crear_usuario('Ana', 'ana@correo.com')
         crear_usuario('Luis', 'luis@correo.com', activo=False)
         usuarios = self.cliente.get('/api/estadisticas/', {'dias': 'todo'}).json()['usuarios']
-        self.assertEqual(usuarios, {'total': 2, 'activos': 1, 'inactivos': 1, 'porcentaje_activos': 50.0})
+        self.assertEqual(usuarios, {'total': 2, 'activos': 1, 'inactivos': 1,
+                                     'porcentaje_activos': 50.0, 'porcentaje_inactivos': 50.0})

@@ -16,6 +16,7 @@ import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
 import com.tecsup.usuario_kotlin.ui.home.HomeScreen
+import com.tecsup.usuario_kotlin.ui.home.ProfileScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
@@ -77,9 +78,8 @@ class MainActivity : ComponentActivity() {
                         "home" -> {
                             HomeScreen(
                                 username = userName,
-                                onNavigateToTranslator = {
-                                    currentScreen = "translation"
-                                },
+                                onNavigateToTranslator = { currentScreen = "translation" },
+                                onNavigateToPerfil = { currentScreen = "perfil" },
                                 viewModel = translationViewModel
                             )
                         }

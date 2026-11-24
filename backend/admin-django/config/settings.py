@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'categorias',
     'usuarios',
     'estadisticas',
+    'asistente',
 ]
 
 MIDDLEWARE = [
@@ -143,6 +144,10 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': ['senas.auth.EsAdmin'],
 }
+
+# Asistente con IA (Gemini). La clave va en el .env, nunca en el código
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash-lite')
 
 # Pruebas: crea las tablas (managed = False) en una base temporal test_senasapp_db
 TEST_RUNNER = 'config.test_runner.PruebasRunner'

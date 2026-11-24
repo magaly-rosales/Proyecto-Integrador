@@ -22,7 +22,7 @@ export default function Sidebar({ resumen, onNavegar }) {
 
             <NavLink to="/perfil" className="lateral-perfil" onClick={onNavegar} title="Mi perfil">
                 <span className="lateral-avatar">
-                    {iniciales(usuario?.nombre)}
+                    {usuario?.foto ? <img src={usuario.foto} alt="" /> : iniciales(usuario?.nombre)}
                     <i aria-hidden="true" />
                 </span>
                 <span className="lateral-correo">{usuario?.email || 'Administrador'}</span>

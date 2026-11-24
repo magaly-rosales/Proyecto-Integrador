@@ -38,10 +38,17 @@ export const SECCIONES = [
         subtitulo: 'Captura ejemplos para que el modelo reconozca cada seña.',
         icono: 'objetivo',
     },
+    {
+        ruta: '/asistente',
+        etiqueta: 'Asistente',
+        titulo: 'Asistente',
+        subtitulo: 'Consulta usuarios, categorías, señas y estadísticas con ayuda de la IA.',
+        icono: 'chat',
+    },
 ];
 
 export const PERFIL = {
     ruta: '/perfil',
     titulo: 'Mi perfil',
-    subtitulo: 'Tus datos y la contraseña de administrador.',
+    subtitulo: 'Tu foto, tus datos y tu contraseña de administrador.',
 };

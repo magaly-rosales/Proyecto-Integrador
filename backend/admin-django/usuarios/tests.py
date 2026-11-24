@@ -1,10 +1,21 @@
-"""Pruebas de la app usuarios (lista y activar/desactivar cuentas)."""
+"""Pruebas de la app usuarios (lista, activar/desactivar cuentas y perfil del administrador)."""
+import os
+
 from django.test import SimpleTestCase
 from rest_framework.test import APIClient, APITestCase
 
-from config.pruebas_comunes import cliente_de, crear_admin, crear_usuario
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+from config.pruebas_comunes import (
+    CarpetaMediaTemporal, cliente_de, crear_admin, crear_usuario, imagen_png, ruta_en_disco,
+)
 from senas.models import Usuario
 
+from senas.auth import verificar_password
+
+from .perfil import (
+    MIN_PASSWORD, ErrorPerfil, datos_perfil, validar_password_nueva,
+)
 from .serializers import UsuarioSerializer
 
 
@@ -38,7 +49,160 @@ class UsuarioSerializerUnitTests(SimpleTestCase):
         self.assertFalse(self.serializer.get_is_staff(Usuario(rol='usuario')))
 
 
+class PerfilUnitTests(SimpleTestCase):
+    """Reglas del perfil del administrador (sin base de datos)."""
+
+    def _campo_del_error(self, funcion, *args):
+        with self.assertRaises(ErrorPerfil) as contexto:
+            funcion(*args)
+        return contexto.exception.campo
+
+    def test_password_corta_da_error_en_nueva(self):
+        corta = 'a' * (MIN_PASSWORD - 1)
+        self.assertEqual(self._campo_del_error(validar_password_nueva, 'actual123', corta, corta), 'nueva')
+
+    def test_password_igual_a_la_actual_da_error_en_nueva(self):
+        self.assertEqual(
+            self._campo_del_error(validar_password_nueva, 'misma-clave1', 'misma-clave1', 'misma-clave1'), 'nueva')
+
+    def test_confirmacion_distinta_da_error_en_confirmar(self):
+        self.assertEqual(
+            self._campo_del_error(validar_password_nueva, 'actual123', 'nueva-clave1', 'otra-clave1'), 'confirmar')
+
+    def test_password_valida_no_lanza_error(self):
+        validar_password_nueva('actual123', 'nueva-clave1', 'nueva-clave1')
+
+    def test_password_sin_numero_da_error_en_nueva(self):
+        self.assertEqual(
+            self._campo_del_error(validar_password_nueva, 'actual123', 'solo-letras', 'solo-letras'), 'nueva')
+
+    def test_password_sin_letra_da_error_en_nueva(self):
+        self.assertEqual(
+            self._campo_del_error(validar_password_nueva, 'actual123', '1234567890', '1234567890'), 'nueva')
+
+    def test_datos_perfil_trae_nombre_correo_rol_iniciales_y_foto(self):
+        datos = datos_perfil(Usuario(nombre='Magaly Rosales', email='m@senasapp.pe', rol='admin'))
+        self.assertEqual(datos, {'nombre': 'Magaly Rosales', 'email': 'm@senasapp.pe',
+                                 'rol': 'Administrador', 'iniciales': 'MR', 'foto': None})
+
+
 # ====================== PRUEBAS DE INTEGRACIÓN ======================
+
+class PerfilApiTests(CarpetaMediaTemporal, APITestCase):
+    """/api/perfil/, /api/perfil/foto/ y /api/perfil/password/"""
+
+    def setUp(self):
+        self.admin = crear_admin()  # contraseña: admin123
+        self.cliente = cliente_de(self.admin)
+
+    def _password(self, actual='admin123', nueva='nueva-clave1', confirmar='nueva-clave1'):
+        return self.cliente.post('/api/perfil/password/',
+                                 {'actual': actual, 'nueva': nueva, 'confirmar': confirmar}, format='json')
+
+    def test_sin_sesion_de_administrador_da_403(self):
+        self.assertEqual(APIClient().get('/api/perfil/').status_code, 403)
+        self.assertEqual(APIClient().post('/api/perfil/password/', {}, format='json').status_code, 403)
+
+    def test_usuario_comun_no_puede_ver_el_perfil(self):
+        ana = crear_usuario('Ana Torres', 'ana@correo.com')
+        self.assertEqual(cliente_de(ana).get('/api/perfil/').status_code, 403)
+
+    def test_devuelve_los_datos_del_administrador_con_sesion(self):
+        datos = self.cliente.get('/api/perfil/').json()
+        self.assertEqual((datos['nombre'], datos['email'], datos['rol']),
+                         ('Administrador', 'admin@senasapp.pe', 'Administrador'))
+        self.assertNotIn('password_hash', datos)
+
+    def test_el_nombre_el_correo_y_el_rol_no_se_pueden_cambiar_desde_el_perfil(self):
+        r = self.cliente.patch('/api/perfil/', {'nombre': 'Otro', 'email': 'otro@correo.com', 'rol': 'usuario'},
+                               format='json')
+        self.assertEqual(r.status_code, 405)
+        self.admin.refresh_from_db()
+        self.assertEqual((self.admin.nombre, self.admin.email, self.admin.rol),
+                         ('Administrador', 'admin@senasapp.pe', 'admin'))
+
+    # ---- foto ----
+    def _subir_foto(self, archivo=None):
+        return self.cliente.post('/api/perfil/foto/', {'foto': archivo or imagen_png()}, format='multipart')
+
+    def test_sin_foto_el_perfil_devuelve_none(self):
+        self.assertIsNone(self.cliente.get('/api/perfil/').json()['foto'])
+
+    def test_agregar_foto_la_guarda_y_devuelve_la_direccion_completa(self):
+        r = self._subir_foto()
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertTrue(r.data['data']['foto'].startswith('http'))
+        self.admin.refresh_from_db()
+        self.assertTrue(os.path.exists(ruta_en_disco(self.admin.foto)))
+
+    def test_cambiar_la_foto_borra_la_anterior(self):
+        self._subir_foto()
+        self.admin.refresh_from_db()
+        vieja = ruta_en_disco(self.admin.foto)
+        self._subir_foto(imagen_png('otra.png'))
+        self.assertFalse(os.path.exists(vieja))
+
+    def test_quitar_la_foto_la_borra(self):
+        self._subir_foto()
+        self.admin.refresh_from_db()
+        archivo = ruta_en_disco(self.admin.foto)
+        r = self.cliente.delete('/api/perfil/foto/')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertIsNone(r.data['data']['foto'])
+        self.assertFalse(os.path.exists(archivo))
+        self.admin.refresh_from_db()
+        self.assertIsNone(self.admin.foto)
+
+    def test_quitar_foto_sin_tener_foto_no_falla(self):
+        self.assertEqual(self.cliente.delete('/api/perfil/foto/').status_code, 200)
+
+    def test_foto_con_formato_no_permitido_da_400(self):
+        gif = SimpleUploadedFile('a.gif', b'GIF89a', content_type='image/gif')
+        r = self._subir_foto(gif)
+        self.assertEqual((r.status_code, r.data['campo']), (400, 'foto'))
+
+    def test_subir_sin_archivo_da_400(self):
+        r = self.cliente.post('/api/perfil/foto/', {}, format='multipart')
+        self.assertEqual((r.status_code, r.data['campo']), (400, 'foto'))
+
+    def test_la_foto_exige_sesion_de_administrador(self):
+        self.assertEqual(APIClient().delete('/api/perfil/foto/').status_code, 403)
+
+    def test_cambiar_la_contraseña_guarda_el_nuevo_hash(self):
+        r = self._password()
+        self.assertEqual(r.status_code, 200, r.content)
+        self.admin.refresh_from_db()
+        self.assertTrue(verificar_password('nueva-clave1', self.admin.password_hash))
+        self.assertFalse(verificar_password('admin123', self.admin.password_hash))
+
+    def test_con_la_contraseña_nueva_se_puede_iniciar_sesion(self):
+        self._password()
+        r = APIClient().post('/api/login/', {'email': 'admin@senasapp.pe', 'password': 'nueva-clave1'},
+                             format='json')
+        self.assertEqual(r.status_code, 200)
+
+    def test_contraseña_actual_incorrecta_da_400_y_no_cambia(self):
+        r = self._password(actual='mala')
+        self.assertEqual((r.status_code, r.data['campo']), (400, 'actual'))
+        self.admin.refresh_from_db()
+        self.assertTrue(verificar_password('admin123', self.admin.password_hash))
+
+    def test_contraseña_nueva_corta_da_400(self):
+        r = self._password(nueva='corta', confirmar='corta')
+        self.assertEqual((r.status_code, r.data['campo']), (400, 'nueva'))
+
+    def test_contraseña_nueva_sin_numero_da_400(self):
+        r = self._password(nueva='solo-letras', confirmar='solo-letras')
+        self.assertEqual((r.status_code, r.data['campo']), (400, 'nueva'))
+
+    def test_confirmacion_distinta_da_400(self):
+        r = self._password(confirmar='otra-distinta')
+        self.assertEqual((r.status_code, r.data['campo']), (400, 'confirmar'))
+
+    def test_faltan_campos_da_400(self):
+        r = self.cliente.post('/api/perfil/password/', {}, format='json')
+        self.assertEqual(r.status_code, 400)
+
 
 class UsuariosApiTests(APITestCase):
     """/api/usuarios/"""

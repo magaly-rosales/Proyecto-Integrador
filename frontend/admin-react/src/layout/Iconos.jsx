@@ -32,6 +32,12 @@ export const IconoGrafico = (p) => (
 export const IconoObjetivo = (p) => (
     <Icono {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" /></Icono>
 );
+export const IconoChat = (p) => (
+    <Icono {...p}>
+        <path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z" />
+        <path d="M8.5 11h7M8.5 14.5h4" />
+    </Icono>
+);
 export const IconoSalir = (p) => (
     <Icono {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></Icono>
 );
@@ -55,4 +61,5 @@ export const ICONOS = {
     usuarios: IconoUsuarios,
     grafico: IconoGrafico,
     objetivo: IconoObjetivo,
+    chat: IconoChat,
 };

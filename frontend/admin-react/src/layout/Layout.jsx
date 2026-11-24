@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { getResumen } from '../api/resumenApi';
+import useAsistente from '../hooks/useAsistente';
+import { AsistenteContext } from './AsistenteContext';
+import AsistenteFlotante from './AsistenteFlotante';
 import Cabecera from './Cabecera';
 import { ResumenContext } from './ResumenContext';
 import { PERFIL, SECCIONES } from './secciones';
@@ -17,6 +20,11 @@ export default function Layout() {
 
     const seccion = [...SECCIONES, PERFIL].find((s) => pathname.startsWith(s.ruta)) || SECCIONES[0];
 
+    const recargar = useCallback(() => setVersion((v) => v + 1), []);
+
+    // La conversación del asistente vive aquí para que no se pierda al cambiar de sección
+    const asistente = useAsistente({ onCuentaCambiada: recargar });
+
     // Trae los números del menú; las pantallas piden recargarlos al crear/borrar algo
     useEffect(() => {
         let vigente = true;
@@ -30,29 +38,29 @@ export default function Layout() {
         };
     }, [version]);
 
-    const valor = useMemo(
-        () => ({ resumen, recargar: () => setVersion((v) => v + 1) }),
-        [resumen]
-    );
+    const valor = useMemo(() => ({ resumen, recargar }), [resumen, recargar]);
 
     return (
         <ResumenContext.Provider value={valor}>
-            <div className={`app${menuAbierto ? ' menu-abierto' : ''}`}>
-                <Sidebar resumen={resumen} onNavegar={() => setMenuAbierto(false)} />
-                <div className="app-velo" onClick={() => setMenuAbierto(false)} />
+            <AsistenteContext.Provider value={asistente}>
+                <div className={`app${menuAbierto ? ' menu-abierto' : ''}`}>
+                    <Sidebar resumen={resumen} onNavegar={() => setMenuAbierto(false)} />
+                    <div className="app-velo" onClick={() => setMenuAbierto(false)} />
 
-                <div className="app-contenido">
-                    <Cabecera
-                        seccion={seccion}
-                        tema={tema}
-                        onAlternarTema={alternar}
-                        onMenu={() => setMenuAbierto(true)}
-                    />
-                    <main className="app-principal">
-                        <Outlet />
-                    </main>
+                    <div className="app-contenido">
+                        <Cabecera
+                            seccion={seccion}
+                            tema={tema}
+                            onAlternarTema={alternar}
+                            onMenu={() => setMenuAbierto(true)}
+                        />
+                        <main className="app-principal">
+                            <Outlet />
+                        </main>
+                    </div>
                 </div>
-            </div>
+                <AsistenteFlotante />
+            </AsistenteContext.Provider>
         </ResumenContext.Provider>
     );
 }

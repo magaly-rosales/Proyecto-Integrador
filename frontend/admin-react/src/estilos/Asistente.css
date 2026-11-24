@@ -1,0 +1,341 @@
+/* Pantalla del asistente (reutiliza cajas y botones de Senas.css y Comun.css) */
+.asistente,
+.asistente-flotante {
+    --as-azul: #3b82f6;
+    --as-azul-suave: rgba(59, 130, 246, 0.1);
+    --as-azul-borde: rgba(59, 130, 246, 0.35);
+}
+
+.asistente-chat {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+}
+
+.asistente {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 780px;
+    margin: 0 auto;
+    height: min(700px, calc(100vh - 240px));
+    min-height: 480px;
+    padding: 0;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--as-azul-suave) 0%, transparent 45%), var(--tarjeta);
+    border-radius: 16px;
+}
+
+.asistente-conversacion {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 24px;
+    overflow-y: auto;
+}
+
+/* Pantalla de inicio */
+.asistente-inicio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: auto;
+    width: 100%;
+    max-width: 560px;
+    text-align: center;
+}
+
+.asistente-inicio h2 {
+    margin: 6px 0 0;
+    font-size: 1.4em;
+    font-weight: 800;
+}
+
+.asistente-inicio p {
+    margin: 0 0 10px;
+    max-width: 420px;
+}
+
+.asistente-ejemplos {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+}
+
+.asistente-ejemplo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 18px;
+    font-size: inherit;
+    font-weight: 700;
+    text-align: left;
+    color: var(--texto);
+    background: var(--as-azul-suave);
+    border: 1px solid var(--as-azul-borde);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.asistente-ejemplo svg {
+    flex-shrink: 0;
+    color: var(--as-azul);
+}
+
+.asistente-ejemplo:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.22);
+}
+
+.asistente-ejemplo:focus-visible {
+    outline: 2px solid var(--as-azul);
+    outline-offset: 2px;
+}
+
+/* Mensajes */
+.asistente-mensaje {
+    max-width: 75%;
+    padding: 12px 18px;
+    border: 1px solid var(--borde);
+    border-radius: 18px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.asistente-mensaje p {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.asistente-usuario {
+    align-self: flex-end;
+    color: #fff;
+    background: var(--as-azul);
+    border-color: var(--as-azul);
+    border-bottom-right-radius: 6px;
+}
+
+.asistente-asistente {
+    align-self: flex-start;
+    background: var(--fondo);
+    border-bottom-left-radius: 6px;
+}
+
+.asistente-error {
+    color: var(--error-texto, #b42318);
+    background: var(--error-fondo, #fdecea);
+    border-color: var(--error-texto, #b42318);
+}
+
+/* Tarjeta para confirmar activar o desactivar una cuenta */
+.asistente-accion {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+}
+
+.asistente-accion-botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* Escribir la pregunta */
+.asistente-formulario {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px 18px;
+    background: var(--tarjeta);
+    border-top: 1px solid var(--borde);
+}
+
+.asistente-formulario input {
+    flex: 1;
+    min-width: 0;
+    height: 58px;
+    padding: 0 24px;
+    font-size: inherit;
+    color: var(--texto);
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.asistente-formulario input:focus-visible {
+    outline: 2px solid var(--as-azul);
+    outline-offset: 2px;
+}
+
+.asistente-enviar {
+    flex-shrink: 0;
+    width: 58px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: var(--as-azul);
+    border: 0;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.asistente-enviar:hover:not(:disabled) {
+    transform: scale(1.06);
+}
+
+.asistente-enviar:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.asistente-enviar:focus-visible {
+    outline: 2px solid var(--as-azul);
+    outline-offset: 3px;
+}
+
+/* Botón y ventana flotantes */
+.asistente-flotante {
+    position: fixed;
+    right: 48px;
+    bottom: 28px;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.asistente-burbuja {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 88px;
+    height: 88px;
+    padding: 0;
+    background: var(--tarjeta);
+    border: 2px solid var(--as-azul-borde);
+    border-radius: 50%;
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.asistente-burbuja:hover {
+    transform: scale(1.08);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.5);
+}
+
+.asistente-burbuja:focus-visible {
+    outline: 2px solid var(--as-azul);
+    outline-offset: 3px;
+}
+
+.asistente-ventana {
+    display: flex;
+    flex-direction: column;
+    width: min(520px, calc(100vw - 32px));
+    height: min(540px, calc(100vh - 140px));
+    overflow: hidden;
+    color: var(--texto);
+    background: linear-gradient(180deg, var(--as-azul-suave) 0%, transparent 45%), var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 16px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+}
+
+.asistente-ventana-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--borde);
+}
+
+.asistente-ventana-cabecera strong {
+    flex: 1;
+}
+
+.asistente-ventana-cabecera button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    color: var(--texto-suave);
+    background: transparent;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.asistente-ventana-cabecera button:hover {
+    background: var(--as-azul-suave);
+}
+
+.asistente-ventana-cabecera button:focus-visible {
+    outline: 2px solid var(--as-azul);
+}
+
+/* Versión pequeña de la conversación (ventana flotante) */
+.asistente-compacto .asistente-conversacion {
+    padding: 12px 14px;
+}
+
+.asistente-compacto .asistente-inicio h2 {
+    font-size: 1.1em;
+}
+
+.asistente-compacto .asistente-ejemplo {
+    padding: 10px 12px;
+    gap: 10px;
+    font-size: 0.85em;
+}
+
+.asistente-compacto .asistente-mensaje {
+    max-width: 90%;
+    padding: 10px 14px;
+}
+
+.asistente-compacto .asistente-formulario {
+    gap: 8px;
+    padding: 10px 12px 12px;
+}
+
+.asistente-compacto .asistente-formulario input {
+    height: 48px;
+    padding: 0 18px;
+}
+
+.asistente-compacto .asistente-enviar {
+    width: 48px;
+    height: 48px;
+}
+
+@media (max-width: 700px) {
+    .asistente-mensaje {
+        max-width: 92%;
+    }
+
+    .asistente-flotante {
+        right: 24px;
+        bottom: 20px;
+    }
+}

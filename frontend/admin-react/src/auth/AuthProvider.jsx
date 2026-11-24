@@ -15,6 +15,15 @@ export default function AuthProvider({ children }) {
         window.location.replace(URL_ACCESO);
     }, []);
 
+    // Actualiza el nombre y el correo que se muestran (y los guardados) después de editar el perfil
+    const actualizarUsuario = useCallback((datos) => {
+        setUsuario((actual) => {
+            const nuevo = { ...actual, ...datos };
+            sesion.guardar(sesion.token(), nuevo);
+            return nuevo;
+        });
+    }, []);
+
     // Si Django rechaza el token, se cierra la sesión
     useEffect(() => {
         window.addEventListener(EVENTO_SESION_VENCIDA, cerrarSesion);
@@ -22,8 +31,8 @@ export default function AuthProvider({ children }) {
     }, [cerrarSesion]);
 
     const valor = useMemo(
-        () => ({ autenticado: Boolean(token), usuario, cerrarSesion }),
-        [token, usuario, cerrarSesion]
+        () => ({ autenticado: Boolean(token), usuario, cerrarSesion, actualizarUsuario }),
+        [token, usuario, cerrarSesion, actualizarUsuario]
     );
 
     return <AuthContext.Provider value={valor}>{children}</AuthContext.Provider>;

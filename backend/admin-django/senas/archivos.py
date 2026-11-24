@@ -26,6 +26,13 @@ def guardar_imagen(archivo):
     return settings.MEDIA_URL + ruta
 
 
+def guardar_foto_perfil(archivo):
+    """Guarda la foto de perfil y devuelve la ruta que se almacena en usuario.foto."""
+    ext = archivo.name.rsplit('.', 1)[-1].lower()
+    ruta = default_storage.save(f'fotos_perfil/{uuid.uuid4()}.{ext}', archivo)
+    return settings.MEDIA_URL + ruta
+
+
 def guardar_video(sena, archivo):
     """Guarda el video y su ruta en la tabla video_referencia."""
     ruta = default_storage.save(f'videos_senas/{uuid.uuid4()}.mp4', archivo)

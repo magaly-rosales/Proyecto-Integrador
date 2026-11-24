@@ -22,15 +22,6 @@ export default function ConfirmarEliminarCategoria({ categoria, onCerrar, onElim
 
     return (
         <Modal titulo={`¿Eliminar la categoría «${categoria.nombre}»?`} onCerrar={onCerrar} ancho={460}>
-            {total > 0 ? (
-                <p className="modal-texto">
-                    Se eliminarán también sus <strong>{total} seña{total === 1 ? '' : 's'}</strong>, con sus
-                    videos y su entrenamiento. Dejarán de verse en la web y en la app móvil. Esta acción no se
-                    puede deshacer.
-                </p>
-            ) : (
-                <p className="modal-texto">Esta acción no se puede deshacer.</p>
-            )}
             {error && <p className="modal-error" role="alert">{error}</p>}
             <div className="modal-acciones">
                 <button type="button" className="boton-contorno" onClick={onCerrar} disabled={enviando}>

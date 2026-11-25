@@ -43,5 +43,6 @@ data class ReconocimientoResponse(
     val sena: String? = null,
     val nombre: String? = null,
     val confianza: Double? = null,
-    val mensaje: String? = null
+    val mensaje: String? = null,
+    val distancia: Double? = null
 )

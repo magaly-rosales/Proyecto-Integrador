@@ -3,9 +3,10 @@ package com.tecsup.usuario_kotlin.camera
 import android.content.Context
 import android.os.SystemClock
 import androidx.camera.core.ImageProxy
+import android.graphics.Bitmap
+import android.graphics.Matrix
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
-import com.google.mediapipe.tasks.vision.core.ImageProcessingOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.handlandmarker.HandLandmarker
 import com.tecsup.usuario_kotlin.data.model.PuntoManoDto
@@ -39,15 +40,27 @@ class HandLandmarkerHelper(context: Context) {
         imageProxy: ImageProxy
     ): List<List<PuntoManoDto>> {
 
-        val bitmap = imageProxy.toBitmap()
-        val imagen = BitmapImageBuilder(bitmap).build()
+        val original = imageProxy.toBitmap()
 
-        val processingOptions = ImageProcessingOptions
-            .builder()
-            .setRotationDegrees(
-                imageProxy.imageInfo.rotationDegrees
+        val rotation = imageProxy.imageInfo.rotationDegrees
+
+        val bitmap = if (rotation == 0) {
+            original
+        } else {
+            Bitmap.createBitmap(
+                original,
+                0,
+                0,
+                original.width,
+                original.height,
+                Matrix().apply {
+                    postRotate(rotation.toFloat())
+                },
+                true
             )
-            .build()
+        }
+
+        val imagen = BitmapImageBuilder(bitmap).build()
 
         val timestamp = maxOf(
             SystemClock.uptimeMillis(),
@@ -58,7 +71,6 @@ class HandLandmarkerHelper(context: Context) {
 
         val resultado = detector.detectForVideo(
             imagen,
-            processingOptions,
             timestamp
         )
 

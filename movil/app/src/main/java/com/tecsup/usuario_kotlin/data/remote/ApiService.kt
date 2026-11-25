@@ -32,4 +32,7 @@ interface ApiService {
 
     @POST("api/reconocimiento/secuencia")
     suspend fun reconocerSecuencia(@Body cuadros: List<List<PuntoManoDto>>): Response<ReconocimientoResponse>
+
+    @POST("api/traducciones")
+    suspend fun registrarTraduccion(@Body datos: Map<String, String>): Response<Map<String, String>>
 }

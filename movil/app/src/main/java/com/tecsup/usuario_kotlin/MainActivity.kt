@@ -1,6 +1,8 @@
+
 package com.tecsup.usuario_kotlin
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -12,6 +14,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.lifecycleScope
+import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
 import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
@@ -21,6 +25,7 @@ import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -29,6 +34,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             UsuariokotlinTheme {
                 var currentScreen by remember { mutableStateOf("login") }
@@ -56,6 +62,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
                         "register" -> {
                             RegisterScreen(
                                 authViewModel = authViewModel,
@@ -67,6 +74,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
                         "forgot_password" -> {
                             ForgotPasswordScreen(
                                 authViewModel = authViewModel,
@@ -75,14 +83,20 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
                         "home" -> {
                             HomeScreen(
                                 username = userName,
-                                onNavigateToTranslator = { currentScreen = "translation" },
-                                onNavigateToPerfil = { currentScreen = "perfil" },
+                                onNavigateToTranslator = {
+                                    currentScreen = "translation"
+                                },
+                                onNavigateToPerfil = {
+                                    currentScreen = "perfil"
+                                },
                                 viewModel = translationViewModel
                             )
                         }
+
                         "translation" -> {
                             TranslationScreen(
                                 viewModel = translationViewModel,
@@ -92,15 +106,45 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToPerfil = {
                                     currentScreen = "perfil"
+                                },
+                                onSpeakText = { nombreSena ->
+                                    lifecycleScope.launch {
+                                        try {
+                                            val respuesta =
+                                                RetrofitClient.apiService.registrarTraduccion(
+                                                    mapOf("sena" to nombreSena)
+                                                )
+
+                                            if (!respuesta.isSuccessful) {
+                                                Toast.makeText(
+                                                    this@MainActivity,
+                                                    "No se pudo guardar la traducción",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+
+                                        } catch (e: Exception) {
+                                            Toast.makeText(
+                                                this@MainActivity,
+                                                "Error al guardar la traducción",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
                                 }
                             )
                         }
+
                         "perfil" -> {
                             ProfileScreen(
                                 userName = authViewModel.loggedUserName,
                                 userEmail = authViewModel.loggedUserEmail,
-                                onNavigateToTraducir = { currentScreen = "translation" },
-                                onNavigateToSenas = { currentScreen = "home" },
+                                onNavigateToTraducir = {
+                                    currentScreen = "translation"
+                                },
+                                onNavigateToSenas = {
+                                    currentScreen = "home"
+                                },
                                 onLogout = {
                                     authViewModel.logout()
                                     currentScreen = "login"

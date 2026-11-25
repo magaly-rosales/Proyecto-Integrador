@@ -148,20 +148,7 @@ fun TranslationScreen(
 
     // FRASES RECIENTES DEL DISEÑO
     val frasesRecientes = remember {
-        mutableStateListOf(
-            FraseReciente(
-                "Buenos días, ¿cómo estás?",
-                "Hace 5 min"
-            ),
-            FraseReciente(
-                "Necesito ir al baño",
-                "Hace 20 min"
-            ),
-            FraseReciente(
-                "Gracias por tu ayuda",
-                "Ayer"
-            )
-        )
+        mutableStateListOf<FraseReciente>()
     }
 
     Scaffold(
@@ -303,7 +290,14 @@ fun TranslationScreen(
 
                     onSpeakClick = {
 
-                        if (displaySign.isNotBlank()) {
+                        if (
+                            displaySign.isNotBlank() &&
+                            displaySign.lowercase() !in setOf(
+                                "desconocida",
+                                "dudosa",
+                                "sin_muestras"
+                            )
+                        ) {
 
                             tts?.speak(
                                 displaySign,
@@ -312,18 +306,20 @@ fun TranslationScreen(
                                 null
                             )
 
-                            if (
-                                frasesRecientes.none {
-                                    it.texto == displaySign
-                                }
-                            ) {
-                                frasesRecientes.add(
-                                    0,
-                                    FraseReciente(
-                                        displaySign,
-                                        "Ahora"
-                                    )
+                            frasesRecientes.removeAll {
+                                it.texto == displaySign
+                            }
+
+                            frasesRecientes.add(
+                                0,
+                                FraseReciente(
+                                    displaySign,
+                                    "Ahora"
                                 )
+                            )
+
+                            if (frasesRecientes.size > 10) {
+                                frasesRecientes.removeAt(frasesRecientes.lastIndex)
                             }
 
                             onSpeakText(displaySign)
@@ -346,6 +342,16 @@ fun TranslationScreen(
                     letterSpacing = 1.sp,
                     modifier = Modifier.padding(top = 4.dp)
                 )
+            }
+
+            if (frasesRecientes.isEmpty()) {
+                item {
+                    Text(
+                        text = "Aún no hay traducciones recientes",
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
+                }
             }
 
             items(frasesRecientes) { item ->
@@ -457,7 +463,7 @@ private fun SenasTopBar(
 
                 Icon(
                     imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notificaciones",
+                    contentDescription = null,
                     tint = TextPrimary,
                     modifier = Modifier.size(26.dp)
                 )

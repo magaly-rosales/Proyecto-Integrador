@@ -1,4 +1,3 @@
-
 package com.tecsup.usuario_kotlin
 
 import android.os.Bundle
@@ -11,7 +10,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
@@ -25,6 +25,7 @@ import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -37,17 +38,63 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             UsuariokotlinTheme {
-                var currentScreen by remember { mutableStateOf("login") }
 
-                // Extrae la inicial real del usuario logueado (ej. "Ana" -> "A")
+                // Pantallas que requieren un inicio de sesión válido
+                val protectedScreens = setOf(
+                    "home",
+                    "translation",
+                    "perfil"
+                )
+
+                // Restaurar la navegación sin permitir el acceso
+                // a pantallas protegidas cuando no existe una sesión
+                val screenSaver = Saver<String, String>(
+                    save = { it },
+                    restore = { savedScreen ->
+                        if (
+                            savedScreen in protectedScreens &&
+                            !authViewModel.loginSuccess
+                        ) {
+                            "login"
+                        } else {
+                            savedScreen
+                        }
+                    }
+                )
+
+                // Conservar la pantalla ante cambios de configuración
+                var currentScreen by rememberSaveable(
+                    stateSaver = screenSaver
+                ) {
+                    mutableStateOf("login")
+                }
+
+                // Validar el acceso a las pantallas protegidas
+                val activeScreen = if (
+                    currentScreen in protectedScreens &&
+                    !authViewModel.loginSuccess
+                ) {
+                    "login"
+                } else {
+                    currentScreen
+                }
+
+                // Obtener los datos del usuario autenticado
                 val userName = authViewModel.loggedUserName
-                val userInitial = userName.trim().firstOrNull()?.uppercase() ?: "U"
+
+                val userInitial = userName
+                    .trim()
+                    .firstOrNull()
+                    ?.uppercase() ?: "U"
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    when (currentScreen) {
+
+                    when (activeScreen) {
+
+                        // Inicio de sesión
                         "login" -> {
                             LoginScreen(
                                 authViewModel = authViewModel,
@@ -63,6 +110,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Registro de usuarios
                         "register" -> {
                             RegisterScreen(
                                 authViewModel = authViewModel,
@@ -75,6 +123,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Recuperación de contraseña
                         "forgot_password" -> {
                             ForgotPasswordScreen(
                                 authViewModel = authViewModel,
@@ -84,6 +133,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Catálogo de señas
                         "home" -> {
                             HomeScreen(
                                 username = userName,
@@ -97,6 +147,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Traductor de señas
                         "translation" -> {
                             TranslationScreen(
                                 viewModel = translationViewModel,
@@ -108,12 +159,17 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "perfil"
                                 },
                                 onSpeakText = { nombreSena ->
+
                                     lifecycleScope.launch {
                                         try {
+
                                             val respuesta =
-                                                RetrofitClient.apiService.registrarTraduccion(
-                                                    mapOf("sena" to nombreSena)
-                                                )
+                                                RetrofitClient.apiService
+                                                    .registrarTraduccion(
+                                                        mapOf(
+                                                            "sena" to nombreSena
+                                                        )
+                                                    )
 
                                             if (!respuesta.isSuccessful) {
                                                 Toast.makeText(
@@ -122,6 +178,9 @@ class MainActivity : ComponentActivity() {
                                                     Toast.LENGTH_SHORT
                                                 ).show()
                                             }
+
+                                        } catch (e: CancellationException) {
+                                            throw e
 
                                         } catch (e: Exception) {
                                             Toast.makeText(
@@ -135,6 +194,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Perfil del usuario
                         "perfil" -> {
                             ProfileScreen(
                                 userName = authViewModel.loggedUserName,
@@ -146,8 +206,28 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "home"
                                 },
                                 onLogout = {
+
+                                    // Limpiar los datos de la sesión
                                     authViewModel.logout()
+
+                                    // Regresar al inicio de sesión
                                     currentScreen = "login"
+                                }
+                            )
+                        }
+
+                        // Pantalla de respaldo
+                        else -> {
+                            LoginScreen(
+                                authViewModel = authViewModel,
+                                onLoginSuccess = {
+                                    currentScreen = "translation"
+                                },
+                                onRegisterClick = {
+                                    currentScreen = "register"
+                                },
+                                onForgotPasswordClick = {
+                                    currentScreen = "forgot_password"
                                 }
                             )
                         }

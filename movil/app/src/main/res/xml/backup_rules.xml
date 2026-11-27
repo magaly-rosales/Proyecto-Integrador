@@ -1,13 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
--->
+<?xml version="1.0" encoding="utf-8"?>
+
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+
+    <!-- Proteger las preferencias privadas del usuario -->
+    <exclude
+        domain="sharedpref"
+        path="." />
+
+    <!-- Proteger los archivos internos -->
+    <exclude
+        domain="file"
+        path="." />
+
+    <!-- Proteger las bases de datos locales -->
+    <exclude
+        domain="database"
+        path="." />
+
 </full-backup-content>

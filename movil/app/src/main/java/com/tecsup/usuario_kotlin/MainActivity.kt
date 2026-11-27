@@ -34,6 +34,8 @@ import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
 import com.tecsup.usuario_kotlin.ui.viewmodel.ProfileViewModel
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -46,6 +48,10 @@ class MainActivity : ComponentActivity() {
 
     private val translationViewModel: TranslationViewModel by viewModels()
 
+    // Peticiones de registro asociadas a la sesión
+    private var translationRegistrationJob: Job? = null
+
+    // Pantallas que requieren autenticación
     private val protectedScreens = setOf(
         "home",
         "translation",
@@ -65,44 +71,63 @@ class MainActivity : ComponentActivity() {
 
             val userId = authViewModel.loggedUserId
 
-            // Repositorio compartido de preferencias
-            val preferencesRepository = remember(userId) {
-                userId?.takeIf { it > 0 }?.let {
+            val sessionVersion =
+                authViewModel.sessionState.generation
+
+            // Comprobar que exista una sesión válida
+            val hasValidSession =
+                authViewModel.loginSuccess &&
+                        userId != null &&
+                        userId > 0
+
+            // Preferencias independientes por sesión
+            val preferencesRepository = remember(
+                userId,
+                sessionVersion,
+                hasValidSession
+            ) {
+                if (hasValidSession && userId != null) {
                     TranslationPreferencesRepository(
                         applicationContext,
-                        it
+                        userId
                     )
+                } else {
+                    null
                 }
             }
 
-            // Repositorio compartido de notificaciones
-            val notificationRepository = remember(userId) {
-                userId?.takeIf { it > 0 }?.let {
+            // Notificaciones independientes por sesión
+            val notificationRepository = remember(
+                userId,
+                sessionVersion,
+                hasValidSession
+            ) {
+                if (hasValidSession && userId != null) {
                     NotificationRepository(
                         applicationContext,
-                        it
+                        userId
                     )
+                } else {
+                    null
                 }
             }
 
-            // Generar bienvenida una sola vez por cuenta
+            // Generar bienvenida únicamente con sesión válida
             LaunchedEffect(
                 notificationRepository,
-                authViewModel.loginSuccess
+                hasValidSession
             ) {
-                if (authViewModel.loginSuccess) {
-                    notificationRepository
-                        ?.generarBienvenida()
+                if (hasValidSession) {
+                    notificationRepository?.generarBienvenida()
                 }
             }
 
-            // Observar notificaciones del usuario
+            // Observar notificaciones
             val notifications = notificationRepository
                 ?.notifications
                 ?.collectAsStateWithLifecycle()
                 ?.value ?: emptyList()
 
-            // Cantidad de notificaciones sin leer
             val notificationCount = notifications.count {
                 !it.leida
             }
@@ -122,12 +147,13 @@ class MainActivity : ComponentActivity() {
                 darkTheme = darkModeEnabled,
                 textSize = textSize
             ) {
+                // Impedir restaurar pantallas privadas sin sesión
                 val screenSaver = Saver<String, String>(
                     save = { it },
                     restore = { savedScreen ->
                         if (
                             savedScreen in protectedScreens &&
-                            !authViewModel.loginSuccess
+                            !hasValidSession
                         ) {
                             "login"
                         } else {
@@ -142,24 +168,40 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf("login")
                 }
 
-                // Proteger las pantallas privadas
+                // Validación centralizada de navegación
+                val canAccessPrivateScreens =
+                    hasValidSession &&
+                            preferencesRepository != null &&
+                            notificationRepository != null
+
                 val activeScreen = if (
                     currentScreen in protectedScreens &&
-                    (
-                            !authViewModel.loginSuccess ||
-                                    preferencesRepository == null ||
-                                    notificationRepository == null
-                            )
+                    !canAccessPrivateScreens
                 ) {
                     "login"
                 } else {
                     currentScreen
                 }
 
-                // Datos del usuario autenticado
+                // Limpiar una ruta privada que ya no es válida
+                LaunchedEffect(
+                    currentScreen,
+                    canAccessPrivateScreens
+                ) {
+                    if (
+                        currentScreen in protectedScreens &&
+                        !canAccessPrivateScreens
+                    ) {
+                        cerrarSesion()
+                        currentScreen = "login"
+                    }
+                }
+
+                // Datos de la sesión actual
                 val userName = authViewModel.loggedUserName
                 val userEmail = authViewModel.loggedUserEmail
                 val userPhoto = authViewModel.loggedUserPhoto
+                val userRole = authViewModel.loggedUserRole
 
                 val userInitial = userName.trim()
                     .firstOrNull()?.uppercase() ?: "U"
@@ -168,327 +210,321 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    when (activeScreen) {
-
-                        // Inicio de sesión
-                        "login" -> {
-                            LoginScreen(
-                                authViewModel = authViewModel,
-
-                                onLoginSuccess = {
-                                    currentScreen = "translation"
-                                },
-
-                                onRegisterClick = {
-                                    authViewModel.resetRegisterSuccess()
-                                    currentScreen = "register"
-                                },
-
-                                onForgotPasswordClick = {
-                                    authViewModel.resetForgotPasswordSuccess()
-                                    currentScreen = "forgot_password"
-                                }
-                            )
+                    // Separar el estado visual de cada sesión
+                    key(
+                        if (activeScreen in protectedScreens) {
+                            sessionVersion
+                        } else {
+                            -1L
                         }
+                    ) {
+                        when (activeScreen) {
 
-                        // Registro
-                        "register" -> {
-                            RegisterScreen(
-                                authViewModel = authViewModel,
-
-                                onRegisterSuccess = {
-                                    authViewModel.resetRegisterSuccess()
-                                    currentScreen = "login"
-                                },
-
-                                onLoginClick = {
-                                    currentScreen = "login"
-                                }
-                            )
-                        }
-
-                        // Recuperación de contraseña
-                        "forgot_password" -> {
-                            ForgotPasswordScreen(
-                                authViewModel = authViewModel,
-
-                                onBackClick = {
-                                    authViewModel.resetForgotPasswordSuccess()
-                                    currentScreen = "login"
-                                }
-                            )
-                        }
-
-                        // Catálogo y progreso del usuario
-                        "home" -> {
-                            if (
-                                userId != null &&
-                                userId > 0 &&
-                                notificationRepository != null
-                            ) {
-                                key(userId) {
-                                    HomeScreen(
-                                        username = userName,
-                                        userId = userId,
-
-                                        onNavigateToTranslator = {
-                                            currentScreen = "translation"
-                                        },
-
-                                        onNavigateToPerfil = {
-                                            currentScreen = "perfil"
-                                        },
-
-                                        viewModel = translationViewModel,
-
-                                        // Notificar práctica exitosa
-                                        onPracticeCompleted = { nombreSena ->
-                                            notificationRepository
-                                                .notificarPracticaExitosa(
-                                                    nombreSena
-                                                )
-                                        }
-                                    )
-                                }
-                            } else {
-                                LaunchedEffect(Unit) {
-                                    cerrarSesion()
-                                    currentScreen = "login"
-                                }
+                            // Inicio de sesión
+                            "login" -> {
+                                LoginScreen(
+                                    authViewModel = authViewModel,
+                                    onLoginSuccess = {
+                                        currentScreen = "translation"
+                                    },
+                                    onRegisterClick = {
+                                        authViewModel.resetRegisterSuccess()
+                                        currentScreen = "register"
+                                    },
+                                    onForgotPasswordClick = {
+                                        authViewModel.resetForgotPasswordSuccess()
+                                        currentScreen = "forgot_password"
+                                    }
+                                )
                             }
-                        }
 
-                        // Traductor
-                        "translation" -> {
-                            if (
-                                userId != null &&
-                                userId > 0 &&
-                                preferencesRepository != null
-                            ) {
-                                key(userId) {
-                                    TranslationScreen(
-                                        viewModel = translationViewModel,
-                                        userId = userId,
-
-                                        preferencesRepository =
-                                            preferencesRepository,
-
-                                        userInitial = userInitial,
-
-                                        notificationCount =
-                                            notificationCount,
-
-                                        onNavigateToSenas = {
-                                            currentScreen = "home"
-                                        },
-
-                                        onNavigateToPerfil = {
-                                            currentScreen = "perfil"
-                                        },
-
-                                        onNavigateToNotifications = {
-                                            currentScreen =
-                                                "notifications_translation"
-                                        },
-
-                                        onSpeakText = { nombreSena ->
-                                            registrarTraduccion(nombreSena)
-                                        }
-                                    )
-                                }
-                            } else {
-                                LaunchedEffect(Unit) {
-                                    cerrarSesion()
-                                    currentScreen = "login"
-                                }
+                            // Registro
+                            "register" -> {
+                                RegisterScreen(
+                                    authViewModel = authViewModel,
+                                    onRegisterSuccess = {
+                                        authViewModel.resetRegisterSuccess()
+                                        currentScreen = "login"
+                                    },
+                                    onLoginClick = {
+                                        currentScreen = "login"
+                                    }
+                                )
                             }
-                        }
 
-                        // Mi cuenta
-                        "perfil" -> {
-                            ProfileScreen(
-                                userName = userName,
-                                userEmail = userEmail,
-                                userPhoto = userPhoto,
+                            // Recuperación de contraseña
+                            "forgot_password" -> {
+                                ForgotPasswordScreen(
+                                    authViewModel = authViewModel,
+                                    onBackClick = {
+                                        authViewModel.resetForgotPasswordSuccess()
+                                        currentScreen = "login"
+                                    }
+                                )
+                            }
 
-                                notificationCount =
-                                    notificationCount,
-
-                                darkModeEnabled = darkModeEnabled,
-
-                                onDarkModeChange = { enabled ->
-                                    preferencesRepository
-                                        ?.cambiarModoOscuro(enabled)
-                                },
-
-                                textSize = textSize,
-
-                                onTextSizeChange = { size ->
-                                    preferencesRepository
-                                        ?.cambiarTamanoTexto(size)
-                                },
-
-                                onNavigateToSettings = {
-                                    currentScreen = "settings"
-                                },
-
-                                onNavigateToNotifications = {
-                                    currentScreen =
-                                        "notifications_profile"
-                                },
-
-                                // Navegar a la guía de uso
-                                onNavigateToGuide = {
-                                    currentScreen = "user_guide"
-                                },
-
-                                onNavigateToTraducir = {
-                                    currentScreen = "translation"
-                                },
-
-                                onNavigateToSenas = {
-                                    currentScreen = "home"
-                                },
-
-                                onLogout = {
-                                    cerrarSesion()
-                                    currentScreen = "login"
-                                },
-
-                                onNavigateToEditProfile = {
-                                    profileViewModel.resetProfileUpdateState()
-                                    profileViewModel.resetPhotoUpdateState()
-                                    currentScreen = "edit_profile"
-                                }
-                            )
-                        }
-
-                        // Notificaciones desde traductor o perfil
-                        "notifications_translation",
-                        "notifications_profile" -> {
-                            if (
-                                userId != null &&
-                                notificationRepository != null
-                            ) {
-                                val returnScreen = if (
-                                    activeScreen ==
-                                    "notifications_translation"
+                            // Catálogo y progreso
+                            "home" -> {
+                                if (
+                                    userId != null &&
+                                    userId > 0 &&
+                                    notificationRepository != null
                                 ) {
-                                    "translation"
-                                } else {
-                                    "perfil"
-                                }
+                                    key(userId) {
+                                        HomeScreen(
+                                            username = userName,
+                                            userId = userId,
+                                            onNavigateToTranslator = {
+                                                currentScreen = "translation"
+                                            },
+                                            onNavigateToPerfil = {
+                                                currentScreen = "perfil"
+                                            },
+                                            viewModel = translationViewModel,
 
-                                key(userId, activeScreen) {
-                                    NotificationsScreen(
-                                        repository =
-                                            notificationRepository,
-
-                                        onBackClick = {
-                                            currentScreen = returnScreen
-                                        }
-                                    )
-                                }
-                            } else {
-                                LaunchedEffect(Unit) {
-                                    cerrarSesion()
-                                    currentScreen = "login"
-                                }
-                            }
-                        }
-
-                        // Configuración de preferencias
-                        "settings" -> {
-                            if (
-                                userId != null &&
-                                preferencesRepository != null
-                            ) {
-                                key(userId) {
-                                    SettingsScreen(
-                                        preferencesRepository =
-                                            preferencesRepository,
-
-                                        onBackClick = {
-                                            currentScreen = "perfil"
-                                        }
-                                    )
-                                }
-                            } else {
-                                LaunchedEffect(Unit) {
-                                    cerrarSesion()
-                                    currentScreen = "login"
+                                            // Comprobar la sesión del evento
+                                            onPracticeCompleted = { nombreSena ->
+                                                if (
+                                                    authViewModel.sessionState
+                                                        .esSesionActual(
+                                                            userId,
+                                                            sessionVersion
+                                                        )
+                                                ) {
+                                                    notificationRepository
+                                                        .notificarPracticaExitosa(
+                                                            nombreSena
+                                                        )
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                             }
-                        }
 
-                        // Guía de uso de SeñasApp
-                        "user_guide" -> {
-                            if (
-                                userId != null &&
-                                userId > 0
-                            ) {
-                                key(userId) {
-                                    UserGuideScreen(
-                                        onBackClick = {
-                                            currentScreen = "perfil"
-                                        }
-                                    )
-                                }
-                            } else {
-                                LaunchedEffect(Unit) {
-                                    cerrarSesion()
-                                    currentScreen = "login"
+                            // Traductor
+                            "translation" -> {
+                                if (
+                                    userId != null &&
+                                    userId > 0 &&
+                                    preferencesRepository != null
+                                ) {
+                                    key(userId) {
+                                        TranslationScreen(
+                                            viewModel = translationViewModel,
+                                            userId = userId,
+                                            preferencesRepository =
+                                                preferencesRepository,
+                                            userInitial = userInitial,
+                                            notificationCount =
+                                                notificationCount,
+
+                                            onNavigateToSenas = {
+                                                currentScreen = "home"
+                                            },
+                                            onNavigateToPerfil = {
+                                                currentScreen = "perfil"
+                                            },
+                                            onNavigateToNotifications = {
+                                                currentScreen =
+                                                    "notifications_translation"
+                                            },
+
+                                            onSpeakText = { nombreSena ->
+                                                registrarTraduccion(
+                                                    nombreSena = nombreSena,
+                                                    userId = userId,
+                                                    sessionVersion =
+                                                        sessionVersion
+                                                )
+                                            }
+                                        )
+                                    }
                                 }
                             }
-                        }
 
-                        // Editar perfil
-                        "edit_profile" -> {
-                            EditProfileScreen(
-                                profileViewModel = profileViewModel,
+                            // Mi cuenta
+                            "perfil" -> {
+                                ProfileScreen(
+                                    userName = userName,
+                                    userEmail = userEmail,
+                                    userPhoto = userPhoto,
 
-                                onBackClick = {
-                                    currentScreen = "perfil"
-                                },
+                                    // Rol recibido del servidor
+                                    userRole = userRole,
 
-                                onNavigateToChangePassword = {
-                                    profileViewModel.resetPasswordChangeState()
-                                    profileViewModel.resetPhotoUpdateState()
-                                    currentScreen = "change_password"
+                                    notificationCount =
+                                        notificationCount,
+
+                                    darkModeEnabled =
+                                        darkModeEnabled,
+
+                                    onDarkModeChange = { enabled ->
+                                        preferencesRepository
+                                            ?.cambiarModoOscuro(enabled)
+                                    },
+
+                                    textSize = textSize,
+
+                                    onTextSizeChange = { size ->
+                                        preferencesRepository
+                                            ?.cambiarTamanoTexto(size)
+                                    },
+
+                                    onNavigateToSettings = {
+                                        currentScreen = "settings"
+                                    },
+
+                                    onNavigateToNotifications = {
+                                        currentScreen =
+                                            "notifications_profile"
+                                    },
+
+                                    onNavigateToGuide = {
+                                        currentScreen = "user_guide"
+                                    },
+
+                                    onNavigateToTraducir = {
+                                        currentScreen = "translation"
+                                    },
+
+                                    onNavigateToSenas = {
+                                        currentScreen = "home"
+                                    },
+
+                                    onLogout = {
+                                        cerrarSesion()
+                                        currentScreen = "login"
+                                    },
+
+                                    onNavigateToEditProfile = {
+                                        profileViewModel
+                                            .resetProfileUpdateState()
+
+                                        profileViewModel
+                                            .resetPhotoUpdateState()
+
+                                        currentScreen = "edit_profile"
+                                    }
+                                )
+                            }
+
+                            // Notificaciones
+                            "notifications_translation",
+                            "notifications_profile" -> {
+                                if (
+                                    userId != null &&
+                                    notificationRepository != null
+                                ) {
+                                    val returnScreen = if (
+                                        activeScreen ==
+                                        "notifications_translation"
+                                    ) {
+                                        "translation"
+                                    } else {
+                                        "perfil"
+                                    }
+
+                                    key(userId, activeScreen) {
+                                        NotificationsScreen(
+                                            repository =
+                                                notificationRepository,
+
+                                            onBackClick = {
+                                                currentScreen = returnScreen
+                                            }
+                                        )
+                                    }
                                 }
-                            )
-                        }
+                            }
 
-                        // Cambiar contraseña
-                        "change_password" -> {
-                            ChangePasswordScreen(
-                                profileViewModel = profileViewModel,
+                            // Configuración
+                            "settings" -> {
+                                if (
+                                    userId != null &&
+                                    preferencesRepository != null
+                                ) {
+                                    key(userId) {
+                                        SettingsScreen(
+                                            preferencesRepository =
+                                                preferencesRepository,
 
-                                onBackClick = {
-                                    currentScreen = "edit_profile"
+                                            onBackClick = {
+                                                currentScreen = "perfil"
+                                            }
+                                        )
+                                    }
                                 }
-                            )
-                        }
+                            }
 
-                        // Pantalla de respaldo
-                        else -> {
-                            LoginScreen(
-                                authViewModel = authViewModel,
-
-                                onLoginSuccess = {
-                                    currentScreen = "translation"
-                                },
-
-                                onRegisterClick = {
-                                    authViewModel.resetRegisterSuccess()
-                                    currentScreen = "register"
-                                },
-
-                                onForgotPasswordClick = {
-                                    authViewModel.resetForgotPasswordSuccess()
-                                    currentScreen = "forgot_password"
+                            // Guía de uso
+                            "user_guide" -> {
+                                if (
+                                    userId != null &&
+                                    userId > 0
+                                ) {
+                                    key(userId) {
+                                        UserGuideScreen(
+                                            onBackClick = {
+                                                currentScreen = "perfil"
+                                            }
+                                        )
+                                    }
                                 }
-                            )
+                            }
+
+                            // Editar perfil
+                            "edit_profile" -> {
+                                EditProfileScreen(
+                                    profileViewModel = profileViewModel,
+
+                                    onBackClick = {
+                                        currentScreen = "perfil"
+                                    },
+
+                                    onNavigateToChangePassword = {
+                                        profileViewModel
+                                            .resetPasswordChangeState()
+
+                                        profileViewModel
+                                            .resetPhotoUpdateState()
+
+                                        currentScreen = "change_password"
+                                    }
+                                )
+                            }
+
+                            // Cambiar contraseña
+                            "change_password" -> {
+                                ChangePasswordScreen(
+                                    profileViewModel = profileViewModel,
+
+                                    onBackClick = {
+                                        currentScreen = "edit_profile"
+                                    }
+                                )
+                            }
+
+                            // Pantalla de respaldo
+                            else -> {
+                                LoginScreen(
+                                    authViewModel = authViewModel,
+
+                                    onLoginSuccess = {
+                                        currentScreen = "translation"
+                                    },
+
+                                    onRegisterClick = {
+                                        authViewModel.resetRegisterSuccess()
+                                        currentScreen = "register"
+                                    },
+
+                                    onForgotPasswordClick = {
+                                        authViewModel.resetForgotPasswordSuccess()
+                                        currentScreen = "forgot_password"
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -496,14 +532,49 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Registrar las señas reconocidas
-    private fun registrarTraduccion(nombreSena: String) {
-        lifecycleScope.launch {
+    // Registrar una traducción de la sesión actual
+    private fun registrarTraduccion(
+        nombreSena: String,
+        userId: Int,
+        sessionVersion: Long
+    ) {
+        val nombre = nombreSena.trim()
+
+        if (nombre.isBlank()) return
+
+        // No iniciar peticiones de una sesión anterior
+        if (
+            !authViewModel.sessionState.esSesionActual(
+                userId,
+                sessionVersion
+            )
+        ) return
+
+        // Crear un grupo de peticiones vinculado a la actividad
+        val parentJob = translationRegistrationJob
+            ?.takeIf { it.isActive }
+            ?: SupervisorJob(
+                lifecycleScope.coroutineContext[Job]
+            ).also {
+                translationRegistrationJob = it
+            }
+
+        lifecycleScope.launch(parentJob) {
             try {
                 val respuesta = RetrofitClient.apiService
                     .registrarTraduccion(
-                        mapOf("sena" to nombreSena)
+                        mapOf("sena" to nombre)
                     )
+
+                respuesta.errorBody()?.close()
+
+                // Ignorar respuestas de sesiones anteriores
+                if (
+                    !authViewModel.sessionState.esSesionActual(
+                        userId,
+                        sessionVersion
+                    )
+                ) return@launch
 
                 if (!respuesta.isSuccessful) {
                     Toast.makeText(
@@ -517,19 +588,30 @@ class MainActivity : ComponentActivity() {
                 throw e
 
             } catch (e: Exception) {
-                Toast.makeText(
-                    this@MainActivity,
-                    "Error al guardar la traducción",
-                    Toast.LENGTH_SHORT
-                ).show()
+                if (
+                    authViewModel.sessionState.esSesionActual(
+                        userId,
+                        sessionVersion
+                    )
+                ) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Error al guardar la traducción",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
     }
 
-    // Cerrar sesión conservando los datos locales
+    // Cerrar sesión y cancelar operaciones pendientes
     private fun cerrarSesion() {
+        translationRegistrationJob?.cancel()
+        translationRegistrationJob = null
+
         translationViewModel.cerrarSesionTraductor()
         profileViewModel.clearProfileOperations()
+
         authViewModel.logout()
     }
 }

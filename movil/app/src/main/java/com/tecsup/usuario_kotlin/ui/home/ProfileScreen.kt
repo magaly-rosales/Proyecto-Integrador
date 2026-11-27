@@ -50,21 +50,32 @@ fun ProfileScreen(
     onTextSizeChange: (TextSize) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onNavigateToNotifications: () -> Unit = {},
-    onNavigateToGuide: () -> Unit = {}
+    onNavigateToGuide: () -> Unit = {},
+    userRole: String? = null
 ) {
-    val displayName = userName.ifBlank {
-        "Usuario"
-    }
+    val displayName = userName.ifBlank { "Usuario" }
 
     val displayEmail = userEmail.ifBlank {
         "Correo no disponible"
     }
 
+    // Comprobar el rol recibido del servidor
+    val isAdmin =
+        userRole?.trim().equals("admin", ignoreCase = true) ||
+                userRole?.trim().equals(
+                    "administrador",
+                    ignoreCase = true
+                )
+
     var showTextSizeDialog by remember {
         mutableStateOf(false)
     }
 
-    // Acceso rápido al tamaño de texto
+    var showAdminDialog by remember {
+        mutableStateOf(false)
+    }
+
+    // Diálogo de tamaño de texto
     if (showTextSizeDialog) {
         TextSizeDialog(
             selectedSize = textSize,
@@ -74,6 +85,49 @@ fun ProfileScreen(
             },
             onDismiss = {
                 showTextSizeDialog = false
+            }
+        )
+    }
+
+    // Información administrativa según el rol
+    if (showAdminDialog && isAdmin) {
+        AlertDialog(
+            onDismissRequest = {
+                showAdminDialog = false
+            },
+            containerColor = ProfileColors.CardDark,
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Security,
+                    contentDescription = null,
+                    tint = ProfileColors.AccentCyan
+                )
+            },
+            title = {
+                Text(
+                    text = "Panel de administración",
+                    color = ProfileColors.TextPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = "Tu cuenta tiene un rol administrativo. " +
+                            "Las funciones de administración se " +
+                            "realizan desde la plataforma web de SeñasApp.",
+                    color = ProfileColors.TextSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showAdminDialog = false
+                    }
+                ) {
+                    Text(
+                        text = "Entendido",
+                        color = ProfileColors.AccentCyan
+                    )
+                }
             }
         )
     }
@@ -95,20 +149,14 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(
-                    horizontal = 20.dp,
-                    vertical = 16.dp
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(20.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Cabecera
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement =
-                    Arrangement.SpaceBetween,
-                verticalAlignment =
-                    Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Mi cuenta",
@@ -119,8 +167,7 @@ fun ProfileScreen(
                 )
 
                 Icon(
-                    imageVector =
-                        Icons.Rounded.KeyboardArrowDown,
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = null,
                     tint = ProfileColors.TextPrimary,
                     modifier = Modifier.size(28.dp)
@@ -129,8 +176,7 @@ fun ProfileScreen(
 
             // Información personal
             Row(
-                verticalAlignment =
-                    Alignment.CenterVertically,
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = 4.dp)
             ) {
                 SharedProfileAvatar(
@@ -142,9 +188,7 @@ fun ProfileScreen(
 
                 Spacer(Modifier.width(16.dp))
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = displayName,
                         color = ProfileColors.TextPrimary,
@@ -189,15 +233,12 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Notificaciones reales del usuario
                     ProfileMenuItem(
                         icon = Icons.Outlined.Notifications,
                         title = "Notificaciones",
                         trailing = {
                             if (notificationCount > 0) {
-                                NotificationBadge(
-                                    notificationCount
-                                )
+                                NotificationBadge(notificationCount)
                             }
                         },
                         onClick = onNavigateToNotifications
@@ -205,15 +246,13 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Acceso rápido al tema
                     ProfileMenuItem(
                         icon = Icons.Outlined.DarkMode,
                         title = "Modo oscuro",
                         trailing = {
                             Switch(
                                 checked = darkModeEnabled,
-                                onCheckedChange =
-                                    onDarkModeChange,
+                                onCheckedChange = onDarkModeChange,
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor =
                                         ProfileColors.BgDark,
@@ -233,7 +272,6 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Acceso rápido al tamaño del texto
                     ProfileMenuItem(
                         icon = Icons.Outlined.TextFields,
                         title = "Tamaño del texto",
@@ -252,22 +290,27 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Panel de administración
-                    ProfileMenuItem(
-                        icon = Icons.Outlined.Security,
-                        title = "Panel de administración",
-                        trailing = {
-                            AdminBadge()
-                        },
-                        onClick = {}
-                    )
+                    // Visible únicamente para administradores
+                    if (isAdmin) {
+                        ProfileMenuItem(
+                            icon = Icons.Outlined.Security,
+                            title = "Panel de administración",
+                            trailing = {
+                                AdminBadge()
+                            },
+                            onClick = {
+                                if (isAdmin) {
+                                    showAdminDialog = true
+                                }
+                            }
+                        )
 
-                    ProfileDivider()
+                        ProfileDivider()
+                    }
 
-                    // Nueva opción de ayuda
+                    // Guía de uso
                     ProfileMenuItem(
-                        icon =
-                            Icons.AutoMirrored.Outlined.MenuBook,
+                        icon = Icons.AutoMirrored.Outlined.MenuBook,
                         title = "Guía de uso",
                         onClick = onNavigateToGuide
                     )
@@ -276,8 +319,7 @@ fun ProfileScreen(
 
                     // Cerrar sesión
                     ProfileMenuItem(
-                        icon =
-                            Icons.AutoMirrored.Outlined.Logout,
+                        icon = Icons.AutoMirrored.Outlined.Logout,
                         title = "Cerrar sesión",
                         onClick = onLogout
                     )
@@ -287,7 +329,6 @@ fun ProfileScreen(
     }
 }
 
-// Separador reutilizable
 @Composable
 private fun ProfileDivider() {
     HorizontalDivider(
@@ -296,7 +337,6 @@ private fun ProfileDivider() {
     )
 }
 
-// Contador de notificaciones
 @Composable
 private fun NotificationBadge(count: Int) {
     Box(
@@ -307,10 +347,7 @@ private fun NotificationBadge(count: Int) {
             )
             .clip(CircleShape)
             .background(ProfileColors.BadgeYellow)
-            .padding(
-                horizontal = 5.dp,
-                vertical = 2.dp
-            ),
+            .padding(horizontal = 5.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -322,7 +359,6 @@ private fun NotificationBadge(count: Int) {
     }
 }
 
-// Etiqueta de administración
 @Composable
 private fun AdminBadge() {
     Box(
@@ -333,10 +369,7 @@ private fun AdminBadge() {
                 ProfileColors.AccentCyan.copy(alpha = 0.6f),
                 RoundedCornerShape(50)
             )
-            .padding(
-                horizontal = 10.dp,
-                vertical = 4.dp
-            )
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
             text = "Solo admin",
@@ -347,7 +380,6 @@ private fun AdminBadge() {
     }
 }
 
-// Opción reutilizable del menú
 @Composable
 private fun ProfileMenuItem(
     icon: ImageVector,
@@ -359,10 +391,7 @@ private fun ProfileMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(
-                horizontal = 16.dp,
-                vertical = 16.dp
-            ),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(

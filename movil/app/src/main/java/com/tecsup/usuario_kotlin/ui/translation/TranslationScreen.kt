@@ -19,6 +19,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tecsup.usuario_kotlin.data.repository.RecentPhraseRepository
+import com.tecsup.usuario_kotlin.data.repository.TranslationPreferencesRepository
 import com.tecsup.usuario_kotlin.ui.theme.ProfileColors
 import com.tecsup.usuario_kotlin.ui.translation.components.CameraDetectionCard
 import com.tecsup.usuario_kotlin.ui.translation.components.ClearRecentPhrasesDialog
@@ -56,12 +57,20 @@ fun TranslationScreen(
 
     val registrarSena by rememberUpdatedState(onSpeakText)
 
-    // Historial persistente por usuario
+    // Historial persistente
     val recentPhraseRepository = remember(context.applicationContext, userId) {
         RecentPhraseRepository(context.applicationContext, userId)
     }
 
     val frasesRecientes by recentPhraseRepository.frases
+        .collectAsStateWithLifecycle()
+
+    // Preferencias del usuario
+    val preferencesRepository = remember(context.applicationContext, userId) {
+        TranslationPreferencesRepository(context.applicationContext, userId)
+    }
+
+    val outputMode by preferencesRepository.outputMode
         .collectAsStateWithLifecycle()
 
     var showClearDialog by remember(userId) { mutableStateOf(false) }
@@ -80,7 +89,7 @@ fun TranslationScreen(
         )
     }
 
-    // Permisos
+    // Permisos de cámara
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -105,7 +114,7 @@ fun TranslationScreen(
         }
     }
 
-    // Motor de voz independiente
+    // Motor de voz
     var speechHelper by remember {
         mutableStateOf<TextToSpeechHelper?>(null)
     }
@@ -120,7 +129,7 @@ fun TranslationScreen(
         }
     }
 
-    // Ciclo de vida de la pantalla
+    // Ciclo de vida
     DisposableEffect(lifecycleOwner, viewModel, context) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -157,11 +166,33 @@ fun TranslationScreen(
         }
     }
 
-    // Reproducir y guardar una frase
-    fun hablarFrase(palabras: List<String>) {
+    // Ejecutar la traducción según el modo seleccionado
+    fun ejecutarSalida(
+        palabras: List<String>,
+        desdeHistorial: Boolean = false
+    ) {
         val frase = palabras.joinToString(" ").trim()
         if (frase.isBlank()) return
 
+        val modoActual = preferencesRepository.outputMode.value
+
+        // Modo texto: guardar sin reproducir audio
+        if (!modoActual.usesVoice) {
+            speechHelper?.stop()
+            recentPhraseRepository.guardar(palabras)
+
+            if (!desdeHistorial) {
+                Toast.makeText(
+                    context,
+                    "Frase guardada",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
+            return
+        }
+
+        // Modos voz y ambos
         val helper = speechHelper
 
         if (helper == null || !helper.isReady) {
@@ -184,7 +215,7 @@ fun TranslationScreen(
         }
     }
 
-    // Diálogo de eliminación del historial
+    // Confirmar eliminación del historial
     if (showClearDialog) {
         ClearRecentPhrasesDialog(
             onConfirm = {
@@ -225,12 +256,13 @@ fun TranslationScreen(
         else -> currentSign.uppercase()
     }
 
-    // Interfaz principal
     Scaffold(
         containerColor = ProfileColors.BgDark,
+
         topBar = {
             SenasTopBar(userInitial, notificationCount)
         },
+
         bottomBar = {
             SenasBottomBar(
                 selectedTab = 0,
@@ -307,33 +339,52 @@ fun TranslationScreen(
                 )
             }
 
-            // Componente de construcción de frases
+            // Traducción y selector de salida
             item(key = "translation_phrase") {
                 TranslationPhraseCard(
                     words = phraseWords,
-                    onSpeakClick = {
-                        hablarFrase(phraseWords)
+                    outputMode = outputMode,
+
+                    onOutputModeChange = { mode ->
+                        if (!mode.usesVoice) {
+                            speechHelper?.stop()
+                        }
+
+                        preferencesRepository.cambiarModoSalida(mode)
                     },
+
+                    onSpeakClick = {
+                        ejecutarSalida(phraseWords)
+                    },
+
                     onDeleteLastClick = {
                         viewModel.borrarUltimaPalabra()
                     },
+
                     onClearClick = {
                         viewModel.limpiarFrase()
                     }
                 )
             }
 
-            // Componente de historial
+            // Historial persistente
             recentPhrasesSection(
                 frases = frasesRecientes,
                 maxPhrases = RecentPhraseRepository.MAX_PHRASES,
+
                 onRepeat = { frase ->
                     viewModel.cargarFrase(frase.palabras)
-                    hablarFrase(frase.palabras)
+
+                    ejecutarSalida(
+                        palabras = frase.palabras,
+                        desdeHistorial = true
+                    )
                 },
+
                 onDelete = { id ->
                     recentPhraseRepository.eliminar(id)
                 },
+
                 onClearRequest = {
                     showClearDialog = true
                 }
@@ -342,7 +393,7 @@ fun TranslationScreen(
     }
 }
 
-// Compatibilidad con las importaciones de otras pantallas
+// Compatibilidad con las demás pantallas
 @Composable
 fun SenasBottomBar(
     selectedTab: Int,

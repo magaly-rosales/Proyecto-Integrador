@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
@@ -48,7 +49,8 @@ fun ProfileScreen(
     textSize: TextSize = TextSize.NORMAL,
     onTextSizeChange: (TextSize) -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    onNavigateToNotifications: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToGuide: () -> Unit = {}
 ) {
     val displayName = userName.ifBlank {
         "Usuario"
@@ -250,6 +252,7 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
+                    // Panel de administración
                     ProfileMenuItem(
                         icon = Icons.Outlined.Security,
                         title = "Panel de administración",
@@ -261,6 +264,17 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
+                    // Nueva opción de ayuda
+                    ProfileMenuItem(
+                        icon =
+                            Icons.AutoMirrored.Outlined.MenuBook,
+                        title = "Guía de uso",
+                        onClick = onNavigateToGuide
+                    )
+
+                    ProfileDivider()
+
+                    // Cerrar sesión
                     ProfileMenuItem(
                         icon =
                             Icons.AutoMirrored.Outlined.Logout,

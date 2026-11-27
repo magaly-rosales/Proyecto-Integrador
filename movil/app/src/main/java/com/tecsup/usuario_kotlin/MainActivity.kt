@@ -27,6 +27,7 @@ import com.tecsup.usuario_kotlin.ui.home.HomeScreen
 import com.tecsup.usuario_kotlin.ui.home.NotificationsScreen
 import com.tecsup.usuario_kotlin.ui.home.ProfileScreen
 import com.tecsup.usuario_kotlin.ui.home.SettingsScreen
+import com.tecsup.usuario_kotlin.ui.home.UserGuideScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
@@ -53,7 +54,8 @@ class MainActivity : ComponentActivity() {
         "change_password",
         "settings",
         "notifications_translation",
-        "notifications_profile"
+        "notifications_profile",
+        "user_guide"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,7 +102,7 @@ class MainActivity : ComponentActivity() {
                 ?.collectAsStateWithLifecycle()
                 ?.value ?: emptyList()
 
-            // Cantidad real de notificaciones sin leer
+            // Cantidad de notificaciones sin leer
             val notificationCount = notifications.count {
                 !it.leida
             }
@@ -335,6 +337,11 @@ class MainActivity : ComponentActivity() {
                                         "notifications_profile"
                                 },
 
+                                // Navegar a la guía de uso
+                                onNavigateToGuide = {
+                                    currentScreen = "user_guide"
+                                },
+
                                 onNavigateToTraducir = {
                                     currentScreen = "translation"
                                 },
@@ -401,6 +408,27 @@ class MainActivity : ComponentActivity() {
                                         preferencesRepository =
                                             preferencesRepository,
 
+                                        onBackClick = {
+                                            currentScreen = "perfil"
+                                        }
+                                    )
+                                }
+                            } else {
+                                LaunchedEffect(Unit) {
+                                    cerrarSesion()
+                                    currentScreen = "login"
+                                }
+                            }
+                        }
+
+                        // Guía de uso de SeñasApp
+                        "user_guide" -> {
+                            if (
+                                userId != null &&
+                                userId > 0
+                            ) {
+                                key(userId) {
+                                    UserGuideScreen(
                                         onBackClick = {
                                             currentScreen = "perfil"
                                         }
@@ -498,7 +526,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Cerrar sesión conservando los datos locales por usuario
+    // Cerrar sesión conservando los datos locales
     private fun cerrarSesion() {
         translationViewModel.cerrarSesionTraductor()
         profileViewModel.clearProfileOperations()

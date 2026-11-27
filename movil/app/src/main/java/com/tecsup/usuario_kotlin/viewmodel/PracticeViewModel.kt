@@ -1,6 +1,7 @@
 package com.tecsup.usuario_kotlin.viewmodel
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tecsup.usuario_kotlin.data.model.PuntoManoDto
@@ -31,6 +32,7 @@ class PracticeViewModel(
 
     // Estado de la práctica
     private val _uiState = MutableStateFlow(PracticeUiState())
+
     val uiState = _uiState.asStateFlow()
 
     // Control de solicitudes
@@ -42,6 +44,15 @@ class PracticeViewModel(
 
     // Confirmaciones independientes
     private var staticConfirmations = 0
+
+    // Callback para registrar prácticas exitosas
+    private var completionListener: ((String) -> Unit)? = null
+
+    fun setOnPracticeCompleted(
+        listener: ((String) -> Unit)?
+    ) {
+        completionListener = listener
+    }
 
     // Iniciar una práctica
     fun iniciarPractica(nombreSena: String) {
@@ -143,14 +154,18 @@ class PracticeViewModel(
         _uiState.value = estado.copy(
             isAnalyzing = true,
             errorMessage = null,
-            status = if (estado.status == PracticeStatus.WAITING_HAND) {
+            status = if (
+                estado.status == PracticeStatus.WAITING_HAND
+            ) {
                 PracticeStatus.ANALYZING
             } else {
                 estado.status
             }
         )
 
-        requestJob = viewModelScope.launch(start = CoroutineStart.LAZY) {
+        requestJob = viewModelScope.launch(
+            start = CoroutineStart.LAZY
+        ) {
             try {
                 val resultado = peticion()
 
@@ -194,6 +209,7 @@ class PracticeViewModel(
                     _uiState.value = _uiState.value.copy(
                         isAnalyzing = false
                     )
+
                     requestJob = null
                 }
             }
@@ -208,16 +224,19 @@ class PracticeViewModel(
         dinamico: Boolean
     ) {
         val estado = _uiState.value
+
         if (!estado.isActive) return
 
-        val detectada = RecognitionUtils.obtenerNombre(resultado)
+        val detectada = RecognitionUtils.obtenerNombre(
+            resultado
+        )
 
         val coincide = RecognitionUtils.coincidenSenas(
             detectada = detectada,
             objetivo = estado.targetSign
         )
 
-        // Confirmaciones independientes por tipo de reconocimiento
+        // Confirmaciones independientes por reconocimiento
         if (dinamico) {
             if (coincide) {
                 dynamicRecognizer.confirmar(resultado)
@@ -242,14 +261,17 @@ class PracticeViewModel(
             confirmaciones >= REQUIRED_CONFIRMATIONS
 
         val nuevoEstado = when {
-            completada -> PracticeStatus.SUCCESS
+            completada ->
+                PracticeStatus.SUCCESS
 
-            confirmaciones > 0 -> PracticeStatus.CONFIRMING
+            confirmaciones > 0 ->
+                PracticeStatus.CONFIRMING
 
             RecognitionUtils.esNombreValido(detectada) ->
                 PracticeStatus.DIFFERENT_SIGN
 
-            else -> PracticeStatus.NOT_RECOGNIZED
+            else ->
+                PracticeStatus.NOT_RECOGNIZED
         }
 
         _uiState.value = estado.copy(
@@ -269,12 +291,26 @@ class PracticeViewModel(
         if (completada) {
             dynamicRecognizer.limpiar()
             staticConfirmations = 0
+
+            // Registrar el éxito una sola vez por intento
+            try {
+                completionListener?.invoke(
+                    estado.targetSign
+                )
+            } catch (e: Exception) {
+                Log.e(
+                    "PracticeViewModel",
+                    "No se pudo registrar el progreso",
+                    e
+                )
+            }
         }
     }
 
     // Limpiar al perder la detección de las manos
     private fun limpiarDeteccion() {
         val estado = _uiState.value
+
         if (!estado.isActive) return
 
         if (
@@ -322,6 +358,7 @@ class PracticeViewModel(
         )
     }
 
+    // Detener el entrenamiento
     fun detenerPractica() {
         reiniciarCaptura()
 
@@ -330,6 +367,7 @@ class PracticeViewModel(
         )
     }
 
+    // Limpiar la sesión de entrenamiento
     fun limpiarPractica() {
         reiniciarCaptura()
         _uiState.value = PracticeUiState()
@@ -337,6 +375,7 @@ class PracticeViewModel(
 
     private fun cancelarSolicitud() {
         generation++
+
         requestJob?.cancel()
         requestJob = null
 
@@ -352,6 +391,7 @@ class PracticeViewModel(
     }
 
     override fun onCleared() {
+        completionListener = null
         reiniciarCaptura()
         super.onCleared()
     }

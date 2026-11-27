@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf("login")
                 }
 
-                // Validar el acceso a pantallas privadas
+                // Validar acceso a pantallas privadas
                 val activeScreen = if (
                     currentScreen in protectedScreens &&
                     (
@@ -117,6 +117,7 @@ class MainActivity : ComponentActivity() {
                     currentScreen
                 }
 
+                // Datos del usuario autenticado
                 val userName = authViewModel.loggedUserName
                 val userEmail = authViewModel.loggedUserEmail
                 val userPhoto = authViewModel.loggedUserPhoto
@@ -173,18 +174,31 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Catálogo de señas
+                        // Catálogo y progreso del usuario
                         "home" -> {
-                            HomeScreen(
-                                username = userName,
-                                onNavigateToTranslator = {
-                                    currentScreen = "translation"
-                                },
-                                onNavigateToPerfil = {
-                                    currentScreen = "perfil"
-                                },
-                                viewModel = translationViewModel
-                            )
+                            if (userId != null && userId > 0) {
+                                key(userId) {
+                                    HomeScreen(
+                                        username = userName,
+                                        userId = userId,
+
+                                        onNavigateToTranslator = {
+                                            currentScreen = "translation"
+                                        },
+
+                                        onNavigateToPerfil = {
+                                            currentScreen = "perfil"
+                                        },
+
+                                        viewModel = translationViewModel
+                                    )
+                                }
+                            } else {
+                                LaunchedEffect(Unit) {
+                                    cerrarSesion()
+                                    currentScreen = "login"
+                                }
+                            }
                         }
 
                         // Traductor
@@ -201,12 +215,15 @@ class MainActivity : ComponentActivity() {
                                         preferencesRepository =
                                             preferencesRepository,
                                         userInitial = userInitial,
+
                                         onNavigateToSenas = {
                                             currentScreen = "home"
                                         },
+
                                         onNavigateToPerfil = {
                                             currentScreen = "perfil"
                                         },
+
                                         onSpeakText = { nombreSena ->
                                             registrarTraduccion(nombreSena)
                                         }
@@ -246,13 +263,16 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToTraducir = {
                                     currentScreen = "translation"
                                 },
+
                                 onNavigateToSenas = {
                                     currentScreen = "home"
                                 },
+
                                 onLogout = {
                                     cerrarSesion()
                                     currentScreen = "login"
                                 },
+
                                 onNavigateToEditProfile = {
                                     profileViewModel.resetProfileUpdateState()
                                     profileViewModel.resetPhotoUpdateState()
@@ -271,6 +291,7 @@ class MainActivity : ComponentActivity() {
                                     SettingsScreen(
                                         preferencesRepository =
                                             preferencesRepository,
+
                                         onBackClick = {
                                             currentScreen = "perfil"
                                         }
@@ -288,9 +309,11 @@ class MainActivity : ComponentActivity() {
                         "edit_profile" -> {
                             EditProfileScreen(
                                 profileViewModel = profileViewModel,
+
                                 onBackClick = {
                                     currentScreen = "perfil"
                                 },
+
                                 onNavigateToChangePassword = {
                                     profileViewModel.resetPasswordChangeState()
                                     profileViewModel.resetPhotoUpdateState()
@@ -303,6 +326,7 @@ class MainActivity : ComponentActivity() {
                         "change_password" -> {
                             ChangePasswordScreen(
                                 profileViewModel = profileViewModel,
+
                                 onBackClick = {
                                     currentScreen = "edit_profile"
                                 }
@@ -313,13 +337,16 @@ class MainActivity : ComponentActivity() {
                         else -> {
                             LoginScreen(
                                 authViewModel = authViewModel,
+
                                 onLoginSuccess = {
                                     currentScreen = "translation"
                                 },
+
                                 onRegisterClick = {
                                     authViewModel.resetRegisterSuccess()
                                     currentScreen = "register"
                                 },
+
                                 onForgotPasswordClick = {
                                     authViewModel.resetForgotPasswordSuccess()
                                     currentScreen = "forgot_password"
@@ -362,7 +389,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Cerrar sesión conservando las preferencias
+    // Cerrar sesión conservando preferencias y progreso
     private fun cerrarSesion() {
         translationViewModel.cerrarSesionTraductor()
         profileViewModel.clearProfileOperations()

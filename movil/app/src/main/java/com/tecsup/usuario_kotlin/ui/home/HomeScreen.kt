@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,25 +18,52 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel as composeViewModel
 import com.tecsup.usuario_kotlin.data.model.CategoriaCatalogoDto
 import com.tecsup.usuario_kotlin.data.model.SenaCatalogoDto
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
+import com.tecsup.usuario_kotlin.data.repository.PracticeProgressRepository
 import com.tecsup.usuario_kotlin.ui.home.components.SenaCatalogItemCard
 import com.tecsup.usuario_kotlin.ui.theme.ProfileColors
 import com.tecsup.usuario_kotlin.ui.translation.SenasBottomBar
+import com.tecsup.usuario_kotlin.viewmodel.PracticeViewModel
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
 import kotlinx.coroutines.CancellationException
 
 @Composable
 fun HomeScreen(
     username: String,
+    userId: Int,
     onNavigateToTranslator: () -> Unit,
     onNavigateToPerfil: () -> Unit = {},
     viewModel: TranslationViewModel
 ) {
+    val context = LocalContext.current
+
+    // Repositorio de progreso del usuario autenticado
+    val progressRepository = remember(
+        context.applicationContext,
+        userId
+    ) {
+        PracticeProgressRepository(
+            context.applicationContext,
+            userId
+        )
+    }
+
+    val progress by progressRepository.progress
+        .collectAsStateWithLifecycle()
+
+    // Navegación hacia el progreso
+    var showProgress by rememberSaveable(userId) {
+        mutableStateOf(false)
+    }
+
     // Estados del catálogo
     var isLoading by remember {
         mutableStateOf(true)
@@ -71,12 +99,12 @@ fun HomeScreen(
         mutableStateOf<Int?>(null)
     }
 
-    // Controlar la navegación hacia la práctica
+    // Navegación hacia la práctica
     var showPractice by rememberSaveable {
         mutableStateOf(false)
     }
 
-    // Conservar la posición de desplazamiento
+    // Posición del desplazamiento
     val catalogListState = rememberLazyListState()
     val categoryListState = rememberLazyListState()
 
@@ -85,13 +113,12 @@ fun HomeScreen(
         mutableStateOf<String?>(null)
     }
 
-    // Control de actualización del catálogo
+    // Actualización del catálogo
     var refreshVersion by remember {
         mutableIntStateOf(0)
     }
 
     val cargarCatalogo: () -> Unit = {
-
         if (!isLoading) {
             refreshVersion++
         }
@@ -99,84 +126,94 @@ fun HomeScreen(
 
     // Cargar catálogo desde Spring Boot
     LaunchedEffect(refreshVersion) {
-
         isLoading = true
         errorMessage = null
 
         try {
-
             val response =
                 RetrofitClient.apiService.obtenerCatalogo()
 
             val body = response.body()
 
             if (response.isSuccessful && body != null) {
-
                 categorias = body.categorias
                 senas = body.senas
 
-                // Obtener la dirección real de la petición
+                // Dirección real de la petición
                 apiUrl = response.raw()
                     .request
                     .url
                     .toString()
 
-                // Verificar la categoría seleccionada
+                // Verificar categoría seleccionada
                 if (
                     selectedCategoryId != null &&
                     categorias.none {
                         it.id == selectedCategoryId
                     }
                 ) {
-
                     selectedCategoryId = null
                 }
 
-                // Verificar que la seña siga disponible
+                // Verificar seña seleccionada
                 if (
                     selectedSenaId != null &&
                     senas.none {
                         it.id == selectedSenaId
                     }
                 ) {
-
                     selectedSenaId = null
                     showPractice = false
                 }
 
                 if (selectedSenaId == null) {
-
                     showPractice = false
                 }
 
             } else {
-
                 errorMessage =
                     "Error al cargar catálogo (${response.code()})"
             }
 
         } catch (e: CancellationException) {
-
             throw e
 
         } catch (e: Exception) {
-
             errorMessage =
                 "Sin conexión con el servidor: " +
                         (e.localizedMessage ?: "Error desconocido")
 
         } finally {
-
             isLoading = false
         }
     }
 
-    // Obtener la información de la seña seleccionada
+    // Pantalla de progreso
+    if (showProgress) {
+        val catalogIds = if (
+            !isLoading && errorMessage == null
+        ) {
+            senas.map { it.id }.toSet()
+        } else {
+            null
+        }
+
+        TrainingProgressScreen(
+            progress = progress,
+            catalogIds = catalogIds,
+            onBackClick = {
+                showProgress = false
+            }
+        )
+
+        return
+    }
+
+    // Obtener información de la seña seleccionada
     val selectedSena = remember(
         senas,
         selectedSenaId
     ) {
-
         senas.firstOrNull {
             it.id == selectedSenaId
         }
@@ -188,37 +225,62 @@ fun HomeScreen(
         !isLoading &&
         errorMessage == null
     ) {
-
         if (showPractice) {
 
-            // Mostrar pantalla de práctica
+            // ViewModel de práctica
+            val practiceViewModel: PracticeViewModel =
+                composeViewModel()
+
+            // Registrar el éxito vinculado a la seña actual
+            DisposableEffect(
+                practiceViewModel,
+                progressRepository,
+                selectedSena.id,
+                selectedSena.nombre
+            ) {
+                practiceViewModel.setOnPracticeCompleted {
+                        nombreReconocido ->
+
+                    if (
+                        nombreReconocido ==
+                        selectedSena.nombre.trim()
+                    ) {
+                        progressRepository.registrarExito(
+                            senaId = selectedSena.id,
+                            nombreSena = selectedSena.nombre
+                        )
+                    }
+                }
+
+                onDispose {
+                    practiceViewModel.setOnPracticeCompleted(
+                        null
+                    )
+                }
+            }
+
+            // Pantalla de práctica existente
             SenaPracticeScreen(
                 sena = selectedSena,
                 apiUrl = apiUrl,
+                practiceViewModel = practiceViewModel,
                 onBackClick = {
-
-                    // Regresar a los detalles
                     showPractice = false
                 }
             )
 
         } else {
-
-            // Mostrar detalles de la seña
+            // Detalles de la seña
             SenaDetailScreen(
                 sena = selectedSena,
                 apiUrl = apiUrl,
 
                 onBackClick = {
-
-                    // Regresar al catálogo
                     showPractice = false
                     selectedSenaId = null
                 },
 
                 onPracticeClick = {
-
-                    // Abrir modalidad de práctica
                     showPractice = true
                 }
             )
@@ -233,9 +295,7 @@ fun HomeScreen(
         selectedCategoryId,
         searchQuery
     ) {
-
         senas.filter { sena ->
-
             val matchesCat =
                 selectedCategoryId == null ||
                         sena.idCategoria == selectedCategoryId
@@ -260,14 +320,11 @@ fun HomeScreen(
     Scaffold(
         containerColor = ProfileColors.BgDark,
         bottomBar = {
-
             SenasBottomBar(
                 selectedTab = 1,
-                onSelectTraducir =
-                    onNavigateToTranslator,
+                onSelectTraducir = onNavigateToTranslator,
                 onSelectSenas = {},
-                onSelectPerfil =
-                    onNavigateToPerfil
+                onSelectPerfil = onNavigateToPerfil
             )
         }
     ) { innerPadding ->
@@ -283,7 +340,6 @@ fun HomeScreen(
             verticalArrangement =
                 Arrangement.spacedBy(12.dp)
         ) {
-
             // Cabecera del catálogo
             CatalogHeader(
                 totalSenas = senasFiltradas.size,
@@ -291,49 +347,80 @@ fun HomeScreen(
                 onRefresh = cargarCatalogo
             )
 
+            // Acceso al progreso del usuario
+            OutlinedButton(
+                onClick = {
+                    showProgress = true
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(
+                    1.dp,
+                    ProfileColors.AccentCyan.copy(alpha = 0.6f)
+                ),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = ProfileColors.CardDark,
+                    contentColor = ProfileColors.AccentCyan
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.EmojiEvents,
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp)
+                )
+
+                Spacer(Modifier.width(8.dp))
+
+                Text(
+                    text = "Mi progreso",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Text(
+                    text = "${progress.size} señas",
+                    color = ProfileColors.TextSecondary,
+                    fontSize = 12.sp
+                )
+            }
+
             // Buscador
             CatalogSearchField(
                 searchQuery = searchQuery,
                 onSearchChange = {
-
                     searchQuery = it
                 }
             )
 
             // Filtros de categorías
             if (categorias.isNotEmpty()) {
-
                 LazyRow(
                     state = categoryListState,
                     horizontalArrangement =
                         Arrangement.spacedBy(8.dp)
                 ) {
-
                     item {
-
                         CategoryChip(
                             label = "Todas",
                             selected =
                                 selectedCategoryId == null,
                             onClick = {
-
                                 selectedCategoryId = null
                             }
                         )
                     }
 
                     items(categorias) { categoria ->
-
                         CategoryChip(
                             label =
                                 "${categoria.nombre} (${categoria.total})",
                             selected =
-                                selectedCategoryId ==
-                                        categoria.id,
+                                selectedCategoryId == categoria.id,
                             onClick = {
-
-                                selectedCategoryId =
-                                    categoria.id
+                                selectedCategoryId = categoria.id
                             }
                         )
                     }
@@ -342,24 +429,18 @@ fun HomeScreen(
 
             // Contenido principal
             when {
-
                 isLoading -> {
-
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment =
-                            Alignment.Center
+                        contentAlignment = Alignment.Center
                     ) {
-
                         CircularProgressIndicator(
-                            color =
-                                ProfileColors.AccentCyan
+                            color = ProfileColors.AccentCyan
                         )
                     }
                 }
 
                 errorMessage != null -> {
-
                     CatalogError(
                         message = errorMessage
                             ?: "Error al cargar catálogo",
@@ -368,24 +449,18 @@ fun HomeScreen(
                 }
 
                 senasFiltradas.isEmpty() -> {
-
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment =
-                            Alignment.Center
+                        contentAlignment = Alignment.Center
                     ) {
-
                         Text(
-                            text =
-                                "No se encontraron señas registradas",
-                            color =
-                                ProfileColors.TextSecondary
+                            text = "No se encontraron señas registradas",
+                            color = ProfileColors.TextSecondary
                         )
                     }
                 }
 
                 else -> {
-
                     LazyColumn(
                         state = catalogListState,
                         verticalArrangement =
@@ -393,7 +468,6 @@ fun HomeScreen(
                         contentPadding =
                             PaddingValues(bottom = 16.dp)
                     ) {
-
                         items(
                             items = senasFiltradas,
                             key = { sena -> sena.id }
@@ -404,12 +478,8 @@ fun HomeScreen(
                                 apiUrl = apiUrl,
 
                                 onPracticeClick = {
-
-                                    // Abrir los detalles
                                     showPractice = false
-
-                                    selectedSenaId =
-                                        sena.id
+                                    selectedSenaId = sena.id
                                 }
                             )
                         }
@@ -427,17 +497,14 @@ private fun CatalogHeader(
     isLoading: Boolean,
     onRefresh: () -> Unit
 ) {
-
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement =
-            Arrangement.SpaceBetween,
-        verticalAlignment =
-            Alignment.CenterVertically
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-
-        Column {
-
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
             Text(
                 text = "Diccionario de Señas",
                 color = ProfileColors.TextPrimary,
@@ -456,11 +523,9 @@ private fun CatalogHeader(
             onClick = onRefresh,
             enabled = !isLoading
         ) {
-
             Icon(
                 imageVector = Icons.Rounded.Refresh,
-                contentDescription =
-                    "Actualizar catálogo",
+                contentDescription = "Actualizar catálogo",
                 tint = ProfileColors.AccentCyan
             )
         }
@@ -473,14 +538,12 @@ private fun CatalogSearchField(
     searchQuery: String,
     onSearchChange: (String) -> Unit
 ) {
-
     OutlinedTextField(
         value = searchQuery,
         onValueChange = onSearchChange,
         modifier = Modifier.fillMaxWidth(),
 
         placeholder = {
-
             Text(
                 text = "Buscar seña o frase...",
                 color = ProfileColors.TextSecondary
@@ -488,7 +551,6 @@ private fun CatalogSearchField(
         },
 
         leadingIcon = {
-
             Icon(
                 imageVector = Icons.Outlined.Search,
                 contentDescription = null,
@@ -497,22 +559,15 @@ private fun CatalogSearchField(
         },
 
         singleLine = true,
-
         shape = RoundedCornerShape(14.dp),
 
         colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor =
-                ProfileColors.CardDark,
-            unfocusedContainerColor =
-                ProfileColors.CardDark,
-            focusedBorderColor =
-                ProfileColors.AccentCyan,
-            unfocusedBorderColor =
-                ProfileColors.CardElevated,
-            focusedTextColor =
-                ProfileColors.TextPrimary,
-            unfocusedTextColor =
-                ProfileColors.TextPrimary
+            focusedContainerColor = ProfileColors.CardDark,
+            unfocusedContainerColor = ProfileColors.CardDark,
+            focusedBorderColor = ProfileColors.AccentCyan,
+            unfocusedBorderColor = ProfileColors.CardElevated,
+            focusedTextColor = ProfileColors.TextPrimary,
+            unfocusedTextColor = ProfileColors.TextPrimary
         )
     )
 }
@@ -524,7 +579,6 @@ private fun CategoryChip(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-
     Surface(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
@@ -533,47 +587,34 @@ private fun CategoryChip(
         shape = RoundedCornerShape(50),
 
         color = if (selected) {
-
             ProfileColors.AccentCyan
-
         } else {
-
             ProfileColors.CardDark
         },
 
         border = BorderStroke(
             1.dp,
             if (selected) {
-
                 ProfileColors.AccentCyan
-
             } else {
-
                 ProfileColors.CardElevated
             }
         )
     ) {
-
         Text(
             text = label,
 
             color = if (selected) {
-
                 ProfileColors.BgDark
-
             } else {
-
                 ProfileColors.TextPrimary
             },
 
             fontSize = 12.sp,
 
             fontWeight = if (selected) {
-
                 FontWeight.Bold
-
             } else {
-
                 FontWeight.Medium
             },
 
@@ -591,38 +632,29 @@ private fun CatalogError(
     message: String,
     onRetry: () -> Unit
 ) {
-
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-
         Column(
             horizontalAlignment =
                 Alignment.CenterHorizontally
         ) {
-
             Text(
                 text = message,
                 color = ProfileColors.TextSecondary,
                 fontSize = 14.sp
             )
 
-            Spacer(
-                modifier = Modifier.height(10.dp)
-            )
+            Spacer(Modifier.height(10.dp))
 
             Button(
                 onClick = onRetry,
-
                 colors = ButtonDefaults.buttonColors(
-                    containerColor =
-                        ProfileColors.AccentCyan,
-                    contentColor =
-                        ProfileColors.BgDark
+                    containerColor = ProfileColors.AccentCyan,
+                    contentColor = ProfileColors.BgDark
                 )
             ) {
-
                 Text(
                     text = "Reintentar",
                     fontWeight = FontWeight.Bold

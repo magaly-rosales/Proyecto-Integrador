@@ -16,6 +16,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.tecsup.usuario_kotlin.data.model.TextSize
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
+import com.tecsup.usuario_kotlin.data.repository.NotificationRepository
 import com.tecsup.usuario_kotlin.data.repository.TranslationPreferencesRepository
 import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
@@ -23,6 +24,7 @@ import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
 import com.tecsup.usuario_kotlin.ui.home.ChangePasswordScreen
 import com.tecsup.usuario_kotlin.ui.home.EditProfileScreen
 import com.tecsup.usuario_kotlin.ui.home.HomeScreen
+import com.tecsup.usuario_kotlin.ui.home.NotificationsScreen
 import com.tecsup.usuario_kotlin.ui.home.ProfileScreen
 import com.tecsup.usuario_kotlin.ui.home.SettingsScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
@@ -49,7 +51,9 @@ class MainActivity : ComponentActivity() {
         "perfil",
         "edit_profile",
         "change_password",
-        "settings"
+        "settings",
+        "notifications_translation",
+        "notifications_profile"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,7 +63,7 @@ class MainActivity : ComponentActivity() {
 
             val userId = authViewModel.loggedUserId
 
-            // Repositorio compartido por toda la sesión
+            // Repositorio compartido de preferencias
             val preferencesRepository = remember(userId) {
                 userId?.takeIf { it > 0 }?.let {
                     TranslationPreferencesRepository(
@@ -69,7 +73,39 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Preferencias visuales globales
+            // Repositorio compartido de notificaciones
+            val notificationRepository = remember(userId) {
+                userId?.takeIf { it > 0 }?.let {
+                    NotificationRepository(
+                        applicationContext,
+                        it
+                    )
+                }
+            }
+
+            // Generar bienvenida una sola vez por cuenta
+            LaunchedEffect(
+                notificationRepository,
+                authViewModel.loginSuccess
+            ) {
+                if (authViewModel.loginSuccess) {
+                    notificationRepository
+                        ?.generarBienvenida()
+                }
+            }
+
+            // Observar notificaciones del usuario
+            val notifications = notificationRepository
+                ?.notifications
+                ?.collectAsStateWithLifecycle()
+                ?.value ?: emptyList()
+
+            // Cantidad real de notificaciones sin leer
+            val notificationCount = notifications.count {
+                !it.leida
+            }
+
+            // Preferencias visuales
             val darkModeEnabled = preferencesRepository
                 ?.darkMode
                 ?.collectAsStateWithLifecycle()
@@ -104,12 +140,13 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf("login")
                 }
 
-                // Validar acceso a pantallas privadas
+                // Proteger las pantallas privadas
                 val activeScreen = if (
                     currentScreen in protectedScreens &&
                     (
                             !authViewModel.loginSuccess ||
-                                    preferencesRepository == null
+                                    preferencesRepository == null ||
+                                    notificationRepository == null
                             )
                 ) {
                     "login"
@@ -135,13 +172,16 @@ class MainActivity : ComponentActivity() {
                         "login" -> {
                             LoginScreen(
                                 authViewModel = authViewModel,
+
                                 onLoginSuccess = {
                                     currentScreen = "translation"
                                 },
+
                                 onRegisterClick = {
                                     authViewModel.resetRegisterSuccess()
                                     currentScreen = "register"
                                 },
+
                                 onForgotPasswordClick = {
                                     authViewModel.resetForgotPasswordSuccess()
                                     currentScreen = "forgot_password"
@@ -153,10 +193,12 @@ class MainActivity : ComponentActivity() {
                         "register" -> {
                             RegisterScreen(
                                 authViewModel = authViewModel,
+
                                 onRegisterSuccess = {
                                     authViewModel.resetRegisterSuccess()
                                     currentScreen = "login"
                                 },
+
                                 onLoginClick = {
                                     currentScreen = "login"
                                 }
@@ -167,6 +209,7 @@ class MainActivity : ComponentActivity() {
                         "forgot_password" -> {
                             ForgotPasswordScreen(
                                 authViewModel = authViewModel,
+
                                 onBackClick = {
                                     authViewModel.resetForgotPasswordSuccess()
                                     currentScreen = "login"
@@ -176,7 +219,11 @@ class MainActivity : ComponentActivity() {
 
                         // Catálogo y progreso del usuario
                         "home" -> {
-                            if (userId != null && userId > 0) {
+                            if (
+                                userId != null &&
+                                userId > 0 &&
+                                notificationRepository != null
+                            ) {
                                 key(userId) {
                                     HomeScreen(
                                         username = userName,
@@ -190,7 +237,15 @@ class MainActivity : ComponentActivity() {
                                             currentScreen = "perfil"
                                         },
 
-                                        viewModel = translationViewModel
+                                        viewModel = translationViewModel,
+
+                                        // Notificar práctica exitosa
+                                        onPracticeCompleted = { nombreSena ->
+                                            notificationRepository
+                                                .notificarPracticaExitosa(
+                                                    nombreSena
+                                                )
+                                        }
                                     )
                                 }
                             } else {
@@ -212,9 +267,14 @@ class MainActivity : ComponentActivity() {
                                     TranslationScreen(
                                         viewModel = translationViewModel,
                                         userId = userId,
+
                                         preferencesRepository =
                                             preferencesRepository,
+
                                         userInitial = userInitial,
+
+                                        notificationCount =
+                                            notificationCount,
 
                                         onNavigateToSenas = {
                                             currentScreen = "home"
@@ -222,6 +282,11 @@ class MainActivity : ComponentActivity() {
 
                                         onNavigateToPerfil = {
                                             currentScreen = "perfil"
+                                        },
+
+                                        onNavigateToNotifications = {
+                                            currentScreen =
+                                                "notifications_translation"
                                         },
 
                                         onSpeakText = { nombreSena ->
@@ -244,13 +309,18 @@ class MainActivity : ComponentActivity() {
                                 userEmail = userEmail,
                                 userPhoto = userPhoto,
 
+                                notificationCount =
+                                    notificationCount,
+
                                 darkModeEnabled = darkModeEnabled,
+
                                 onDarkModeChange = { enabled ->
                                     preferencesRepository
                                         ?.cambiarModoOscuro(enabled)
                                 },
 
                                 textSize = textSize,
+
                                 onTextSizeChange = { size ->
                                     preferencesRepository
                                         ?.cambiarTamanoTexto(size)
@@ -258,6 +328,11 @@ class MainActivity : ComponentActivity() {
 
                                 onNavigateToSettings = {
                                     currentScreen = "settings"
+                                },
+
+                                onNavigateToNotifications = {
+                                    currentScreen =
+                                        "notifications_profile"
                                 },
 
                                 onNavigateToTraducir = {
@@ -279,6 +354,40 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "edit_profile"
                                 }
                             )
+                        }
+
+                        // Notificaciones desde traductor o perfil
+                        "notifications_translation",
+                        "notifications_profile" -> {
+                            if (
+                                userId != null &&
+                                notificationRepository != null
+                            ) {
+                                val returnScreen = if (
+                                    activeScreen ==
+                                    "notifications_translation"
+                                ) {
+                                    "translation"
+                                } else {
+                                    "perfil"
+                                }
+
+                                key(userId, activeScreen) {
+                                    NotificationsScreen(
+                                        repository =
+                                            notificationRepository,
+
+                                        onBackClick = {
+                                            currentScreen = returnScreen
+                                        }
+                                    )
+                                }
+                            } else {
+                                LaunchedEffect(Unit) {
+                                    cerrarSesion()
+                                    currentScreen = "login"
+                                }
+                            }
                         }
 
                         // Configuración de preferencias
@@ -389,7 +498,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Cerrar sesión conservando preferencias y progreso
+    // Cerrar sesión conservando los datos locales por usuario
     private fun cerrarSesion() {
         translationViewModel.cerrarSesionTraductor()
         profileViewModel.clearProfileOperations()

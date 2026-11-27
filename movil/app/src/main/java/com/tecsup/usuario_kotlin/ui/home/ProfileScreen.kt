@@ -37,7 +37,7 @@ import com.tecsup.usuario_kotlin.ui.translation.SenasBottomBar
 fun ProfileScreen(
     userName: String,
     userEmail: String,
-    notificationCount: Int = 3,
+    notificationCount: Int = 0,
     onNavigateToTraducir: () -> Unit,
     onNavigateToSenas: () -> Unit,
     onLogout: () -> Unit,
@@ -47,10 +47,16 @@ fun ProfileScreen(
     onDarkModeChange: (Boolean) -> Unit = {},
     textSize: TextSize = TextSize.NORMAL,
     onTextSizeChange: (TextSize) -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {}
 ) {
-    val displayName = userName.ifBlank { "Usuario" }
-    val displayEmail = userEmail.ifBlank { "Correo no disponible" }
+    val displayName = userName.ifBlank {
+        "Usuario"
+    }
+
+    val displayEmail = userEmail.ifBlank {
+        "Correo no disponible"
+    }
 
     var showTextSizeDialog by remember {
         mutableStateOf(false)
@@ -87,14 +93,20 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(
+                    horizontal = 20.dp,
+                    vertical = 16.dp
+                ),
+            verticalArrangement =
+                Arrangement.spacedBy(20.dp)
         ) {
             // Cabecera
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement =
+                    Arrangement.SpaceBetween,
+                verticalAlignment =
+                    Alignment.CenterVertically
             ) {
                 Text(
                     text = "Mi cuenta",
@@ -105,7 +117,8 @@ fun ProfileScreen(
                 )
 
                 Icon(
-                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    imageVector =
+                        Icons.Rounded.KeyboardArrowDown,
                     contentDescription = null,
                     tint = ProfileColors.TextPrimary,
                     modifier = Modifier.size(28.dp)
@@ -114,7 +127,8 @@ fun ProfileScreen(
 
             // Información personal
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment =
+                    Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = 4.dp)
             ) {
                 SharedProfileAvatar(
@@ -126,7 +140,9 @@ fun ProfileScreen(
 
                 Spacer(Modifier.width(16.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         text = displayName,
                         color = ProfileColors.TextPrimary,
@@ -163,7 +179,6 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Navegar a la pantalla de configuración
                     ProfileMenuItem(
                         icon = Icons.Outlined.Tune,
                         title = "Configuración",
@@ -172,15 +187,18 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
+                    // Notificaciones reales del usuario
                     ProfileMenuItem(
                         icon = Icons.Outlined.Notifications,
                         title = "Notificaciones",
                         trailing = {
                             if (notificationCount > 0) {
-                                NotificationBadge(notificationCount)
+                                NotificationBadge(
+                                    notificationCount
+                                )
                             }
                         },
-                        onClick = {}
+                        onClick = onNavigateToNotifications
                     )
 
                     ProfileDivider()
@@ -192,7 +210,8 @@ fun ProfileScreen(
                         trailing = {
                             Switch(
                                 checked = darkModeEnabled,
-                                onCheckedChange = onDarkModeChange,
+                                onCheckedChange =
+                                    onDarkModeChange,
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor =
                                         ProfileColors.BgDark,
@@ -234,14 +253,17 @@ fun ProfileScreen(
                     ProfileMenuItem(
                         icon = Icons.Outlined.Security,
                         title = "Panel de administración",
-                        trailing = { AdminBadge() },
+                        trailing = {
+                            AdminBadge()
+                        },
                         onClick = {}
                     )
 
                     ProfileDivider()
 
                     ProfileMenuItem(
-                        icon = Icons.AutoMirrored.Outlined.Logout,
+                        icon =
+                            Icons.AutoMirrored.Outlined.Logout,
                         title = "Cerrar sesión",
                         onClick = onLogout
                     )
@@ -271,7 +293,10 @@ private fun NotificationBadge(count: Int) {
             )
             .clip(CircleShape)
             .background(ProfileColors.BadgeYellow)
-            .padding(horizontal = 5.dp, vertical = 2.dp),
+            .padding(
+                horizontal = 5.dp,
+                vertical = 2.dp
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -294,7 +319,10 @@ private fun AdminBadge() {
                 ProfileColors.AccentCyan.copy(alpha = 0.6f),
                 RoundedCornerShape(50)
             )
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .padding(
+                horizontal = 10.dp,
+                vertical = 4.dp
+            )
     ) {
         Text(
             text = "Solo admin",
@@ -317,7 +345,10 @@ private fun ProfileMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            .padding(
+                horizontal = 16.dp,
+                vertical = 16.dp
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(

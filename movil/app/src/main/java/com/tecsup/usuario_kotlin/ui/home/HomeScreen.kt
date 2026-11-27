@@ -41,11 +41,17 @@ fun HomeScreen(
     userId: Int,
     onNavigateToTranslator: () -> Unit,
     onNavigateToPerfil: () -> Unit = {},
-    viewModel: TranslationViewModel
+    viewModel: TranslationViewModel,
+    onPracticeCompleted: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
 
-    // Repositorio de progreso del usuario autenticado
+    // Callback actualizado de notificaciones
+    val notificarPractica by rememberUpdatedState(
+        onPracticeCompleted
+    )
+
+    // Repositorio de progreso
     val progressRepository = remember(
         context.applicationContext,
         userId
@@ -85,7 +91,7 @@ fun HomeScreen(
         )
     }
 
-    // Estados de búsqueda y filtrado
+    // Búsqueda y filtrado
     var selectedCategoryId by rememberSaveable {
         mutableStateOf<Int?>(null)
     }
@@ -94,7 +100,6 @@ fun HomeScreen(
         mutableStateOf("")
     }
 
-    // Seña seleccionada
     var selectedSenaId by rememberSaveable {
         mutableStateOf<Int?>(null)
     }
@@ -104,7 +109,6 @@ fun HomeScreen(
         mutableStateOf(false)
     }
 
-    // Posición del desplazamiento
     val catalogListState = rememberLazyListState()
     val categoryListState = rememberLazyListState()
 
@@ -139,13 +143,11 @@ fun HomeScreen(
                 categorias = body.categorias
                 senas = body.senas
 
-                // Dirección real de la petición
                 apiUrl = response.raw()
                     .request
                     .url
                     .toString()
 
-                // Verificar categoría seleccionada
                 if (
                     selectedCategoryId != null &&
                     categorias.none {
@@ -155,7 +157,6 @@ fun HomeScreen(
                     selectedCategoryId = null
                 }
 
-                // Verificar seña seleccionada
                 if (
                     selectedSenaId != null &&
                     senas.none {
@@ -209,7 +210,7 @@ fun HomeScreen(
         return
     }
 
-    // Obtener información de la seña seleccionada
+    // Obtener la seña seleccionada
     val selectedSena = remember(
         senas,
         selectedSenaId
@@ -226,12 +227,10 @@ fun HomeScreen(
         errorMessage == null
     ) {
         if (showPractice) {
-
-            // ViewModel de práctica
             val practiceViewModel: PracticeViewModel =
                 composeViewModel()
 
-            // Registrar el éxito vinculado a la seña actual
+            // Registrar progreso y generar notificación
             DisposableEffect(
                 practiceViewModel,
                 progressRepository,
@@ -245,9 +244,15 @@ fun HomeScreen(
                         nombreReconocido ==
                         selectedSena.nombre.trim()
                     ) {
+                        // Guardar progreso del usuario
                         progressRepository.registrarExito(
                             senaId = selectedSena.id,
                             nombreSena = selectedSena.nombre
+                        )
+
+                        // Generar notificación de éxito
+                        notificarPractica(
+                            selectedSena.nombre
                         )
                     }
                 }
@@ -259,7 +264,6 @@ fun HomeScreen(
                 }
             }
 
-            // Pantalla de práctica existente
             SenaPracticeScreen(
                 sena = selectedSena,
                 apiUrl = apiUrl,
@@ -358,7 +362,9 @@ fun HomeScreen(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
                     1.dp,
-                    ProfileColors.AccentCyan.copy(alpha = 0.6f)
+                    ProfileColors.AccentCyan.copy(
+                        alpha = 0.6f
+                    )
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(
                     containerColor = ProfileColors.CardDark,
@@ -366,7 +372,8 @@ fun HomeScreen(
                 )
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.EmojiEvents,
+                    imageVector =
+                        Icons.Outlined.EmojiEvents,
                     contentDescription = null,
                     modifier = Modifier.size(22.dp)
                 )
@@ -476,7 +483,6 @@ fun HomeScreen(
                             SenaCatalogItemCard(
                                 sena = sena,
                                 apiUrl = apiUrl,
-
                                 onPracticeClick = {
                                     showPractice = false
                                     selectedSenaId = sena.id
@@ -499,8 +505,10 @@ private fun CatalogHeader(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement =
+            Arrangement.SpaceBetween,
+        verticalAlignment =
+            Alignment.CenterVertically
     ) {
         Column(
             modifier = Modifier.weight(1f)

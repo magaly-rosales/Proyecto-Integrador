@@ -38,10 +38,11 @@ fun TranslationScreen(
     userId: Int,
     preferencesRepository: TranslationPreferencesRepository,
     userInitial: String = "M",
-    notificationCount: Int = 3,
+    notificationCount: Int = 0,
     onNavigateToSenas: () -> Unit = {},
     onNavigateToPerfil: () -> Unit = {},
-    onSpeakText: (String) -> Unit = {}
+    onSpeakText: (String) -> Unit = {},
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -72,7 +73,7 @@ fun TranslationScreen(
     val frasesRecientes by recentPhraseRepository.frases
         .collectAsStateWithLifecycle()
 
-    // Preferencias compartidas desde MainActivity
+    // Preferencias compartidas
     val outputMode by preferencesRepository.outputMode
         .collectAsStateWithLifecycle()
 
@@ -86,7 +87,9 @@ fun TranslationScreen(
     }
 
     var lensFacing by remember {
-        mutableIntStateOf(CameraSelector.LENS_FACING_BACK)
+        mutableIntStateOf(
+            CameraSelector.LENS_FACING_BACK
+        )
     }
 
     var screenActive by remember(lifecycleOwner) {
@@ -189,9 +192,10 @@ fun TranslationScreen(
 
         if (frase.isBlank()) return
 
-        val modoActual = preferencesRepository.outputMode.value
+        val modoActual =
+            preferencesRepository.outputMode.value
 
-        // Modo texto: guardar sin reproducir audio
+        // Modo texto
         if (!modoActual.usesVoice) {
             speechHelper?.stop()
             recentPhraseRepository.guardar(palabras)
@@ -230,7 +234,7 @@ fun TranslationScreen(
         }
     }
 
-    // Confirmación para eliminar el historial
+    // Confirmación para eliminar historial
     if (showClearDialog) {
         ClearRecentPhrasesDialog(
             onConfirm = {
@@ -274,10 +278,13 @@ fun TranslationScreen(
     Scaffold(
         containerColor = ProfileColors.BgDark,
 
+        // Barra superior con notificaciones reales
         topBar = {
             SenasTopBar(
-                userInitial,
-                notificationCount
+                userInitial = userInitial,
+                notificationCount = notificationCount,
+                onNotificationsClick =
+                    onNavigateToNotifications
             )
         },
 
@@ -296,7 +303,8 @@ fun TranslationScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(14.dp),
             contentPadding = PaddingValues(
                 top = 8.dp,
                 bottom = 20.dp
@@ -305,9 +313,11 @@ fun TranslationScreen(
             // Cámara y reconocimiento
             item(key = "camera") {
                 CameraDetectionCard(
-                    hasCameraPermission = hasCameraPermission,
+                    hasCameraPermission =
+                        hasCameraPermission,
                     screenActive = screenActive,
-                    cameraError = cameraError ?: recognitionError,
+                    cameraError =
+                        cameraError ?: recognitionError,
                     landmarks = handLandmarks,
                     lensFacing = lensFacing,
                     detectedLabel = badgeText,
@@ -323,7 +333,8 @@ fun TranslationScreen(
                         cameraError = null
 
                         lensFacing = if (
-                            lensFacing == CameraSelector.LENS_FACING_BACK
+                            lensFacing ==
+                            CameraSelector.LENS_FACING_BACK
                         ) {
                             CameraSelector.LENS_FACING_FRONT
                         } else {
@@ -360,7 +371,7 @@ fun TranslationScreen(
                 )
             }
 
-            // Construcción de frases y modo de salida
+            // Construcción de frases
             item(key = "translation_phrase") {
                 TranslationPhraseCard(
                     words = phraseWords,
@@ -392,7 +403,8 @@ fun TranslationScreen(
             // Historial persistente
             recentPhrasesSection(
                 frases = frasesRecientes,
-                maxPhrases = RecentPhraseRepository.MAX_PHRASES,
+                maxPhrases =
+                    RecentPhraseRepository.MAX_PHRASES,
 
                 onRepeat = { frase ->
                     viewModel.cargarFrase(frase.palabras)

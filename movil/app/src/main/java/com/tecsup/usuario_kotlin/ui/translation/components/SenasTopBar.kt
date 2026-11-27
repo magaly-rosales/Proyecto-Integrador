@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.rounded.PanTool
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,8 +25,12 @@ import com.tecsup.usuario_kotlin.ui.theme.ProfileColors
 @Composable
 fun SenasTopBar(
     userInitial: String,
-    notificationCount: Int
+    notificationCount: Int,
+    onNotificationsClick: () -> Unit = {}
 ) {
+    val textPrimary = ProfileColors.TextPrimary
+    val accentCyan = ProfileColors.AccentCyan
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -35,19 +40,26 @@ fun SenasTopBar(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         // Logo y nombre de la aplicación
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
                     .background(ProfileColors.CardElevated)
-                    .border(1.5.dp, ProfileColors.AccentCyan, CircleShape),
+                    .border(
+                        1.5.dp,
+                        accentCyan,
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Rounded.PanTool,
                     contentDescription = "Logo SeñasApp",
-                    tint = ProfileColors.AccentCyan,
+                    tint = accentCyan,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -58,7 +70,7 @@ fun SenasTopBar(
                 text = buildAnnotatedString {
                     withStyle(
                         SpanStyle(
-                            color = ProfileColors.TextPrimary,
+                            color = textPrimary,
                             fontWeight = FontWeight.Bold
                         )
                     ) {
@@ -67,7 +79,7 @@ fun SenasTopBar(
 
                     withStyle(
                         SpanStyle(
-                            color = ProfileColors.AccentCyan,
+                            color = accentCyan,
                             fontWeight = FontWeight.Bold
                         )
                     ) {
@@ -79,40 +91,66 @@ fun SenasTopBar(
         }
 
         // Notificaciones e inicial del usuario
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.padding(end = 12.dp)) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Notificaciones",
-                    tint = ProfileColors.TextPrimary,
-                    modifier = Modifier.size(26.dp)
-                )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onNotificationsClick
+            ) {
+                Box(
+                    modifier = Modifier.size(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector =
+                            Icons.Outlined.Notifications,
+                        contentDescription =
+                            "Notificaciones: $notificationCount sin leer",
+                        tint = textPrimary,
+                        modifier = Modifier.size(26.dp)
+                    )
 
-                if (notificationCount > 0) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = 4.dp, y = (-4).dp)
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .background(ProfileColors.BadgeYellow),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = notificationCount.toString(),
-                            color = ProfileColors.BgDark,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                    if (notificationCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(
+                                    x = 4.dp,
+                                    y = (-4).dp
+                                )
+                                .sizeIn(
+                                    minWidth = 16.dp,
+                                    minHeight = 16.dp
+                                )
+                                .clip(CircleShape)
+                                .background(
+                                    ProfileColors.BadgeYellow
+                                )
+                                .padding(
+                                    horizontal = 4.dp,
+                                    vertical = 1.dp
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = notificationCount.toString(),
+                                color = ProfileColors.BgDark,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
 
+            Spacer(Modifier.width(4.dp))
+
+            // Inicial del usuario
             Box(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(ProfileColors.AccentCyan),
+                    .background(accentCyan),
                 contentAlignment = Alignment.Center
             ) {
                 Text(

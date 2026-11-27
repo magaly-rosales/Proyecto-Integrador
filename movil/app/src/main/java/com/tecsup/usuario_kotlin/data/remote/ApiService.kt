@@ -75,6 +75,8 @@ interface ApiService {
         @Body puntos: List<PuntoManoDto>
     ): Response<ReconocimientoResponse>
 
+    // Reconocimiento dinámico compatible con Retrofit
+    @JvmSuppressWildcards
     @POST("api/reconocimiento/secuencia")
     suspend fun reconocerSecuencia(
         @Body cuadros: List<List<PuntoManoDto>>

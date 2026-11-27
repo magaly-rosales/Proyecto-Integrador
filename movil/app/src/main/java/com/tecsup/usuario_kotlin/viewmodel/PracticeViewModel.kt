@@ -4,13 +4,15 @@ import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tecsup.usuario_kotlin.data.model.PuntoManoDto
+import com.tecsup.usuario_kotlin.data.model.ReconocimientoResponse
+import com.tecsup.usuario_kotlin.data.recognition.DynamicSignRecognizer
+import com.tecsup.usuario_kotlin.data.recognition.StaticSignRecognizer
 import com.tecsup.usuario_kotlin.data.repository.SenasRepository
+import com.tecsup.usuario_kotlin.utils.RecognitionUtils
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
@@ -19,55 +21,41 @@ class PracticeViewModel(
 ) : ViewModel() {
 
     companion object {
-
-        // Tiempo mínimo entre solicitudes
         private const val REQUEST_INTERVAL_MS = 700L
-
-        // Coincidencias consecutivas necesarias
         const val REQUIRED_CONFIRMATIONS = 2
-
-        // Respuestas que no representan una seña reconocida
-        private val INVALID_RESULTS = setOf(
-            "desconocida",
-            "dudosa",
-            "sin_muestras"
-        )
     }
 
-    // Estado observable de la práctica
-    private val _uiState = MutableStateFlow(
-        PracticeUiState()
-    )
+    // Reconocedores compartidos
+    private val staticRecognizer = StaticSignRecognizer(repository)
+    private val dynamicRecognizer = DynamicSignRecognizer(repository)
 
-    val uiState: StateFlow<PracticeUiState> =
-        _uiState.asStateFlow()
+    // Estado de la práctica
+    private val _uiState = MutableStateFlow(PracticeUiState())
+    val uiState = _uiState.asStateFlow()
 
     // Control de solicitudes
     private var requestJob: Job? = null
-
-    private var lastRequestTime = -REQUEST_INTERVAL_MS
-
-    // Identificar cada sesión de práctica
     private var generation = 0L
+    private var lastStaticRequest = -REQUEST_INTERVAL_MS
+    private var lastDynamicRequest = -REQUEST_INTERVAL_MS
+    private var lastRequestWasDynamic = false
 
-    // Iniciar una práctica nueva
+    // Confirmaciones independientes
+    private var staticConfirmations = 0
+
+    // Iniciar una práctica
     fun iniciarPractica(nombreSena: String) {
-
-        cancelarSolicitud()
+        reiniciarCaptura()
 
         val objetivo = nombreSena.trim()
 
         if (objetivo.isBlank()) {
-
             _uiState.value = PracticeUiState(
                 status = PracticeStatus.ERROR,
                 errorMessage = "No se ha seleccionado una seña"
             )
-
             return
         }
-
-        lastRequestTime = -REQUEST_INTERVAL_MS
 
         _uiState.value = PracticeUiState(
             targetSign = objetivo,
@@ -76,226 +64,219 @@ class PracticeViewModel(
         )
     }
 
-    // Recibir los puntos detectados por MediaPipe
-    fun onHandsDetected(
-        puntos: List<PuntoManoDto>
-    ) {
-
-        val estado = _uiState.value
-
-        // Ignorar resultados fuera de una práctica activa
-        if (!estado.isActive) return
-
-        // Validar una o dos manos completas
-        val puntosValidos =
-            puntos.size in setOf(21, 42) &&
-                    puntos.all { punto ->
-                        punto.x.isFinite() &&
-                                punto.y.isFinite() &&
-                                punto.z.isFinite()
-                    }
-
-        if (!puntosValidos) {
-
-            limpiarDeteccion()
-
-            return
-        }
-
-        // Actualizar puntos para el overlay
-        _uiState.value = estado.copy(
-            handLandmarks = puntos.toList()
-        )
-
-        val tiempoActual =
-            SystemClock.elapsedRealtime()
-
-        // Evitar peticiones simultáneas
-        if (requestJob?.isActive == true) {
-            return
-        }
-
-        // Limitar las solicitudes al servidor
-        if (
-            tiempoActual - lastRequestTime <
-            REQUEST_INTERVAL_MS
-        ) {
-            return
-        }
-
-        lastRequestTime = tiempoActual
-
-        analizarSena(puntos.toList())
-    }
-
-    // Clasificar los puntos utilizando Spring Boot
-    private fun analizarSena(
-        puntos: List<PuntoManoDto>
-    ) {
-
+    // Recibir puntos de MediaPipe
+    fun onHandsDetected(puntos: List<PuntoManoDto>) {
         if (!_uiState.value.isActive) return
 
-        val version = generation
+        if (!RecognitionUtils.puntosValidos(puntos)) {
+            limpiarDeteccion()
+            return
+        }
 
+        val now = SystemClock.elapsedRealtime()
+        val actuales = puntos.toList()
+
+        _uiState.value = _uiState.value.copy(
+            handLandmarks = actuales
+        )
+
+        // Capturar movimiento de forma continua
+        if (dynamicRecognizer.registrar(actuales, now)) {
+            cancelarSolicitud()
+            staticConfirmations = 0
+
+            _uiState.value = _uiState.value.copy(
+                detectedSign = null,
+                confirmations = 0,
+                isAnalyzing = false,
+                status = PracticeStatus.WAITING_HAND
+            )
+        }
+
+        if (requestJob?.isActive == true) return
+
+        val staticAvailable =
+            now - lastStaticRequest >= REQUEST_INTERVAL_MS
+
+        val dynamicAvailable =
+            dynamicRecognizer.secuenciaPendiente != null &&
+                    now - lastDynamicRequest >= REQUEST_INTERVAL_MS
+
+        // Alternar ambos tipos de reconocimiento
+        when {
+            dynamicAvailable &&
+                    (!lastRequestWasDynamic || !staticAvailable) -> {
+
+                val cuadros = dynamicRecognizer.tomarSecuencia()
+                    ?: return
+
+                lastDynamicRequest = now
+                lastRequestWasDynamic = true
+
+                analizarSena(dinamico = true) {
+                    dynamicRecognizer.reconocer(cuadros)
+                }
+            }
+
+            staticAvailable -> {
+                lastStaticRequest = now
+                lastRequestWasDynamic = false
+
+                analizarSena(dinamico = false) {
+                    staticRecognizer.reconocer(actuales)
+                }
+            }
+        }
+    }
+
+    // Ejecutar reconocimiento
+    private fun analizarSena(
+        dinamico: Boolean,
+        peticion: suspend () -> ReconocimientoResponse
+    ) {
+        if (!_uiState.value.isActive) return
+        if (requestJob?.isActive == true) return
+
+        val version = generation
         val estado = _uiState.value
 
         _uiState.value = estado.copy(
             isAnalyzing = true,
             errorMessage = null,
-            status = if (
-                estado.status ==
-                PracticeStatus.WAITING_HAND
-            ) {
+            status = if (estado.status == PracticeStatus.WAITING_HAND) {
                 PracticeStatus.ANALYZING
             } else {
                 estado.status
             }
         )
 
-        requestJob = viewModelScope.launch {
-
+        requestJob = viewModelScope.launch(start = CoroutineStart.LAZY) {
             try {
+                val resultado = peticion()
 
-                // Reutilizar el reconocimiento existente
-                val resultado =
-                    repository.enviarPuntosMano(puntos)
-
-                currentCoroutineContext().ensureActive()
-
-                // Ignorar respuestas de prácticas anteriores
-                if (!esPracticaActual(version)) {
+                if (
+                    version != generation ||
+                    !_uiState.value.isActive
+                ) {
                     return@launch
                 }
 
-                val respuesta = resultado.getOrThrow()
-
-                val nombreDetectado =
-                    respuesta.sena
-                        ?.takeIf { it.isNotBlank() }
-                        ?: respuesta.nombre
-
-                procesarResultado(
-                    nombreDetectado
-                )
+                procesarResultado(resultado, dinamico)
 
             } catch (e: CancellationException) {
-
                 throw e
 
             } catch (e: Exception) {
+                if (version == generation) {
+                    if (dinamico) {
+                        dynamicRecognizer.limpiarConfirmaciones()
+                    } else {
+                        staticConfirmations = 0
+                    }
 
-                if (esPracticaActual(version)) {
+                    dynamicRecognizer.limpiar()
 
-                    _uiState.value =
-                        _uiState.value.copy(
-                            status = PracticeStatus.ERROR,
-                            isActive = false,
-                            isAnalyzing = false,
-                            confirmations = 0,
-                            detectedSign = null,
-                            handLandmarks = emptyList(),
-                            errorMessage =
-                                "No se pudo completar el reconocimiento. " +
-                                        "Comprueba la conexión e inténtalo nuevamente."
-                        )
+                    _uiState.value = _uiState.value.copy(
+                        status = PracticeStatus.ERROR,
+                        isActive = false,
+                        isAnalyzing = false,
+                        confirmations = 0,
+                        detectedSign = null,
+                        handLandmarks = emptyList(),
+                        errorMessage =
+                            "No se pudo completar el reconocimiento. " +
+                                    "Comprueba la conexión e inténtalo nuevamente."
+                    )
                 }
 
             } finally {
-
                 if (version == generation) {
-
-                    _uiState.value =
-                        _uiState.value.copy(
-                            isAnalyzing = false
-                        )
-
+                    _uiState.value = _uiState.value.copy(
+                        isAnalyzing = false
+                    )
                     requestJob = null
                 }
             }
         }
+
+        requestJob?.start()
     }
 
-    // Comparar la seña reconocida con la seña objetivo
+    // Evaluar si el resultado coincide con el objetivo
     private fun procesarResultado(
-        nombreDetectado: String?
+        resultado: ReconocimientoResponse,
+        dinamico: Boolean
     ) {
-
         val estado = _uiState.value
-
         if (!estado.isActive) return
 
-        val detectada = nombreDetectado
-            ?.trim()
-            .orEmpty()
+        val detectada = RecognitionUtils.obtenerNombre(resultado)
 
-        // El servidor no reconoció una seña válida
-        if (
-            detectada.isBlank() ||
-            detectada.lowercase() in INVALID_RESULTS
-        ) {
-
-            _uiState.value = estado.copy(
-                status = PracticeStatus.NOT_RECOGNIZED,
-                detectedSign = null,
-                confirmations = 0
-            )
-
-            return
-        }
-
-        // Comparar nombres sin distinguir mayúsculas
-        val coincide = detectada.equals(
-            estado.targetSign,
-            ignoreCase = true
+        val coincide = RecognitionUtils.coincidenSenas(
+            detectada = detectada,
+            objetivo = estado.targetSign
         )
 
-        if (!coincide) {
-
-            _uiState.value = estado.copy(
-                status = PracticeStatus.DIFFERENT_SIGN,
-                detectedSign = detectada,
-                confirmations = 0
-            )
-
-            return
+        // Confirmaciones independientes por tipo de reconocimiento
+        if (dinamico) {
+            if (coincide) {
+                dynamicRecognizer.confirmar(resultado)
+            } else {
+                dynamicRecognizer.limpiarConfirmaciones()
+            }
+        } else {
+            staticConfirmations = if (coincide) {
+                (staticConfirmations + 1)
+                    .coerceAtMost(REQUIRED_CONFIRMATIONS)
+            } else {
+                0
+            }
         }
 
-        // Registrar una coincidencia consecutiva
-        val confirmaciones =
-            (estado.confirmations + 1)
-                .coerceAtMost(REQUIRED_CONFIRMATIONS)
+        val confirmaciones = maxOf(
+            staticConfirmations,
+            dynamicRecognizer.confirmaciones
+        )
 
         val completada =
             confirmaciones >= REQUIRED_CONFIRMATIONS
 
+        val nuevoEstado = when {
+            completada -> PracticeStatus.SUCCESS
+
+            confirmaciones > 0 -> PracticeStatus.CONFIRMING
+
+            RecognitionUtils.esNombreValido(detectada) ->
+                PracticeStatus.DIFFERENT_SIGN
+
+            else -> PracticeStatus.NOT_RECOGNIZED
+        }
+
         _uiState.value = estado.copy(
-
-            detectedSign = detectada,
-
-            confirmations = confirmaciones,
-
-            status = if (completada) {
-
-                PracticeStatus.SUCCESS
-
+            detectedSign = if (confirmaciones > 0) {
+                estado.targetSign
             } else {
-
-                PracticeStatus.CONFIRMING
+                detectada?.takeIf {
+                    RecognitionUtils.esNombreValido(it)
+                }
             },
-
-            // Detener el reconocimiento al completar la práctica
-            isActive = !completada
+            confirmations = confirmaciones,
+            status = nuevoEstado,
+            isActive = !completada,
+            isAnalyzing = false
         )
+
+        if (completada) {
+            dynamicRecognizer.limpiar()
+            staticConfirmations = 0
+        }
     }
 
-    // Limpiar los resultados cuando no hay manos visibles
+    // Limpiar al perder la detección de las manos
     private fun limpiarDeteccion() {
-
         val estado = _uiState.value
-
         if (!estado.isActive) return
 
-        // Evitar reiniciar innecesariamente cada fotograma
         if (
             estado.handLandmarks.isEmpty() &&
             estado.status == PracticeStatus.WAITING_HAND &&
@@ -304,7 +285,7 @@ class PracticeViewModel(
             return
         }
 
-        cancelarSolicitud()
+        reiniciarCaptura()
 
         _uiState.value = estado.copy(
             handLandmarks = emptyList(),
@@ -315,25 +296,20 @@ class PracticeViewModel(
         )
     }
 
-    // Reiniciar la práctica con el mismo objetivo
     fun reiniciarPractica() {
-
-        val objetivo = _uiState.value.targetSign
-
-        iniciarPractica(objetivo)
+        iniciarPractica(_uiState.value.targetSign)
     }
 
-    // Limpiar los puntos al cambiar de cámara
+    // Limpiar al cambiar de cámara
     fun limpiarManos() {
         limpiarDeteccion()
     }
 
-    // Gestionar errores de cámara
+    // Controlar errores de cámara
     fun mostrarErrorCamara(mensaje: String) {
-
         if (!_uiState.value.isActive) return
 
-        cancelarSolicitud()
+        reiniciarCaptura()
 
         _uiState.value = _uiState.value.copy(
             status = PracticeStatus.ERROR,
@@ -346,47 +322,37 @@ class PracticeViewModel(
         )
     }
 
-    // Detener la práctica y conservar la seña objetivo
     fun detenerPractica() {
-
-        cancelarSolicitud()
+        reiniciarCaptura()
 
         _uiState.value = PracticeUiState(
             targetSign = _uiState.value.targetSign
         )
     }
 
-    // Limpiar completamente la sesión de práctica
     fun limpiarPractica() {
-
-        cancelarSolicitud()
-
+        reiniciarCaptura()
         _uiState.value = PracticeUiState()
     }
 
-    // Cancelar solicitudes pendientes
     private fun cancelarSolicitud() {
-
         generation++
-
         requestJob?.cancel()
-
         requestJob = null
+
+        lastStaticRequest = -REQUEST_INTERVAL_MS
+        lastDynamicRequest = -REQUEST_INTERVAL_MS
+        lastRequestWasDynamic = false
     }
 
-    // Verificar que la respuesta corresponda a la sesión actual
-    private fun esPracticaActual(
-        version: Long
-    ): Boolean {
-
-        return version == generation &&
-                _uiState.value.isActive
+    private fun reiniciarCaptura() {
+        cancelarSolicitud()
+        dynamicRecognizer.limpiar()
+        staticConfirmations = 0
     }
 
     override fun onCleared() {
-
-        cancelarSolicitud()
-
+        reiniciarCaptura()
         super.onCleared()
     }
 }

@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,16 +53,25 @@ fun HomeScreen(
         mutableStateOf<List<SenaCatalogoDto>>(emptyList())
     }
 
-    // Estados de búsqueda y filtrado
-    var selectedCategoryId by remember {
+    // Conservar la búsqueda y categoría seleccionada
+    var selectedCategoryId by rememberSaveable {
         mutableStateOf<Int?>(null)
     }
 
-    var searchQuery by remember {
+    var searchQuery by rememberSaveable {
         mutableStateOf("")
     }
 
-    // Dirección del servidor obtenida desde Retrofit
+    // Identificar la seña seleccionada
+    var selectedSenaId by rememberSaveable {
+        mutableStateOf<Int?>(null)
+    }
+
+    // Conservar la posición de desplazamiento
+    val catalogListState = rememberLazyListState()
+    val categoryListState = rememberLazyListState()
+
+    // Dirección del servidor
     var apiUrl by remember {
         mutableStateOf<String?>(null)
     }
@@ -100,6 +111,26 @@ fun HomeScreen(
                     .url
                     .toString()
 
+                // Verificar que la categoría siga disponible
+                if (
+                    selectedCategoryId != null &&
+                    categorias.none {
+                        it.id == selectedCategoryId
+                    }
+                ) {
+                    selectedCategoryId = null
+                }
+
+                // Verificar que la seña siga disponible
+                if (
+                    selectedSenaId != null &&
+                    senas.none {
+                        it.id == selectedSenaId
+                    }
+                ) {
+                    selectedSenaId = null
+                }
+
             } else {
 
                 errorMessage =
@@ -120,6 +151,46 @@ fun HomeScreen(
 
             isLoading = false
         }
+    }
+
+    // Obtener los datos de la seña seleccionada
+    val selectedSena = remember(
+        senas,
+        selectedSenaId
+    ) {
+        senas.firstOrNull {
+            it.id == selectedSenaId
+        }
+    }
+
+    // Mostrar la pantalla de detalles
+    if (
+        selectedSena != null &&
+        !isLoading &&
+        errorMessage == null
+    ) {
+        SenaDetailScreen(
+            sena = selectedSena,
+            apiUrl = apiUrl,
+            onBackClick = {
+
+                // Regresar al catálogo
+                selectedSenaId = null
+            },
+            onPracticeClick = {
+
+                // Mantener temporalmente la navegación al traductor
+                viewModel.updateTranslation(
+                    selectedSena.nombre
+                )
+
+                selectedSenaId = null
+
+                onNavigateToTranslator()
+            }
+        )
+
+        return
     }
 
     // Filtrar señas por categoría y búsqueda
@@ -171,7 +242,8 @@ fun HomeScreen(
                     horizontal = 16.dp,
                     vertical = 12.dp
                 ),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement =
+                Arrangement.spacedBy(12.dp)
         ) {
             // Cabecera del catálogo
             CatalogHeader(
@@ -192,13 +264,15 @@ fun HomeScreen(
             if (categorias.isNotEmpty()) {
 
                 LazyRow(
+                    state = categoryListState,
                     horizontalArrangement =
                         Arrangement.spacedBy(8.dp)
                 ) {
                     item {
                         CategoryChip(
                             label = "Todas",
-                            selected = selectedCategoryId == null,
+                            selected =
+                                selectedCategoryId == null,
                             onClick = {
                                 selectedCategoryId = null
                             }
@@ -259,6 +333,7 @@ fun HomeScreen(
                 else -> {
 
                     LazyColumn(
+                        state = catalogListState,
                         verticalArrangement =
                             Arrangement.spacedBy(10.dp),
                         contentPadding = PaddingValues(
@@ -275,11 +350,8 @@ fun HomeScreen(
                                 apiUrl = apiUrl,
                                 onPracticeClick = {
 
-                                    viewModel.updateTranslation(
-                                        sena.nombre
-                                    )
-
-                                    onNavigateToTranslator()
+                                    // Abrir los detalles de la seña
+                                    selectedSenaId = sena.id
                                 }
                             )
                         }
@@ -430,7 +502,8 @@ private fun CatalogError(
         contentAlignment = Alignment.Center
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment =
+                Alignment.CenterHorizontally
         ) {
             Text(
                 text = message,
@@ -443,8 +516,10 @@ private fun CatalogError(
             Button(
                 onClick = onRetry,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = ProfileColors.AccentCyan,
-                    contentColor = ProfileColors.BgDark
+                    containerColor =
+                        ProfileColors.AccentCyan,
+                    contentColor =
+                        ProfileColors.BgDark
                 )
             ) {
                 Text(

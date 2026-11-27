@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -49,7 +50,7 @@ fun SenaCatalogItemCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Imagen de la seña
+            // Miniatura de la seña
             SenaCatalogImage(
                 imagenSena = sena.imagen,
                 imagenCategoria = sena.imagenCategoria,
@@ -108,23 +109,29 @@ fun SenaCatalogItemCard(
     }
 }
 
-// Imagen reutilizable para el catálogo
+// Imagen reutilizable para catálogo y detalles
 @Composable
 fun SenaCatalogImage(
     imagenSena: String?,
     imagenCategoria: String?,
     apiUrl: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier.size(46.dp),
+    iconSize: Dp = 22.dp,
+    cornerRadius: Dp = 12.dp,
+    contentDescription: String? = null
 ) {
-    // Obtener las imágenes disponibles por prioridad
+    // Obtener imágenes disponibles por prioridad
     val imagenes = remember(
         imagenSena,
         imagenCategoria,
         apiUrl
     ) {
         if (apiUrl.isNullOrBlank()) {
+
             emptyList()
+
         } else {
+
             CatalogMediaUtils.obtenerImagenes(
                 imagenSena = imagenSena,
                 imagenCategoria = imagenCategoria,
@@ -143,11 +150,11 @@ fun SenaCatalogImage(
         mutableStateOf(false)
     }
 
-    val imageShape = RoundedCornerShape(12.dp)
+    val imageShape =
+        RoundedCornerShape(cornerRadius)
 
     Box(
         modifier = modifier
-            .size(46.dp)
             .clip(imageShape)
             .background(ProfileColors.CardElevated)
             .border(
@@ -159,27 +166,28 @@ fun SenaCatalogImage(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Icono original mientras carga o si no hay imagen
+        // Icono alternativo mientras carga o si falla
         if (!imageLoaded || currentImage == null) {
+
             Icon(
                 imageVector = Icons.Rounded.PanTool,
                 contentDescription = null,
                 tint = ProfileColors.AccentCyan,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(iconSize)
             )
         }
 
-        // Descargar y mostrar la imagen
+        // Descargar y mostrar imagen
         if (currentImage != null) {
 
             key(currentImage) {
+
                 AsyncImage(
                     model = currentImage,
-                    contentDescription = null,
+                    contentDescription = contentDescription,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(1.dp)
-                        .clip(RoundedCornerShape(11.dp)),
+                        .padding(1.dp),
                     contentScale = ContentScale.Fit,
                     onLoading = {
                         imageLoaded = false
@@ -191,7 +199,7 @@ fun SenaCatalogImage(
 
                         imageLoaded = false
 
-                        // Intentar cargar la siguiente imagen
+                        // Intentar cargar la imagen alternativa
                         if (
                             imagenes.getOrNull(imageIndex) ==
                             currentImage
@@ -205,11 +213,13 @@ fun SenaCatalogImage(
     }
 }
 
-// Etiqueta para las señas recientemente registradas
+// Etiqueta reutilizable de seña nueva
 @Composable
-private fun NuevaSenaBadge() {
+fun NuevaSenaBadge(
+    modifier: Modifier = Modifier
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(6.dp))
             .background(ProfileColors.BadgeYellow)
             .padding(

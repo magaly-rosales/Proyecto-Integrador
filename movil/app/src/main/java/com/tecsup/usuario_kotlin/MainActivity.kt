@@ -14,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.tecsup.usuario_kotlin.data.model.TextSize
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
 import com.tecsup.usuario_kotlin.data.repository.TranslationPreferencesRepository
 import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
@@ -65,13 +66,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            // Tema seleccionado
             val darkModeEnabled = preferencesRepository
                 ?.darkMode
                 ?.collectAsStateWithLifecycle()
                 ?.value ?: true
 
+            // Tamaño de texto seleccionado
+            val textSize = preferencesRepository
+                ?.textSize
+                ?.collectAsStateWithLifecycle()
+                ?.value ?: TextSize.NORMAL
+
             UsuariokotlinTheme(
-                darkTheme = darkModeEnabled
+                darkTheme = darkModeEnabled,
+                textSize = textSize
             ) {
                 val screenSaver = Saver<String, String>(
                     save = { it },
@@ -93,6 +102,7 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf("login")
                 }
 
+                // Proteger las pantallas privadas
                 val activeScreen = if (
                     currentScreen in protectedScreens &&
                     !authViewModel.loginSuccess
@@ -102,6 +112,7 @@ class MainActivity : ComponentActivity() {
                     currentScreen
                 }
 
+                // Datos del usuario autenticado
                 val userName = authViewModel.loggedUserName
                 val userEmail = authViewModel.loggedUserEmail
                 val userPhoto = authViewModel.loggedUserPhoto
@@ -115,6 +126,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     when (activeScreen) {
 
+                        // Inicio de sesión
                         "login" -> {
                             LoginScreen(
                                 authViewModel = authViewModel,
@@ -132,6 +144,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Registro
                         "register" -> {
                             RegisterScreen(
                                 authViewModel = authViewModel,
@@ -145,6 +158,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Recuperación de contraseña
                         "forgot_password" -> {
                             ForgotPasswordScreen(
                                 authViewModel = authViewModel,
@@ -155,6 +169,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Catálogo de señas
                         "home" -> {
                             HomeScreen(
                                 username = userName,
@@ -168,6 +183,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Traductor
                         "translation" -> {
                             if (userId != null && userId > 0) {
                                 key(userId) {
@@ -194,16 +210,25 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
+                        // Mi cuenta
                         "perfil" -> {
                             ProfileScreen(
                                 userName = userName,
                                 userEmail = userEmail,
                                 userPhoto = userPhoto,
 
+                                // Preferencia del tema
                                 darkModeEnabled = darkModeEnabled,
                                 onDarkModeChange = { enabled ->
                                     preferencesRepository
                                         ?.cambiarModoOscuro(enabled)
+                                },
+
+                                // Preferencia del tamaño de texto
+                                textSize = textSize,
+                                onTextSizeChange = { size ->
+                                    preferencesRepository
+                                        ?.cambiarTamanoTexto(size)
                                 },
 
                                 onNavigateToTraducir = {
@@ -224,6 +249,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Editar perfil
                         "edit_profile" -> {
                             EditProfileScreen(
                                 profileViewModel = profileViewModel,
@@ -238,6 +264,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Cambiar contraseña
                         "change_password" -> {
                             ChangePasswordScreen(
                                 profileViewModel = profileViewModel,
@@ -247,6 +274,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        // Pantalla de respaldo
                         else -> {
                             LoginScreen(
                                 authViewModel = authViewModel,
@@ -299,6 +327,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // Cerrar sesión conservando las preferencias
     private fun cerrarSesion() {
         translationViewModel.cerrarSesionTraductor()
         profileViewModel.clearProfileOperations()

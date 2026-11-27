@@ -2,6 +2,7 @@ package com.tecsup.usuario_kotlin.data.repository
 
 import android.content.Context
 import com.tecsup.usuario_kotlin.data.model.OutputMode
+import com.tecsup.usuario_kotlin.data.model.TextSize
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -24,6 +25,7 @@ class TranslationPreferencesRepository(
 
     private val outputModeKey = "output_mode_$userId"
     private val darkModeKey = "dark_mode_$userId"
+    private val textSizeKey = "text_size_$userId"
 
     // Preferencia del modo de salida
     private val _outputMode = MutableStateFlow(
@@ -40,6 +42,15 @@ class TranslationPreferencesRepository(
     )
 
     val darkMode = _darkMode.asStateFlow()
+
+    // Preferencia del tamaño de texto
+    private val _textSize = MutableStateFlow(
+        TextSize.fromName(
+            preferences.getString(textSizeKey, null)
+        )
+    )
+
+    val textSize = _textSize.asStateFlow()
 
     // Cambiar el modo de traducción
     fun cambiarModoSalida(mode: OutputMode) {
@@ -61,5 +72,16 @@ class TranslationPreferencesRepository(
             .apply()
 
         _darkMode.value = enabled
+    }
+
+    // Cambiar el tamaño del texto
+    fun cambiarTamanoTexto(size: TextSize) {
+        if (_textSize.value == size) return
+
+        preferences.edit()
+            .putString(textSizeKey, size.name)
+            .apply()
+
+        _textSize.value = size
     }
 }

@@ -15,10 +15,11 @@ import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,7 +27,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tecsup.usuario_kotlin.data.model.TextSize
 import com.tecsup.usuario_kotlin.ui.components.ProfileAvatar as SharedProfileAvatar
+import com.tecsup.usuario_kotlin.ui.home.components.TextSizeDialog
 import com.tecsup.usuario_kotlin.ui.theme.ProfileColors
 import com.tecsup.usuario_kotlin.ui.translation.SenasBottomBar
 
@@ -41,10 +44,31 @@ fun ProfileScreen(
     onNavigateToEditProfile: () -> Unit = {},
     userPhoto: String? = null,
     darkModeEnabled: Boolean = true,
-    onDarkModeChange: (Boolean) -> Unit = {}
+    onDarkModeChange: (Boolean) -> Unit = {},
+    textSize: TextSize = TextSize.NORMAL,
+    onTextSizeChange: (TextSize) -> Unit = {}
 ) {
     val displayName = userName.ifBlank { "Usuario" }
     val displayEmail = userEmail.ifBlank { "Correo no disponible" }
+
+    // Estado del diálogo de tamaño de texto
+    var showTextSizeDialog by remember {
+        mutableStateOf(false)
+    }
+
+    // Configurar el tamaño del texto
+    if (showTextSizeDialog) {
+        TextSizeDialog(
+            selectedSize = textSize,
+            onConfirm = { size ->
+                onTextSizeChange(size)
+                showTextSizeDialog = false
+            },
+            onDismiss = {
+                showTextSizeDialog = false
+            }
+        )
+    }
 
     Scaffold(
         containerColor = ProfileColors.BgDark,
@@ -76,7 +100,8 @@ fun ProfileScreen(
                     text = "Mi cuenta",
                     color = ProfileColors.TextPrimary,
                     fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
 
                 Icon(
@@ -101,7 +126,9 @@ fun ProfileScreen(
 
                 Spacer(Modifier.width(16.dp))
 
-                Column {
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         text = displayName,
                         color = ProfileColors.TextPrimary,
@@ -119,7 +146,7 @@ fun ProfileScreen(
                 }
             }
 
-            // Menú del perfil
+            // Menú de opciones
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
@@ -127,6 +154,8 @@ fun ProfileScreen(
                 border = BorderStroke(1.dp, ProfileColors.CardElevated)
             ) {
                 Column {
+
+                    // Información del perfil
                     ProfileMenuItem(
                         icon = Icons.Outlined.Person,
                         title = "Mi perfil",
@@ -135,6 +164,7 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
+                    // Configuración
                     ProfileMenuItem(
                         icon = Icons.Outlined.Tune,
                         title = "Configuración",
@@ -143,6 +173,7 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
+                    // Notificaciones
                     ProfileMenuItem(
                         icon = Icons.Outlined.Notifications,
                         title = "Notificaciones",
@@ -156,7 +187,7 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Interruptor conectado al tema global
+                    // Tema claro y oscuro
                     ProfileMenuItem(
                         icon = Icons.Outlined.DarkMode,
                         title = "Modo oscuro",
@@ -183,6 +214,26 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
+                    // Tamaño del texto
+                    ProfileMenuItem(
+                        icon = Icons.Outlined.TextFields,
+                        title = "Tamaño del texto",
+                        trailing = {
+                            Text(
+                                text = textSize.label,
+                                color = ProfileColors.AccentCyan,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
+                        onClick = {
+                            showTextSizeDialog = true
+                        }
+                    )
+
+                    ProfileDivider()
+
+                    // Panel de administración
                     ProfileMenuItem(
                         icon = Icons.Outlined.Security,
                         title = "Panel de administración",
@@ -192,6 +243,7 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
+                    // Cerrar sesión
                     ProfileMenuItem(
                         icon = Icons.AutoMirrored.Outlined.Logout,
                         title = "Cerrar sesión",
@@ -203,6 +255,7 @@ fun ProfileScreen(
     }
 }
 
+// Separador reutilizable
 @Composable
 private fun ProfileDivider() {
     HorizontalDivider(
@@ -211,13 +264,18 @@ private fun ProfileDivider() {
     )
 }
 
+// Contador de notificaciones
 @Composable
 private fun NotificationBadge(count: Int) {
     Box(
         modifier = Modifier
-            .size(24.dp)
+            .sizeIn(
+                minWidth = 24.dp,
+                minHeight = 24.dp
+            )
             .clip(CircleShape)
-            .background(ProfileColors.BadgeYellow),
+            .background(ProfileColors.BadgeYellow)
+            .padding(horizontal = 5.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -229,6 +287,7 @@ private fun NotificationBadge(count: Int) {
     }
 }
 
+// Etiqueta de administración
 @Composable
 private fun AdminBadge() {
     Box(
@@ -250,6 +309,7 @@ private fun AdminBadge() {
     }
 }
 
+// Opción reutilizable del menú
 @Composable
 private fun ProfileMenuItem(
     icon: ImageVector,
@@ -262,13 +322,15 @@ private fun ProfileMenuItem(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 imageVector = icon,
-                contentDescription = title,
+                contentDescription = null,
                 tint = ProfileColors.AccentCyan,
                 modifier = Modifier.size(22.dp)
             )
@@ -279,10 +341,14 @@ private fun ProfileMenuItem(
                 text = title,
                 color = ProfileColors.TextPrimary,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f)
             )
         }
 
-        trailing?.invoke()
+        if (trailing != null) {
+            Spacer(Modifier.width(8.dp))
+            trailing.invoke()
+        }
     }
 }

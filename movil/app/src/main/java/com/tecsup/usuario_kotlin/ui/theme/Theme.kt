@@ -5,6 +5,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import com.tecsup.usuario_kotlin.data.model.TextSize
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkSenasPalette.accent,
@@ -35,6 +38,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun UsuariokotlinTheme(
     darkTheme: Boolean = true,
+    textSize: TextSize = TextSize.NORMAL,
     content: @Composable () -> Unit
 ) {
     val palette = if (darkTheme) {
@@ -49,8 +53,22 @@ fun UsuariokotlinTheme(
         LightColorScheme
     }
 
+    // Conservar la densidad y accesibilidad del dispositivo
+    val systemDensity = LocalDensity.current
+
+    val adjustedDensity = if (textSize == TextSize.NORMAL) {
+        systemDensity
+    } else {
+        Density(
+            density = systemDensity.density,
+            fontScale = systemDensity.fontScale * textSize.scale
+        )
+    }
+
+    // Aplicar el tema y la escala de texto
     CompositionLocalProvider(
-        LocalSenasPalette provides palette
+        LocalSenasPalette provides palette,
+        LocalDensity provides adjustedDensity
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

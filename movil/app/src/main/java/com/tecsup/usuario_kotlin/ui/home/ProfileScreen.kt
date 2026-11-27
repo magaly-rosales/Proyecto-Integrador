@@ -22,20 +22,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tecsup.usuario_kotlin.ui.components.ProfileAvatar as SharedProfileAvatar
+import com.tecsup.usuario_kotlin.ui.theme.ProfileColors
 import com.tecsup.usuario_kotlin.ui.translation.SenasBottomBar
-
-private val BgDark = Color(0xFF08141A)
-private val CardDark = Color(0xFF0F2129)
-private val CardElevated = Color(0xFF132A34)
-private val AccentCyan = Color(0xFF22B8CF)
-private val TextPrimary = Color(0xFFFFFFFF)
-private val TextSecondary = Color(0xFF8A9BA8)
-private val BadgeYellow = Color(0xFFF5B82E)
 
 @Composable
 fun ProfileScreen(
@@ -45,22 +38,18 @@ fun ProfileScreen(
     onNavigateToTraducir: () -> Unit,
     onNavigateToSenas: () -> Unit,
     onLogout: () -> Unit,
-    onNavigateToEditProfile: () -> Unit = {}
+    onNavigateToEditProfile: () -> Unit = {},
+    userPhoto: String? = null
 ) {
-
-    // Mostrar los datos reales del usuario autenticado
     val displayName = userName.ifBlank { "Usuario" }
     val displayEmail = userEmail.ifBlank { "Correo no disponible" }
 
-    val initial = displayName
-        .trim()
-        .firstOrNull()
-        ?.uppercase() ?: "U"
-
-    var darkModeEnabled by remember { mutableStateOf(true) }
+    var darkModeEnabled by remember {
+        mutableStateOf(true)
+    }
 
     Scaffold(
-        containerColor = BgDark,
+        containerColor = ProfileColors.BgDark,
         bottomBar = {
             SenasBottomBar(
                 selectedTab = 2,
@@ -79,17 +68,15 @@ fun ProfileScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-
-            // Cabecera "Mi cuenta"
+            // Cabecera de Mi cuenta
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Text(
                     text = "Mi cuenta",
-                    color = TextPrimary,
+                    color = ProfileColors.TextPrimary,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -97,40 +84,29 @@ fun ProfileScreen(
                 Icon(
                     imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = null,
-                    tint = TextPrimary,
+                    tint = ProfileColors.TextPrimary,
                     modifier = Modifier.size(28.dp)
                 )
             }
 
-            // Avatar + Nombre + Correo
+            // Información del usuario
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = 4.dp)
             ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(AccentCyan),
-                    contentAlignment = Alignment.Center
-                ) {
-
-                    Text(
-                        text = initial,
-                        color = BgDark,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                SharedProfileAvatar(
+                    userName = displayName,
+                    foto = userPhoto,
+                    avatarSize = 64.dp,
+                    fontSize = 26.sp
+                )
 
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column {
-
                     Text(
                         text = displayName,
-                        color = TextPrimary,
+                        color = ProfileColors.TextPrimary,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -139,33 +115,30 @@ fun ProfileScreen(
 
                     Text(
                         text = displayEmail,
-                        color = TextSecondary,
+                        color = ProfileColors.TextSecondary,
                         fontSize = 13.sp
                     )
                 }
             }
 
-            // Tarjeta contenedora de opciones
+            // Menú de opciones
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                color = CardDark,
-                border = BorderStroke(1.dp, CardElevated)
+                color = ProfileColors.CardDark,
+                border = BorderStroke(
+                    1.dp,
+                    ProfileColors.CardElevated
+                )
             ) {
-
                 Column {
-
-                    // Navegación hacia la edición del perfil
                     ProfileMenuItem(
                         icon = Icons.Outlined.Person,
                         title = "Mi perfil",
                         onClick = onNavigateToEditProfile
                     )
 
-                    HorizontalDivider(
-                        color = CardElevated,
-                        thickness = 1.dp
-                    )
+                    ProfileDivider()
 
                     ProfileMenuItem(
                         icon = Icons.Outlined.Tune,
@@ -173,58 +146,39 @@ fun ProfileScreen(
                         onClick = {}
                     )
 
-                    HorizontalDivider(
-                        color = CardElevated,
-                        thickness = 1.dp
-                    )
+                    ProfileDivider()
 
                     ProfileMenuItem(
                         icon = Icons.Outlined.Notifications,
                         title = "Notificaciones",
                         trailing = {
-
                             if (notificationCount > 0) {
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(BadgeYellow),
-                                    contentAlignment = Alignment.Center
-                                ) {
-
-                                    Text(
-                                        text = notificationCount.toString(),
-                                        color = BgDark,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+                                NotificationBadge(notificationCount)
                             }
                         },
                         onClick = {}
                     )
 
-                    HorizontalDivider(
-                        color = CardElevated,
-                        thickness = 1.dp
-                    )
+                    ProfileDivider()
 
                     ProfileMenuItem(
                         icon = Icons.Outlined.DarkMode,
                         title = "Modo oscuro",
                         trailing = {
-
                             Switch(
                                 checked = darkModeEnabled,
                                 onCheckedChange = {
                                     darkModeEnabled = it
                                 },
                                 colors = SwitchDefaults.colors(
-                                    checkedThumbColor = TextPrimary,
-                                    checkedTrackColor = AccentCyan,
-                                    uncheckedThumbColor = TextSecondary,
-                                    uncheckedTrackColor = CardElevated
+                                    checkedThumbColor =
+                                        ProfileColors.TextPrimary,
+                                    checkedTrackColor =
+                                        ProfileColors.AccentCyan,
+                                    uncheckedThumbColor =
+                                        ProfileColors.TextSecondary,
+                                    uncheckedTrackColor =
+                                        ProfileColors.CardElevated
                                 )
                             )
                         },
@@ -233,45 +187,16 @@ fun ProfileScreen(
                         }
                     )
 
-                    HorizontalDivider(
-                        color = CardElevated,
-                        thickness = 1.dp
-                    )
+                    ProfileDivider()
 
                     ProfileMenuItem(
                         icon = Icons.Outlined.Security,
                         title = "Panel de administración",
-                        trailing = {
-
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50))
-                                    .border(
-                                        1.dp,
-                                        AccentCyan.copy(alpha = 0.6f),
-                                        RoundedCornerShape(50)
-                                    )
-                                    .padding(
-                                        horizontal = 10.dp,
-                                        vertical = 4.dp
-                                    )
-                            ) {
-
-                                Text(
-                                    text = "Solo admin",
-                                    color = AccentCyan,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        },
+                        trailing = { AdminBadge() },
                         onClick = {}
                     )
 
-                    HorizontalDivider(
-                        color = CardElevated,
-                        thickness = 1.dp
-                    )
+                    ProfileDivider()
 
                     ProfileMenuItem(
                         icon = Icons.AutoMirrored.Outlined.Logout,
@@ -284,7 +209,57 @@ fun ProfileScreen(
     }
 }
 
-// Componente reutilizable para las opciones del perfil
+// Separador reutilizable del menú
+@Composable
+private fun ProfileDivider() {
+    HorizontalDivider(
+        color = ProfileColors.CardElevated,
+        thickness = 1.dp
+    )
+}
+
+// Contador de notificaciones
+@Composable
+private fun NotificationBadge(count: Int) {
+    Box(
+        modifier = Modifier
+            .size(24.dp)
+            .clip(CircleShape)
+            .background(ProfileColors.BadgeYellow),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = count.toString(),
+            color = ProfileColors.BgDark,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+// Etiqueta del panel de administración
+@Composable
+private fun AdminBadge() {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .border(
+                1.dp,
+                ProfileColors.AccentCyan.copy(alpha = 0.6f),
+                RoundedCornerShape(50)
+            )
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = "Solo admin",
+            color = ProfileColors.AccentCyan,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+// Opción reutilizable del menú
 @Composable
 private fun ProfileMenuItem(
     icon: ImageVector,
@@ -292,7 +267,6 @@ private fun ProfileMenuItem(
     trailing: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
 ) {
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -301,15 +275,13 @@ private fun ProfileMenuItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = AccentCyan,
+                tint = ProfileColors.AccentCyan,
                 modifier = Modifier.size(22.dp)
             )
 
@@ -317,14 +289,12 @@ private fun ProfileMenuItem(
 
             Text(
                 text = title,
-                color = TextPrimary,
+                color = ProfileColors.TextPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium
             )
         }
 
-        if (trailing != null) {
-            trailing()
-        }
+        trailing?.invoke()
     }
 }

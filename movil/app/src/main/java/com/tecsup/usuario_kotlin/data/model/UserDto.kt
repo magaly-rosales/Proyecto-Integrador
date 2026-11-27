@@ -67,3 +67,8 @@ data class PasswordRequest(
 data class PasswordResponse(
     val mensaje: String? = null
 )
+
+// Solicitud de actualización de foto de perfil
+data class FotoRequest(
+    val foto: String
+)

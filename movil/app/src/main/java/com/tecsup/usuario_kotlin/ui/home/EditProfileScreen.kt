@@ -3,147 +3,202 @@ package com.tecsup.usuario_kotlin.ui.home
 import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
-
-// Colores correspondientes al diseño original
-private val BgDark = Color(0xFF08141A)
-private val CardDark = Color(0xFF0F2129)
-private val CardElevated = Color(0xFF132A34)
-private val AccentCyan = Color(0xFF22B8CF)
-private val TextPrimary = Color(0xFFFFFFFF)
-private val TextSecondary = Color(0xFF8A9BA8)
-private val ErrorColor = Color(0xFFFF8585)
+import com.tecsup.usuario_kotlin.ui.components.ErrorMessage
+import com.tecsup.usuario_kotlin.ui.components.ProfileAvatar as SharedProfileAvatar
+import com.tecsup.usuario_kotlin.ui.components.ScreenHeader
+import com.tecsup.usuario_kotlin.ui.home.components.*
+import com.tecsup.usuario_kotlin.ui.theme.ProfileColors
+import com.tecsup.usuario_kotlin.ui.viewmodel.ProfileViewModel
+import com.tecsup.usuario_kotlin.utils.prepararFotoPerfil as prepararImagen
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 @Composable
 fun EditProfileScreen(
-    authViewModel: AuthViewModel,
+    profileViewModel: ProfileViewModel,
     onBackClick: () -> Unit,
     onNavigateToChangePassword: () -> Unit = {}
 ) {
-
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val userId = profileViewModel.loggedUserId
 
-    val userId = authViewModel.loggedUserId
-
-    // Conservar los datos originales del usuario
     val originalEmail = rememberSaveable(userId) {
-        authViewModel.loggedUserEmail
+        profileViewModel.loggedUserEmail
     }
 
-    // Campos editables
     var nombre by rememberSaveable(userId) {
-        mutableStateOf(authViewModel.loggedUserName)
+        mutableStateOf(profileViewModel.loggedUserName)
     }
 
     var email by rememberSaveable(userId) {
-        mutableStateOf(authViewModel.loggedUserEmail)
+        mutableStateOf(profileViewModel.loggedUserEmail)
     }
 
-    // Confirmación cuando existen cambios sin guardar
-    var showUnsavedChangesDialog by rememberSaveable {
+    var showPhotoOptions by rememberSaveable(userId) {
         mutableStateOf(false)
     }
 
-    val isUpdating = authViewModel.isUpdatingProfile
-
-    val hasUnsavedChanges =
-        nombre != authViewModel.loggedUserName ||
-                email != authViewModel.loggedUserEmail
-
-    val initial = authViewModel.loggedUserName
-        .trim()
-        .firstOrNull()
-        ?.uppercase() ?: "U"
-
-    // Regresar al perfil sin guardar los cambios
-    val regresar: () -> Unit = {
-        if (!isUpdating) {
-            authViewModel.resetProfileUpdateState()
-            onBackClick()
-        }
+    var showDeletePhotoDialog by rememberSaveable(userId) {
+        mutableStateOf(false)
     }
 
-    // Navegar hacia el cambio de contraseña
-    val abrirCambioPassword: () -> Unit = {
-        if (!isUpdating) {
+    var showUnsavedChangesDialog by rememberSaveable(userId) {
+        mutableStateOf(false)
+    }
 
-            if (hasUnsavedChanges) {
+    var isPreparingPhoto by remember(userId) {
+        mutableStateOf(false)
+    }
 
-                showUnsavedChangesDialog = true
+    val isUpdating = profileViewModel.isUpdatingProfile
 
-            } else {
+    val isPhotoBusy =
+        isPreparingPhoto || profileViewModel.isUpdatingPhoto
 
-                authViewModel.resetProfileUpdateState()
-                authViewModel.resetPasswordChangeState()
+    val isBusy =
+        isPreparingPhoto || profileViewModel.isBusy
 
-                onNavigateToChangePassword()
+    val hasPhoto =
+        !profileViewModel.loggedUserPhoto.isNullOrBlank()
+
+    val hasUnsavedChanges =
+        nombre != profileViewModel.loggedUserName ||
+                email != profileViewModel.loggedUserEmail
+
+    // Selector de fotografías
+    val photoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+
+        if (
+            uri != null && userId != null &&
+            !isBusy && profileViewModel.loginSuccess
+        ) {
+            profileViewModel.resetPhotoUpdateState()
+            isPreparingPhoto = true
+
+            scope.launch {
+                try {
+                    val foto = prepararImagen(
+                        context.applicationContext,
+                        uri
+                    )
+
+                    if (
+                        profileViewModel.loginSuccess &&
+                        profileViewModel.loggedUserId == userId
+                    ) {
+                        profileViewModel.actualizarFotoPerfil(foto)
+                    }
+
+                } catch (e: CancellationException) {
+                    throw e
+
+                } catch (e: Exception) {
+                    if (profileViewModel.loggedUserId == userId) {
+                        profileViewModel.mostrarErrorFoto(
+                            if (e is IllegalArgumentException) {
+                                e.message ?: "Imagen no válida"
+                            } else {
+                                "No se pudo procesar la imagen seleccionada"
+                            }
+                        )
+                    }
+
+                } finally {
+                    isPreparingPhoto = false
+                }
             }
         }
     }
 
-    // Controlar el botón de retroceso de Android
-    BackHandler {
-        if (showUnsavedChangesDialog) {
-            showUnsavedChangesDialog = false
-        } else {
-            regresar()
+    val abrirOpcionesFoto: () -> Unit = {
+        if (!isBusy) {
+            profileViewModel.resetPhotoUpdateState()
+            showPhotoOptions = true
         }
     }
 
-    // Procesar una actualización exitosa
-    LaunchedEffect(authViewModel.profileUpdateSuccess) {
+    val regresar: () -> Unit = {
+        if (!isBusy) {
+            profileViewModel.resetProfileUpdateState()
+            profileViewModel.resetPhotoUpdateState()
+            onBackClick()
+        }
+    }
 
-        if (authViewModel.profileUpdateSuccess) {
+    val navegarCambioPassword: () -> Unit = {
+        profileViewModel.resetProfileUpdateState()
+        profileViewModel.resetPasswordChangeState()
+        profileViewModel.resetPhotoUpdateState()
+        onNavigateToChangePassword()
+    }
 
-            // Sincronizar el correo de la opción Recordarme
+    val abrirCambioPassword: () -> Unit = {
+        if (!isBusy) {
+            if (hasUnsavedChanges) {
+                showUnsavedChangesDialog = true
+            } else {
+                navegarCambioPassword()
+            }
+        }
+    }
+
+    BackHandler {
+        when {
+            showDeletePhotoDialog ->
+                showDeletePhotoDialog = false
+
+            showPhotoOptions ->
+                showPhotoOptions = false
+
+            showUnsavedChangesDialog ->
+                showUnsavedChangesDialog = false
+
+            else -> regresar()
+        }
+    }
+
+    // Actualización exitosa de datos personales
+    LaunchedEffect(profileViewModel.profileUpdateSuccess) {
+        if (profileViewModel.profileUpdateSuccess) {
+
             val preferences = context.getSharedPreferences(
                 "senasapp_preferences",
                 Context.MODE_PRIVATE
             )
 
             val rememberedEmail = preferences.getString(
-                "remembered_email",
-                null
+                "remembered_email", null
             )
 
             if (
                 rememberedEmail != null &&
-                rememberedEmail.equals(
-                    originalEmail,
-                    ignoreCase = true
-                )
+                rememberedEmail.equals(originalEmail, ignoreCase = true)
             ) {
                 preferences.edit()
                     .putString(
                         "remembered_email",
-                        authViewModel.loggedUserEmail
+                        profileViewModel.loggedUserEmail
                     )
                     .apply()
             }
@@ -154,484 +209,231 @@ fun EditProfileScreen(
                 Toast.LENGTH_SHORT
             ).show()
 
-            authViewModel.resetProfileUpdateState()
-
+            profileViewModel.resetProfileUpdateState()
             onBackClick()
         }
     }
 
-    // Diálogo para evitar perder cambios accidentalmente
+    // Actualización exitosa de fotografía
+    LaunchedEffect(profileViewModel.photoUpdateSuccess) {
+        if (profileViewModel.photoUpdateSuccess) {
+            Toast.makeText(
+                context,
+                profileViewModel.photoSuccessMessage
+                    ?: "Foto de perfil actualizada correctamente",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            profileViewModel.resetPhotoUpdateState()
+        }
+    }
+
+    // Diálogos reutilizables
+    if (showPhotoOptions) {
+        PhotoOptionsDialog(
+            hasPhoto = hasPhoto,
+            enabled = !isBusy,
+            onDismiss = { showPhotoOptions = false },
+            onSelectPhoto = {
+                showPhotoOptions = false
+
+                try {
+                    photoLauncher.launch("image/*")
+                } catch (e: Exception) {
+                    profileViewModel.mostrarErrorFoto(
+                        "No se pudo abrir el selector de imágenes"
+                    )
+                }
+            },
+            onDeletePhoto = {
+                showPhotoOptions = false
+                showDeletePhotoDialog = true
+            }
+        )
+    }
+
+    if (showDeletePhotoDialog) {
+        DeletePhotoDialog(
+            enabled = !isBusy,
+            onDismiss = { showDeletePhotoDialog = false },
+            onConfirm = {
+                showDeletePhotoDialog = false
+                profileViewModel.eliminarFotoPerfil()
+            }
+        )
+    }
+
     if (showUnsavedChangesDialog) {
-
-        AlertDialog(
-            onDismissRequest = {
+        UnsavedChangesDialog(
+            enabled = !isBusy,
+            onDismiss = { showUnsavedChangesDialog = false },
+            onConfirm = {
                 showUnsavedChangesDialog = false
-            },
-            containerColor = CardDark,
-            titleContentColor = TextPrimary,
-            textContentColor = TextSecondary,
-            shape = RoundedCornerShape(18.dp),
-            title = {
-                Text(
-                    text = "Cambios sin guardar",
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    text = "Tienes cambios pendientes en tus datos personales. " +
-                            "Si continúas, estos cambios no se guardarán."
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-
-                        showUnsavedChangesDialog = false
-
-                        nombre = authViewModel.loggedUserName
-                        email = authViewModel.loggedUserEmail
-
-                        authViewModel.resetProfileUpdateState()
-                        authViewModel.resetPasswordChangeState()
-
-                        onNavigateToChangePassword()
-                    }
-                ) {
-                    Text(
-                        text = "Continuar",
-                        color = AccentCyan,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showUnsavedChangesDialog = false
-                    }
-                ) {
-                    Text(
-                        text = "Cancelar",
-                        color = TextSecondary
-                    )
-                }
+                nombre = profileViewModel.loggedUserName
+                email = profileViewModel.loggedUserEmail
+                navegarCambioPassword()
             }
         )
     }
 
     Scaffold(
-        containerColor = BgDark
+        containerColor = ProfileColors.BgDark
     ) { innerPadding ->
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            ScreenHeader(
+                title = "Mi perfil",
+                onBackClick = regresar,
+                enabled = !isBusy
+            )
 
-            // Cabecera de la pantalla
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            ProfilePhotoSection(
+                userName = profileViewModel.loggedUserName,
+                userEmail = profileViewModel.loggedUserEmail,
+                userPhoto = profileViewModel.loggedUserPhoto,
+                hasPhoto = hasPhoto,
+                isBusy = isBusy,
+                isPhotoBusy = isPhotoBusy,
+                isPreparingPhoto = isPreparingPhoto,
+                errorMessage = profileViewModel.photoErrorMessage,
+                onPhotoClick = abrirOpcionesFoto
+            )
 
-                IconButton(
-                    onClick = regresar,
-                    enabled = !isUpdating
-                ) {
+            PersonalDataCard(
+                nombre = nombre,
+                email = email,
+                onNombreChange = {
+                    nombre = it
+                    profileViewModel.resetProfileUpdateState()
+                },
+                onEmailChange = {
+                    email = it
+                    profileViewModel.resetProfileUpdateState()
+                },
+                onSave = {
+                    profileViewModel.actualizarPerfil(nombre, email)
+                },
+                onCancel = regresar,
+                isBusy = isBusy,
+                isUpdating = isUpdating,
+                errorMessage = profileViewModel.profileErrorMessage
+            )
 
-                    Icon(
-                        imageVector =
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Regresar",
-                        tint = TextPrimary
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                Text(
-                    text = "Mi perfil",
-                    color = TextPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Información del usuario
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(84.dp)
-                        .clip(CircleShape)
-                        .background(AccentCyan),
-                    contentAlignment = Alignment.Center
-                ) {
-
-                    Text(
-                        text = initial,
-                        color = BgDark,
-                        fontSize = 34.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = authViewModel.loggedUserName,
-                    color = TextPrimary,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = authViewModel.loggedUserEmail,
-                    color = TextSecondary,
-                    fontSize = 13.sp
-                )
-            }
-
-            // Tarjeta de edición de datos personales
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = CardDark,
-                border = BorderStroke(1.dp, CardElevated)
-            ) {
-
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
-
-                    Text(
-                        text = "Datos personales",
-                        color = TextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "Actualiza la información de tu cuenta.",
-                        color = TextSecondary,
-                        fontSize = 13.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Campo nombre
-                    Text(
-                        text = "Nombre completo",
-                        color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = nombre,
-                        onValueChange = {
-                            nombre = it
-                            authViewModel.resetProfileUpdateState()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isUpdating,
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        placeholder = {
-                            Text(
-                                text = "Ingresa tu nombre",
-                                color = TextSecondary,
-                                fontSize = 14.sp
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Person,
-                                contentDescription = null,
-                                tint = AccentCyan
-                            )
-                        },
-                        colors = profileTextFieldColors()
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "${nombre.length}/50 caracteres",
-                        modifier = Modifier.align(Alignment.End),
-                        color = if (nombre.length > 50) {
-                            ErrorColor
-                        } else {
-                            TextSecondary
-                        },
-                        fontSize = 11.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Campo correo electrónico
-                    Text(
-                        text = "Correo electrónico",
-                        color = TextPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = {
-                            email = it
-                            authViewModel.resetProfileUpdateState()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isUpdating,
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email
-                        ),
-                        placeholder = {
-                            Text(
-                                text = "nombre@correo.com",
-                                color = TextSecondary,
-                                fontSize = 14.sp
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Email,
-                                contentDescription = null,
-                                tint = AccentCyan
-                            )
-                        },
-                        colors = profileTextFieldColors()
-                    )
-
-                    // Mostrar errores de validación o del servidor
-                    authViewModel.profileErrorMessage?.let { error ->
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = ErrorColor.copy(alpha = 0.10f),
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(
-                                1.dp,
-                                ErrorColor.copy(alpha = 0.35f)
-                            )
-                        ) {
-
-                            Text(
-                                text = error,
-                                color = ErrorColor,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Botón guardar cambios
-                    Button(
-                        onClick = {
-                            authViewModel.actualizarPerfil(
-                                nombre = nombre,
-                                email = email
-                            )
-                        },
-                        enabled = !isUpdating,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = AccentCyan,
-                            contentColor = BgDark,
-                            disabledContainerColor =
-                                AccentCyan.copy(alpha = 0.5f),
-                            disabledContentColor = BgDark
-                        )
-                    ) {
-
-                        if (isUpdating) {
-
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = BgDark,
-                                strokeWidth = 2.dp
-                            )
-
-                            Spacer(modifier = Modifier.width(10.dp))
-
-                            Text(
-                                text = "Guardando...",
-                                fontWeight = FontWeight.Bold
-                            )
-
-                        } else {
-
-                            Text(
-                                text = "Guardar cambios",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Botón cancelar
-                    OutlinedButton(
-                        onClick = regresar,
-                        enabled = !isUpdating,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(
-                            1.dp,
-                            TextSecondary.copy(alpha = 0.5f)
-                        ),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = TextSecondary
-                        )
-                    ) {
-
-                        Text(
-                            text = "Cancelar",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
-            // Nueva sección de seguridad
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = CardDark,
-                border = BorderStroke(1.dp, CardElevated)
-            ) {
-
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
-
-                    Text(
-                        text = "Seguridad",
-                        color = TextPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "Protege el acceso a tu cuenta.",
-                        color = TextSecondary,
-                        fontSize = 13.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Opción para cambiar la contraseña
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = CardElevated,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(
-                                    enabled = !isUpdating,
-                                    onClick = abrirCambioPassword
-                                )
-                                .padding(16.dp),
-                            verticalAlignment =
-                                Alignment.CenterVertically
-                        ) {
-
-                            Icon(
-                                imageVector = Icons.Outlined.Lock,
-                                contentDescription = null,
-                                tint = AccentCyan,
-                                modifier = Modifier.size(24.dp)
-                            )
-
-                            Spacer(modifier = Modifier.width(14.dp))
-
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-
-                                Text(
-                                    text = "Cambiar contraseña",
-                                    color = TextPrimary,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-
-                                Spacer(
-                                    modifier = Modifier.height(4.dp)
-                                )
-
-                                Text(
-                                    text = "Actualiza tu contraseña de acceso",
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            }
-
-                            Icon(
-                                imageVector =
-                                    Icons.Rounded.KeyboardArrowRight,
-                                contentDescription = null,
-                                tint = AccentCyan,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                }
-            }
+            SecurityCard(
+                onChangePassword = abrirCambioPassword,
+                enabled = !isBusy
+            )
         }
     }
 }
 
-// Estilos reutilizables para los campos de texto
+// Sección visual de fotografía y datos del usuario
 @Composable
-private fun profileTextFieldColors(): TextFieldColors {
+private fun ProfilePhotoSection(
+    userName: String,
+    userEmail: String,
+    userPhoto: String?,
+    hasPhoto: Boolean,
+    isBusy: Boolean,
+    isPhotoBusy: Boolean,
+    isPreparingPhoto: Boolean,
+    errorMessage: String?,
+    onPhotoClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(modifier = Modifier.size(84.dp)) {
 
-    return OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = CardElevated,
-        unfocusedContainerColor = CardElevated,
-        disabledContainerColor = CardElevated,
-        focusedBorderColor = AccentCyan,
-        unfocusedBorderColor = TextSecondary.copy(alpha = 0.35f),
-        disabledBorderColor = TextSecondary.copy(alpha = 0.20f),
-        focusedTextColor = TextPrimary,
-        unfocusedTextColor = TextPrimary,
-        disabledTextColor = TextSecondary,
-        cursorColor = AccentCyan
-    )
+            SharedProfileAvatar(
+                userName = userName,
+                foto = userPhoto
+            )
+
+            IconButton(
+                onClick = onPhotoClick,
+                enabled = !isBusy,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(32.dp)
+                    .background(ProfileColors.BgDark, CircleShape)
+                    .padding(2.dp)
+                    .background(ProfileColors.AccentCyan, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.CameraAlt,
+                    contentDescription = "Cambiar foto de perfil",
+                    tint = ProfileColors.BgDark,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = userName,
+            color = ProfileColors.TextPrimary,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = userEmail,
+            color = ProfileColors.TextSecondary,
+            fontSize = 13.sp
+        )
+
+        if (isPhotoBusy) {
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = ProfileColors.AccentCyan,
+                    strokeWidth = 2.dp
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Text(
+                    text = if (isPreparingPhoto) {
+                        "Procesando imagen..."
+                    } else {
+                        "Actualizando foto..."
+                    },
+                    color = ProfileColors.AccentCyan,
+                    fontSize = 12.sp
+                )
+            }
+        } else {
+            TextButton(
+                onClick = onPhotoClick,
+                enabled = !isBusy
+            ) {
+                Text(
+                    text = if (hasPhoto) "Cambiar foto" else "Agregar foto",
+                    color = ProfileColors.AccentCyan,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
+        ErrorMessage(
+            message = errorMessage,
+            topSpacing = 8.dp
+        )
+    }
 }

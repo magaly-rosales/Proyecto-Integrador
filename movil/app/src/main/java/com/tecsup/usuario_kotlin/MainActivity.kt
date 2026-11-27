@@ -8,11 +8,9 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
@@ -26,14 +24,31 @@ import com.tecsup.usuario_kotlin.ui.home.ProfileScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
+import com.tecsup.usuario_kotlin.ui.viewmodel.ProfileViewModel
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    // ViewModel de autenticación
     private val authViewModel: AuthViewModel by viewModels()
+
+    // ViewModel del perfil con la misma sesión
+    private val profileViewModel: ProfileViewModel by viewModels {
+        ProfileViewModel.factory(authViewModel.sessionState)
+    }
+
+    // ViewModel del traductor
     private val translationViewModel: TranslationViewModel by viewModels()
+
+    private val protectedScreens = setOf(
+        "home",
+        "translation",
+        "perfil",
+        "edit_profile",
+        "change_password"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,17 +56,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             UsuariokotlinTheme {
 
-                // Pantallas que requieren un inicio de sesión válido
-                val protectedScreens = setOf(
-                    "home",
-                    "translation",
-                    "perfil",
-                    "edit_profile",
-                    "change_password"
-                )
-
-                // Restaurar la navegación sin permitir el acceso
-                // a pantallas protegidas cuando no existe una sesión
                 val screenSaver = Saver<String, String>(
                     save = { it },
                     restore = { savedScreen ->
@@ -66,14 +70,13 @@ class MainActivity : ComponentActivity() {
                     }
                 )
 
-                // Conservar la pantalla ante cambios de configuración
                 var currentScreen by rememberSaveable(
                     stateSaver = screenSaver
                 ) {
                     mutableStateOf("login")
                 }
 
-                // Validar el acceso a las pantallas protegidas
+                // Proteger las pantallas que requieren sesión
                 val activeScreen = if (
                     currentScreen in protectedScreens &&
                     !authViewModel.loginSuccess
@@ -83,8 +86,9 @@ class MainActivity : ComponentActivity() {
                     currentScreen
                 }
 
-                // Obtener los datos del usuario autenticado
                 val userName = authViewModel.loggedUserName
+                val userEmail = authViewModel.loggedUserEmail
+                val userPhoto = authViewModel.loggedUserPhoto
 
                 val userInitial = userName
                     .trim()
@@ -95,7 +99,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-
                     when (activeScreen) {
 
                         // Inicio de sesión
@@ -106,19 +109,22 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "translation"
                                 },
                                 onRegisterClick = {
+                                    authViewModel.resetRegisterSuccess()
                                     currentScreen = "register"
                                 },
                                 onForgotPasswordClick = {
+                                    authViewModel.resetForgotPasswordSuccess()
                                     currentScreen = "forgot_password"
                                 }
                             )
                         }
 
-                        // Registro de usuarios
+                        // Registro
                         "register" -> {
                             RegisterScreen(
                                 authViewModel = authViewModel,
                                 onRegisterSuccess = {
+                                    authViewModel.resetRegisterSuccess()
                                     currentScreen = "login"
                                 },
                                 onLoginClick = {
@@ -132,6 +138,7 @@ class MainActivity : ComponentActivity() {
                             ForgotPasswordScreen(
                                 authViewModel = authViewModel,
                                 onBackClick = {
+                                    authViewModel.resetForgotPasswordSuccess()
                                     currentScreen = "login"
                                 }
                             )
@@ -151,7 +158,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Traductor de señas
+                        // Traductor
                         "translation" -> {
                             TranslationScreen(
                                 viewModel = translationViewModel,
@@ -163,46 +170,17 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "perfil"
                                 },
                                 onSpeakText = { nombreSena ->
-
-                                    lifecycleScope.launch {
-                                        try {
-
-                                            val respuesta =
-                                                RetrofitClient.apiService
-                                                    .registrarTraduccion(
-                                                        mapOf(
-                                                            "sena" to nombreSena
-                                                        )
-                                                    )
-
-                                            if (!respuesta.isSuccessful) {
-                                                Toast.makeText(
-                                                    this@MainActivity,
-                                                    "No se pudo guardar la traducción",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                            }
-
-                                        } catch (e: CancellationException) {
-                                            throw e
-
-                                        } catch (e: Exception) {
-                                            Toast.makeText(
-                                                this@MainActivity,
-                                                "Error al guardar la traducción",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
+                                    registrarTraduccion(nombreSena)
                                 }
                             )
                         }
 
-                        // Perfil del usuario
+                        // Mi cuenta
                         "perfil" -> {
                             ProfileScreen(
-                                userName = authViewModel.loggedUserName,
-                                userEmail = authViewModel.loggedUserEmail,
+                                userName = userName,
+                                userEmail = userEmail,
+                                userPhoto = userPhoto,
                                 onNavigateToTraducir = {
                                     currentScreen = "translation"
                                 },
@@ -210,49 +188,39 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "home"
                                 },
                                 onLogout = {
-
-                                    // Limpiar los datos de la sesión
-                                    authViewModel.logout()
-
-                                    // Regresar al inicio de sesión
+                                    cerrarSesion()
                                     currentScreen = "login"
                                 },
                                 onNavigateToEditProfile = {
+                                    profileViewModel.resetProfileUpdateState()
+                                    profileViewModel.resetPhotoUpdateState()
 
-                                    // Limpiar estados de ediciones anteriores
-                                    authViewModel.resetProfileUpdateState()
-
-                                    // Abrir la pantalla de edición
                                     currentScreen = "edit_profile"
                                 }
                             )
                         }
 
-                        // Edición de datos personales
+                        // Editar perfil
                         "edit_profile" -> {
                             EditProfileScreen(
-                                authViewModel = authViewModel,
+                                profileViewModel = profileViewModel,
                                 onBackClick = {
                                     currentScreen = "perfil"
                                 },
                                 onNavigateToChangePassword = {
+                                    profileViewModel.resetPasswordChangeState()
+                                    profileViewModel.resetPhotoUpdateState()
 
-                                    // Limpiar estados de intentos anteriores
-                                    authViewModel.resetPasswordChangeState()
-
-                                    // Abrir la pantalla de cambio de contraseña
                                     currentScreen = "change_password"
                                 }
                             )
                         }
 
-                        // Cambio de contraseña
+                        // Cambiar contraseña
                         "change_password" -> {
                             ChangePasswordScreen(
-                                authViewModel = authViewModel,
+                                profileViewModel = profileViewModel,
                                 onBackClick = {
-
-                                    // Regresar a la edición del perfil
                                     currentScreen = "edit_profile"
                                 }
                             )
@@ -266,9 +234,11 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "translation"
                                 },
                                 onRegisterClick = {
+                                    authViewModel.resetRegisterSuccess()
                                     currentScreen = "register"
                                 },
                                 onForgotPasswordClick = {
+                                    authViewModel.resetForgotPasswordSuccess()
                                     currentScreen = "forgot_password"
                                 }
                             )
@@ -277,5 +247,42 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    // Registrar una traducción en el backend
+    private fun registrarTraduccion(nombreSena: String) {
+
+        lifecycleScope.launch {
+            try {
+                val respuesta = RetrofitClient.apiService
+                    .registrarTraduccion(
+                        mapOf("sena" to nombreSena)
+                    )
+
+                if (!respuesta.isSuccessful) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "No se pudo guardar la traducción",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+            } catch (e: CancellationException) {
+                throw e
+
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error al guardar la traducción",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    // Cancelar operaciones y cerrar la sesión
+    private fun cerrarSesion() {
+        profileViewModel.clearProfileOperations()
+        authViewModel.logout()
     }
 }

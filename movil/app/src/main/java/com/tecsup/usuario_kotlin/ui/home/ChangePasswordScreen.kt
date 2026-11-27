@@ -8,56 +8,42 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
-
-// Colores correspondientes al diseño original
-private val BgDark = Color(0xFF08141A)
-private val CardDark = Color(0xFF0F2129)
-private val CardElevated = Color(0xFF132A34)
-private val AccentCyan = Color(0xFF22B8CF)
-private val TextPrimary = Color(0xFFFFFFFF)
-private val TextSecondary = Color(0xFF8A9BA8)
-private val ErrorColor = Color(0xFFFF8585)
+import com.tecsup.usuario_kotlin.ui.components.*
+import com.tecsup.usuario_kotlin.ui.theme.ProfileColors
+import com.tecsup.usuario_kotlin.ui.viewmodel.ProfileViewModel
 
 @Composable
 fun ChangePasswordScreen(
-    authViewModel: AuthViewModel,
+    profileViewModel: ProfileViewModel,
     onBackClick: () -> Unit
 ) {
-
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
-    // Las contraseñas se mantienen temporalmente en memoria
+    // Las contraseñas permanecen temporalmente en memoria
     var actual by remember { mutableStateOf("") }
     var nueva by remember { mutableStateOf("") }
     var confirmacion by remember { mutableStateOf("") }
 
-    val isChanging = authViewModel.isChangingPassword
+    val isChanging = profileViewModel.isChangingPassword
+    val isBusy = profileViewModel.isBusy
 
-    // Limpiar los campos al abandonar la pantalla
+    val passwordsNotMatch =
+        confirmacion.isNotEmpty() && nueva != confirmacion
+
     val limpiarCampos: () -> Unit = {
         actual = ""
         nueva = ""
@@ -65,27 +51,20 @@ fun ChangePasswordScreen(
         focusManager.clearFocus()
     }
 
-    // Regresar a la pantalla de edición del perfil
     val regresar: () -> Unit = {
-        if (!isChanging) {
-
+        if (!isBusy) {
             limpiarCampos()
-
-            authViewModel.resetPasswordChangeState()
-
+            profileViewModel.resetPasswordChangeState()
             onBackClick()
         }
     }
 
-    // Controlar el botón de retroceso de Android
     BackHandler {
         regresar()
     }
 
-    // Procesar un cambio de contraseña exitoso
-    LaunchedEffect(authViewModel.passwordChangeSuccess) {
-
-        if (authViewModel.passwordChangeSuccess) {
+    LaunchedEffect(profileViewModel.passwordChangeSuccess) {
+        if (profileViewModel.passwordChangeSuccess) {
 
             limpiarCampos()
 
@@ -95,14 +74,13 @@ fun ChangePasswordScreen(
                 Toast.LENGTH_SHORT
             ).show()
 
-            authViewModel.resetPasswordChangeState()
-
+            profileViewModel.resetPasswordChangeState()
             onBackClick()
         }
     }
 
     Scaffold(
-        containerColor = BgDark
+        containerColor = ProfileColors.BgDark
     ) { innerPadding ->
 
         Column(
@@ -114,91 +92,29 @@ fun ChangePasswordScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            ScreenHeader(
+                title = "Contraseña",
+                onBackClick = regresar,
+                enabled = !isBusy
+            )
 
-            // Cabecera de la pantalla
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            PasswordSecurityHeader()
 
-                IconButton(
-                    onClick = regresar,
-                    enabled = !isChanging
-                ) {
-
-                    Icon(
-                        imageVector =
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Regresar",
-                        tint = TextPrimary
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(4.dp))
-
-                Text(
-                    text = "Contraseña",
-                    color = TextPrimary,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Encabezado de seguridad
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(84.dp)
-                        .clip(CircleShape)
-                        .background(CardElevated),
-                    contentAlignment = Alignment.Center
-                ) {
-
-                    Icon(
-                        imageVector = Icons.Outlined.Security,
-                        contentDescription = null,
-                        tint = AccentCyan,
-                        modifier = Modifier.size(42.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Cambiar contraseña",
-                    color = TextPrimary,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Text(
-                    text = "Protege la seguridad de tu cuenta.",
-                    color = TextSecondary,
-                    fontSize = 13.sp
-                )
-            }
-
-            // Tarjeta del formulario
+            // Formulario de cambio de contraseña
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
-                color = CardDark,
-                border = BorderStroke(1.dp, CardElevated)
+                color = ProfileColors.CardDark,
+                border = BorderStroke(
+                    1.dp,
+                    ProfileColors.CardElevated
+                )
             ) {
-
-                Column(
-                    modifier = Modifier.padding(20.dp)
-                ) {
+                Column(modifier = Modifier.padding(20.dp)) {
 
                     Text(
                         text = "Datos de seguridad",
-                        color = TextPrimary,
+                        color = ProfileColors.TextPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -207,317 +123,176 @@ fun ChangePasswordScreen(
 
                     Text(
                         text = "Ingresa tu contraseña actual y la nueva contraseña.",
-                        color = TextSecondary,
+                        color = ProfileColors.TextSecondary,
                         fontSize = 13.sp
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Contraseña actual
-                    PasswordInputField(
+                    PasswordTextField(
                         label = "Contraseña actual",
                         placeholder = "Ingresa tu contraseña actual",
                         value = actual,
                         onValueChange = {
                             actual = it
-                            authViewModel.resetPasswordChangeState()
+                            profileViewModel.resetPasswordChangeState()
                         },
-                        enabled = !isChanging
+                        enabled = !isBusy
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Nueva contraseña
-                    PasswordInputField(
+                    PasswordTextField(
                         label = "Nueva contraseña",
                         placeholder = "Ingresa tu nueva contraseña",
                         value = nueva,
                         onValueChange = {
                             nueva = it
-                            authViewModel.resetPasswordChangeState()
+                            profileViewModel.resetPasswordChangeState()
                         },
-                        enabled = !isChanging
+                        enabled = !isBusy
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
                         text = "Debe contener entre 6 y 30 caracteres.",
-                        color = TextSecondary,
+                        color = ProfileColors.TextSecondary,
                         fontSize = 11.sp
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Confirmación de la contraseña
-                    PasswordInputField(
+                    PasswordTextField(
                         label = "Confirmar contraseña",
                         placeholder = "Repite tu nueva contraseña",
                         value = confirmacion,
                         onValueChange = {
                             confirmacion = it
-                            authViewModel.resetPasswordChangeState()
+                            profileViewModel.resetPasswordChangeState()
                         },
-                        enabled = !isChanging,
-                        isError = confirmacion.isNotEmpty() &&
-                                nueva != confirmacion
+                        enabled = !isBusy,
+                        isError = passwordsNotMatch
                     )
 
-                    // Validación visual de coincidencia
-                    if (
-                        confirmacion.isNotEmpty() &&
-                        nueva != confirmacion
-                    ) {
-
+                    if (passwordsNotMatch) {
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
                             text = "Las contraseñas no coinciden",
-                            color = ErrorColor,
+                            color = ProfileColors.ErrorColor,
                             fontSize = 11.sp
                         )
                     }
 
-                    // Mostrar errores de validación o del servidor
-                    authViewModel.passwordErrorMessage?.let { error ->
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = ErrorColor.copy(alpha = 0.10f),
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(
-                                1.dp,
-                                ErrorColor.copy(alpha = 0.35f)
-                            )
-                        ) {
-
-                            Text(
-                                text = error,
-                                color = ErrorColor,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-                    }
+                    ErrorMessage(
+                        message = profileViewModel.passwordErrorMessage
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Botón actualizar contraseña
-                    Button(
+                    PrimaryButton(
+                        text = "Actualizar contraseña",
                         onClick = {
-
                             focusManager.clearFocus()
 
-                            authViewModel.cambiarPassword(
+                            profileViewModel.cambiarPassword(
                                 actual = actual,
                                 nueva = nueva,
                                 confirmacion = confirmacion
                             )
                         },
-                        enabled = !isChanging,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = AccentCyan,
-                            contentColor = BgDark,
-                            disabledContainerColor =
-                                AccentCyan.copy(alpha = 0.5f),
-                            disabledContentColor = BgDark
-                        )
-                    ) {
-
-                        if (isChanging) {
-
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = BgDark,
-                                strokeWidth = 2.dp
-                            )
-
-                            Spacer(modifier = Modifier.width(10.dp))
-
-                            Text(
-                                text = "Actualizando...",
-                                fontWeight = FontWeight.Bold
-                            )
-
-                        } else {
-
-                            Text(
-                                text = "Actualizar contraseña",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                        enabled = !isBusy,
+                        isLoading = isChanging,
+                        loadingText = "Actualizando..."
+                    )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Botón cancelar
-                    OutlinedButton(
+                    SecondaryButton(
+                        text = "Cancelar",
                         onClick = regresar,
-                        enabled = !isChanging,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(
-                            1.dp,
-                            TextSecondary.copy(alpha = 0.5f)
-                        ),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = TextSecondary
-                        )
-                    ) {
-
-                        Text(
-                            text = "Cancelar",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
-            // Recomendación de seguridad
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = CardDark,
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, CardElevated)
-            ) {
-
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-
-                    Icon(
-                        imageVector = Icons.Outlined.Security,
-                        contentDescription = null,
-                        tint = AccentCyan,
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Text(
-                        text = "Utiliza una contraseña única, larga y difícil de adivinar.",
-                        color = TextSecondary,
-                        fontSize = 12.sp,
-                        modifier = Modifier.weight(1f)
+                        enabled = !isBusy
                     )
                 }
             }
+
+            PasswordSecurityTip()
         }
     }
 }
 
-// Componente reutilizable para los campos de contraseña
+// Encabezado visual de seguridad
 @Composable
-private fun PasswordInputField(
-    label: String,
-    placeholder: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    enabled: Boolean = true,
-    isError: Boolean = false
-) {
+private fun PasswordSecurityHeader() {
 
-    var passwordVisible by remember {
-        mutableStateOf(false)
-    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(84.dp)
+                .clip(CircleShape)
+                .background(ProfileColors.CardElevated),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Security,
+                contentDescription = null,
+                tint = ProfileColors.AccentCyan,
+                modifier = Modifier.size(42.dp)
+            )
+        }
 
-    Column {
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = label,
-            color = TextPrimary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
+            text = "Cambiar contraseña",
+            color = ProfileColors.TextPrimary,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled,
-            singleLine = true,
-            isError = isError,
-            shape = RoundedCornerShape(12.dp),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                autoCorrectEnabled = false
-            ),
-            visualTransformation = if (
-                passwordVisible && enabled
-            ) {
-                VisualTransformation.None
-            } else {
-                PasswordVisualTransformation()
-            },
-            placeholder = {
-                Text(
-                    text = placeholder,
-                    color = TextSecondary,
-                    fontSize = 13.sp
-                )
-            },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Outlined.Lock,
-                    contentDescription = null,
-                    tint = AccentCyan
-                )
-            },
-            trailingIcon = {
+        Text(
+            text = "Protege la seguridad de tu cuenta.",
+            color = ProfileColors.TextSecondary,
+            fontSize = 13.sp
+        )
+    }
+}
 
-                IconButton(
-                    onClick = {
-                        passwordVisible = !passwordVisible
-                    },
-                    enabled = enabled
-                ) {
+// Recomendación de seguridad
+@Composable
+private fun PasswordSecurityTip() {
 
-                    Icon(
-                        imageVector = if (passwordVisible) {
-                            Icons.Outlined.VisibilityOff
-                        } else {
-                            Icons.Outlined.Visibility
-                        },
-                        contentDescription = if (passwordVisible) {
-                            "Ocultar contraseña"
-                        } else {
-                            "Mostrar contraseña"
-                        },
-                        tint = TextSecondary
-                    )
-                }
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = CardElevated,
-                unfocusedContainerColor = CardElevated,
-                disabledContainerColor = CardElevated,
-                errorContainerColor = CardElevated,
-                focusedBorderColor = AccentCyan,
-                unfocusedBorderColor =
-                    TextSecondary.copy(alpha = 0.35f),
-                disabledBorderColor =
-                    TextSecondary.copy(alpha = 0.20f),
-                errorBorderColor = ErrorColor,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-                disabledTextColor = TextSecondary,
-                errorTextColor = TextPrimary,
-                cursorColor = AccentCyan,
-                errorCursorColor = ErrorColor
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = ProfileColors.CardDark,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, ProfileColors.CardElevated)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Security,
+                contentDescription = null,
+                tint = ProfileColors.AccentCyan,
+                modifier = Modifier.size(24.dp)
             )
-        )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Text(
+                text = "Utiliza una contraseña única, larga y difícil de adivinar.",
+                color = ProfileColors.TextSecondary,
+                fontSize = 12.sp,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }

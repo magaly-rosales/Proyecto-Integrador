@@ -3,6 +3,7 @@ package com.tecsup.usuario_kotlin.data.remote
 import com.tecsup.usuario_kotlin.data.model.CatalogoResponse
 import com.tecsup.usuario_kotlin.data.model.ForgotPasswordRequest
 import com.tecsup.usuario_kotlin.data.model.ForgotPasswordResponse
+import com.tecsup.usuario_kotlin.data.model.FotoRequest
 import com.tecsup.usuario_kotlin.data.model.LoginRequest
 import com.tecsup.usuario_kotlin.data.model.LoginResponse
 import com.tecsup.usuario_kotlin.data.model.PasswordRequest
@@ -53,6 +54,12 @@ interface ApiService {
         @Path("id") idUsuario: Int,
         @Body request: PasswordRequest
     ): Response<PasswordResponse>
+
+    @PUT("api/perfil/{id}/foto")
+    suspend fun actualizarFotoPerfil(
+        @Path("id") idUsuario: Int,
+        @Body request: FotoRequest
+    ): Response<PerfilResponse>
 
 
     // CATÁLOGO DE SEÑAS

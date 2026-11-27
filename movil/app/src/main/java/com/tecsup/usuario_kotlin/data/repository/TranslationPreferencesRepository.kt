@@ -20,14 +20,12 @@ class TranslationPreferencesRepository(
     }
 
     private val preferences = context.applicationContext
-        .getSharedPreferences(
-            PREFS_NAME,
-            Context.MODE_PRIVATE
-        )
+        .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val outputModeKey = "output_mode_$userId"
+    private val darkModeKey = "dark_mode_$userId"
 
-    // Modo de salida almacenado
+    // Preferencia del modo de salida
     private val _outputMode = MutableStateFlow(
         OutputMode.fromName(
             preferences.getString(outputModeKey, null)
@@ -36,7 +34,14 @@ class TranslationPreferencesRepository(
 
     val outputMode = _outputMode.asStateFlow()
 
-    // Actualizar y guardar la preferencia
+    // Preferencia del tema visual
+    private val _darkMode = MutableStateFlow(
+        preferences.getBoolean(darkModeKey, true)
+    )
+
+    val darkMode = _darkMode.asStateFlow()
+
+    // Cambiar el modo de traducción
     fun cambiarModoSalida(mode: OutputMode) {
         if (_outputMode.value == mode) return
 
@@ -45,5 +50,16 @@ class TranslationPreferencesRepository(
             .apply()
 
         _outputMode.value = mode
+    }
+
+    // Cambiar el tema de la aplicación
+    fun cambiarModoOscuro(enabled: Boolean) {
+        if (_darkMode.value == enabled) return
+
+        preferences.edit()
+            .putBoolean(darkModeKey, enabled)
+            .apply()
+
+        _darkMode.value = enabled
     }
 }

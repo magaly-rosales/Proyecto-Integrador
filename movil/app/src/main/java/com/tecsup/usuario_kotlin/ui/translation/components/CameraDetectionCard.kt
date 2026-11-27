@@ -45,6 +45,9 @@ fun CameraDetectionCard(
     val handDetected = landmarks.isNotEmpty()
     val disposeCallback by rememberUpdatedState(onCameraDisposed)
 
+    // Color del marco según el tema seleccionado
+    val frameColor = ProfileColors.AccentCyan.copy(alpha = 0.75f)
+
     val handStatus = when (landmarks.size) {
         0 -> "Buscando mano..."
         21 -> "1 mano detectada (21 puntos)"
@@ -184,7 +187,7 @@ fun CameraDetectionCard(
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawRoundRect(
-                        color = ProfileColors.AccentCyan.copy(alpha = 0.75f),
+                        color = frameColor,
                         style = Stroke(
                             width = 2.dp.toPx(),
                             pathEffect = PathEffect.dashPathEffect(

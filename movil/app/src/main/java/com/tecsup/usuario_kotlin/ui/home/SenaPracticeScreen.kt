@@ -46,7 +46,10 @@ import com.tecsup.usuario_kotlin.viewmodel.PracticeStatus
 import com.tecsup.usuario_kotlin.viewmodel.PracticeUiState
 import com.tecsup.usuario_kotlin.viewmodel.PracticeViewModel
 
-private val PracticeSuccess = Color(0xFF4ADE80)
+// Color de éxito adaptable al tema claro y oscuro
+private val PracticeSuccess: Color
+    @Composable
+    get() = ProfileColors.SuccessColor
 
 @Composable
 fun SenaPracticeScreen(
@@ -64,9 +67,7 @@ fun SenaPracticeScreen(
 
     // Cámara seleccionada
     var lensFacing by rememberSaveable {
-        mutableIntStateOf(
-            CameraSelector.LENS_FACING_FRONT
-        )
+        mutableIntStateOf(CameraSelector.LENS_FACING_FRONT)
     }
 
     // Permiso de cámara
@@ -79,14 +80,11 @@ fun SenaPracticeScreen(
         )
     }
 
-    val permissionLauncher =
-        rememberLauncherForActivityResult(
-            contract =
-                ActivityResultContracts.RequestPermission()
-        ) { granted ->
-
-            hasCameraPermission = granted
-        }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCameraPermission = granted
+    }
 
     // Iniciar y limpiar la sesión de práctica
     DisposableEffect(
@@ -96,69 +94,49 @@ fun SenaPracticeScreen(
         practiceViewModel,
         context
     ) {
-        practiceViewModel.iniciarPractica(
-            sena.nombre
-        )
+        practiceViewModel.iniciarPractica(sena.nombre)
 
-        val observer =
-            LifecycleEventObserver { _, event ->
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    hasCameraPermission =
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.CAMERA
+                        ) == PackageManager.PERMISSION_GRANTED
 
-                when (event) {
-
-                    Lifecycle.Event.ON_RESUME -> {
-
-                        hasCameraPermission =
-                            ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.CAMERA
-                            ) == PackageManager.PERMISSION_GRANTED
-
-                        if (!hasCameraPermission) {
-                            practiceViewModel.limpiarManos()
-                        }
+                    if (!hasCameraPermission) {
+                        practiceViewModel.limpiarManos()
                     }
-
-                    Lifecycle.Event.ON_STOP -> {
-
-                        // Detener una práctica activa
-                        // al salir de la aplicación
-                        if (
-                            practiceViewModel.uiState
-                                .value.isActive
-                        ) {
-                            practiceViewModel.detenerPractica()
-                        }
-                    }
-
-                    else -> Unit
                 }
-            }
 
-        lifecycleOwner.lifecycle.addObserver(
-            observer
-        )
+                Lifecycle.Event.ON_STOP -> {
+                    // Detener una práctica activa
+                    // al salir de la aplicación
+                    if (practiceViewModel.uiState.value.isActive) {
+                        practiceViewModel.detenerPractica()
+                    }
+                }
+
+                else -> Unit
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
 
         onDispose {
-
-            lifecycleOwner.lifecycle.removeObserver(
-                observer
-            )
-
+            lifecycleOwner.lifecycle.removeObserver(observer)
             practiceViewModel.limpiarPractica()
         }
     }
 
     val regresar: () -> Unit = {
-
         practiceViewModel.limpiarPractica()
-
         onBackClick()
     }
 
     // Retroceso mediante el botón de Android
-    BackHandler(
-        onBack = regresar
-    )
+    BackHandler(onBack = regresar)
 
     Scaffold(
         containerColor = ProfileColors.BgDark
@@ -168,15 +146,9 @@ fun SenaPracticeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(
-                    rememberScrollState()
-                )
-                .padding(
-                    horizontal = 16.dp,
-                    vertical = 12.dp
-                ),
-            verticalArrangement =
-                Arrangement.spacedBy(16.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Cabecera
             ScreenHeader(
@@ -205,19 +177,16 @@ fun SenaPracticeScreen(
                 lensFacing = lensFacing,
 
                 onRequestPermission = {
-
                     permissionLauncher.launch(
                         Manifest.permission.CAMERA
                     )
                 },
 
                 onSwitchCamera = {
-
                     practiceViewModel.limpiarManos()
 
                     lensFacing = if (
-                        lensFacing ==
-                        CameraSelector.LENS_FACING_FRONT
+                        lensFacing == CameraSelector.LENS_FACING_FRONT
                     ) {
                         CameraSelector.LENS_FACING_BACK
                     } else {
@@ -226,19 +195,12 @@ fun SenaPracticeScreen(
                 },
 
                 onHandsDetected = { puntos ->
-
-                    practiceViewModel.onHandsDetected(
-                        puntos
-                    )
+                    practiceViewModel.onHandsDetected(puntos)
                 },
 
                 onCameraError = { mensaje ->
-
                     if (!mensaje.isNullOrBlank()) {
-
-                        practiceViewModel.mostrarErrorCamara(
-                            mensaje
-                        )
+                        practiceViewModel.mostrarErrorCamara(mensaje)
                     }
                 }
             )
@@ -251,19 +213,14 @@ fun SenaPracticeScreen(
 
             // Acciones de práctica
             if (state.isActive) {
-
                 SecondaryButton(
                     text = "Detener práctica",
                     onClick = {
-
                         practiceViewModel.detenerPractica()
                     }
                 )
-
             } else {
-
                 val buttonText = when (state.status) {
-
                     PracticeStatus.SUCCESS ->
                         "Practicar nuevamente"
 
@@ -277,10 +234,7 @@ fun SenaPracticeScreen(
                 PrimaryButton(
                     text = buttonText,
                     onClick = {
-
-                        practiceViewModel.iniciarPractica(
-                            sena.nombre
-                        )
+                        practiceViewModel.iniciarPractica(sena.nombre)
                     }
                 )
             }
@@ -290,9 +244,7 @@ fun SenaPracticeScreen(
                 onClick = regresar
             )
 
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -307,18 +259,13 @@ private fun PracticeTargetCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = ProfileColors.CardDark,
-        border = BorderStroke(
-            1.dp,
-            ProfileColors.CardElevated
-        )
+        border = BorderStroke(1.dp, ProfileColors.CardElevated)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement =
-                Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-
             SenaCatalogImage(
                 imagenSena = sena.imagen,
                 imagenCategoria = sena.imagenCategoria,
@@ -326,14 +273,10 @@ private fun PracticeTargetCard(
                 modifier = Modifier.size(72.dp),
                 iconSize = 34.dp,
                 cornerRadius = 14.dp,
-                contentDescription =
-                    "Referencia visual del catálogo"
+                contentDescription = "Referencia visual del catálogo"
             )
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "SEÑA OBJETIVO",
                     color = ProfileColors.TextSecondary,
@@ -342,9 +285,7 @@ private fun PracticeTargetCard(
                     letterSpacing = 1.sp
                 )
 
-                Spacer(
-                    modifier = Modifier.height(4.dp)
-                )
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = sena.nombre,
@@ -354,10 +295,7 @@ private fun PracticeTargetCard(
                 )
 
                 if (!sena.categoria.isNullOrBlank()) {
-
-                    Spacer(
-                        modifier = Modifier.height(4.dp)
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
                         text = sena.categoria,
@@ -393,39 +331,27 @@ private fun PracticeCameraCard(
             .background(ProfileColors.CardDark)
             .border(
                 1.5.dp,
-                ProfileColors.AccentCyan.copy(
-                    alpha = 0.7f
-                ),
+                ProfileColors.AccentCyan.copy(alpha = 0.7f),
                 cameraShape
             ),
         contentAlignment = Alignment.Center
     ) {
-
         when {
-
             // Cámara desactivada
             !state.isActive -> {
-
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally,
-                    verticalArrangement =
-                        Arrangement.spacedBy(10.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-
                     Icon(
-                        imageVector = if (
-                            state.practiceCompleted
-                        ) {
+                        imageVector = if (state.practiceCompleted) {
                             Icons.Rounded.CheckCircle
                         } else {
                             Icons.Rounded.PanTool
                         },
                         contentDescription = null,
-                        tint = if (
-                            state.practiceCompleted
-                        ) {
+                        tint = if (state.practiceCompleted) {
                             PracticeSuccess
                         } else {
                             ProfileColors.AccentCyan
@@ -434,9 +360,7 @@ private fun PracticeCameraCard(
                     )
 
                     Text(
-                        text = if (
-                            state.practiceCompleted
-                        ) {
+                        text = if (state.practiceCompleted) {
                             "Práctica completada"
                         } else {
                             "Cámara desactivada"
@@ -450,15 +374,11 @@ private fun PracticeCameraCard(
 
             // Solicitar permiso de cámara
             !hasCameraPermission -> {
-
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    horizontalAlignment =
-                        Alignment.CenterHorizontally,
-                    verticalArrangement =
-                        Arrangement.spacedBy(12.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-
                     Icon(
                         imageVector = Icons.Rounded.PanTool,
                         contentDescription = null,
@@ -481,18 +401,13 @@ private fun PracticeCameraCard(
 
             // Cámara activa
             else -> {
-
                 key(lensFacing) {
-
                     CameraPreview(
                         modifier = Modifier.fillMaxSize(),
                         lensFacing = lensFacing,
 
                         onHandsDetected = { manos ->
-
-                            onHandsDetected(
-                                manos.flatten()
-                            )
+                            onHandsDetected(manos.flatten())
                         },
 
                         onError = onCameraError
@@ -504,12 +419,10 @@ private fun PracticeCameraCard(
                     .chunked(21)
                     .filter { it.size == 21 }
                     .forEach { mano ->
-
                         HandSkeletonOverlay(
                             landmarks = mano,
                             isFrontCamera =
-                                lensFacing ==
-                                        CameraSelector.LENS_FACING_FRONT,
+                                lensFacing == CameraSelector.LENS_FACING_FRONT,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -521,18 +434,11 @@ private fun PracticeCameraCard(
                         .padding(12.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(
-                            ProfileColors.BgDark.copy(
-                                alpha = 0.85f
-                            )
+                            ProfileColors.BgDark.copy(alpha = 0.85f)
                         )
-                        .padding(
-                            horizontal = 10.dp,
-                            vertical = 8.dp
-                        ),
-                    verticalAlignment =
-                        Alignment.CenterVertically
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-
                     Box(
                         modifier = Modifier
                             .size(8.dp)
@@ -546,17 +452,12 @@ private fun PracticeCameraCard(
                             )
                     )
 
-                    Spacer(
-                        modifier = Modifier.width(6.dp)
-                    )
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     Text(
                         text = when (state.handCount) {
-
                             1 -> "1 mano detectada"
-
                             2 -> "2 manos detectadas"
-
                             else -> "Buscando manos..."
                         },
                         color = ProfileColors.TextPrimary,
@@ -572,17 +473,12 @@ private fun PracticeCameraCard(
                         .padding(8.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(
-                            ProfileColors.BgDark.copy(
-                                alpha = 0.8f
-                            )
+                            ProfileColors.BgDark.copy(alpha = 0.8f)
                         )
                 ) {
-
                     Icon(
-                        imageVector =
-                            Icons.Rounded.Cameraswitch,
-                        contentDescription =
-                            "Cambiar cámara",
+                        imageVector = Icons.Rounded.Cameraswitch,
+                        contentDescription = "Cambiar cámara",
                         tint = ProfileColors.TextPrimary
                     )
                 }
@@ -598,7 +494,6 @@ private fun PracticeResultCard(
     hasCameraPermission: Boolean
 ) {
     val resultColor = when (state.status) {
-
         PracticeStatus.SUCCESS ->
             PracticeSuccess
 
@@ -614,12 +509,10 @@ private fun PracticeResultCard(
     }
 
     val title = when (state.status) {
-
         PracticeStatus.IDLE ->
             "Práctica detenida"
 
         PracticeStatus.WAITING_HAND ->
-
             if (hasCameraPermission) {
                 "Esperando tus manos..."
             } else {
@@ -646,12 +539,10 @@ private fun PracticeResultCard(
     }
 
     val message = when (state.status) {
-
         PracticeStatus.IDLE ->
             "Puedes iniciar otro intento cuando desees."
 
         PracticeStatus.WAITING_HAND ->
-
             if (hasCameraPermission) {
                 "Coloca tus manos dentro de la cámara."
             } else {
@@ -688,10 +579,8 @@ private fun PracticeResultCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement =
-                Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-
             Text(
                 text = "RESULTADO DE LA PRÁCTICA",
                 color = ProfileColors.TextSecondary,
@@ -700,36 +589,25 @@ private fun PracticeResultCard(
                 letterSpacing = 1.sp
             )
 
-            Row(
-                verticalAlignment =
-                    Alignment.CenterVertically
-            ) {
-
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (state.isAnalyzing) {
-
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
                         color = resultColor,
                         strokeWidth = 2.dp
                     )
 
-                    Spacer(
-                        modifier = Modifier.width(10.dp)
-                    )
+                    Spacer(modifier = Modifier.width(10.dp))
 
                 } else if (state.practiceCompleted) {
-
                     Icon(
-                        imageVector =
-                            Icons.Rounded.CheckCircle,
+                        imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = null,
                         tint = resultColor,
                         modifier = Modifier.size(24.dp)
                     )
 
-                    Spacer(
-                        modifier = Modifier.width(10.dp)
-                    )
+                    Spacer(modifier = Modifier.width(10.dp))
                 }
 
                 Text(
@@ -749,7 +627,6 @@ private fun PracticeResultCard(
             )
 
             state.detectedSign?.let { detectada ->
-
                 HorizontalDivider(
                     color = ProfileColors.CardElevated
                 )
@@ -766,15 +643,12 @@ private fun PracticeResultCard(
                 state.status == PracticeStatus.CONFIRMING ||
                 state.status == PracticeStatus.SUCCESS
             ) {
-
-                val required =
-                    PracticeViewModel.REQUIRED_CONFIRMATIONS
+                val required = PracticeViewModel.REQUIRED_CONFIRMATIONS
 
                 LinearProgressIndicator(
                     progress = {
                         (
-                                state.confirmations.toFloat() /
-                                        required
+                                state.confirmations.toFloat() / required
                                 ).coerceIn(0f, 1f)
                     },
                     modifier = Modifier

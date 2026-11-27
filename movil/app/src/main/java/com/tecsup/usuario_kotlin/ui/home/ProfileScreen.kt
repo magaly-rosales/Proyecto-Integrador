@@ -18,7 +18,7 @@ import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,14 +39,12 @@ fun ProfileScreen(
     onNavigateToSenas: () -> Unit,
     onLogout: () -> Unit,
     onNavigateToEditProfile: () -> Unit = {},
-    userPhoto: String? = null
+    userPhoto: String? = null,
+    darkModeEnabled: Boolean = true,
+    onDarkModeChange: (Boolean) -> Unit = {}
 ) {
     val displayName = userName.ifBlank { "Usuario" }
     val displayEmail = userEmail.ifBlank { "Correo no disponible" }
-
-    var darkModeEnabled by remember {
-        mutableStateOf(true)
-    }
 
     Scaffold(
         containerColor = ProfileColors.BgDark,
@@ -68,7 +66,7 @@ fun ProfileScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Cabecera de Mi cuenta
+            // Cabecera
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -89,7 +87,7 @@ fun ProfileScreen(
                 )
             }
 
-            // Información del usuario
+            // Información personal
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = 4.dp)
@@ -101,7 +99,7 @@ fun ProfileScreen(
                     fontSize = 26.sp
                 )
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(Modifier.width(16.dp))
 
                 Column {
                     Text(
@@ -111,7 +109,7 @@ fun ProfileScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(Modifier.height(2.dp))
 
                     Text(
                         text = displayEmail,
@@ -121,15 +119,12 @@ fun ProfileScreen(
                 }
             }
 
-            // Menú de opciones
+            // Menú del perfil
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
                 color = ProfileColors.CardDark,
-                border = BorderStroke(
-                    1.dp,
-                    ProfileColors.CardElevated
-                )
+                border = BorderStroke(1.dp, ProfileColors.CardElevated)
             ) {
                 Column {
                     ProfileMenuItem(
@@ -161,18 +156,17 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
+                    // Interruptor conectado al tema global
                     ProfileMenuItem(
                         icon = Icons.Outlined.DarkMode,
                         title = "Modo oscuro",
                         trailing = {
                             Switch(
                                 checked = darkModeEnabled,
-                                onCheckedChange = {
-                                    darkModeEnabled = it
-                                },
+                                onCheckedChange = onDarkModeChange,
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor =
-                                        ProfileColors.TextPrimary,
+                                        ProfileColors.BgDark,
                                     checkedTrackColor =
                                         ProfileColors.AccentCyan,
                                     uncheckedThumbColor =
@@ -183,7 +177,7 @@ fun ProfileScreen(
                             )
                         },
                         onClick = {
-                            darkModeEnabled = !darkModeEnabled
+                            onDarkModeChange(!darkModeEnabled)
                         }
                     )
 
@@ -209,7 +203,6 @@ fun ProfileScreen(
     }
 }
 
-// Separador reutilizable del menú
 @Composable
 private fun ProfileDivider() {
     HorizontalDivider(
@@ -218,7 +211,6 @@ private fun ProfileDivider() {
     )
 }
 
-// Contador de notificaciones
 @Composable
 private fun NotificationBadge(count: Int) {
     Box(
@@ -237,7 +229,6 @@ private fun NotificationBadge(count: Int) {
     }
 }
 
-// Etiqueta del panel de administración
 @Composable
 private fun AdminBadge() {
     Box(
@@ -259,7 +250,6 @@ private fun AdminBadge() {
     }
 }
 
-// Opción reutilizable del menú
 @Composable
 private fun ProfileMenuItem(
     icon: ImageVector,
@@ -275,9 +265,7 @@ private fun ProfileMenuItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = icon,
                 contentDescription = title,
@@ -285,7 +273,7 @@ private fun ProfileMenuItem(
                 modifier = Modifier.size(22.dp)
             )
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(Modifier.width(14.dp))
 
             Text(
                 text = title,

@@ -1,58 +1,61 @@
 package com.tecsup.usuario_kotlin.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.CompositionLocalProvider
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = DarkSenasPalette.accent,
+    onPrimary = DarkSenasPalette.background,
+    secondary = DarkSenasPalette.secondaryText,
+    background = DarkSenasPalette.background,
+    onBackground = DarkSenasPalette.text,
+    surface = DarkSenasPalette.card,
+    onSurface = DarkSenasPalette.text,
+    surfaceVariant = DarkSenasPalette.elevated,
+    onSurfaceVariant = DarkSenasPalette.secondaryText,
+    error = DarkSenasPalette.error
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = LightSenasPalette.accent,
+    onPrimary = LightSenasPalette.background,
+    secondary = LightSenasPalette.secondaryText,
+    background = LightSenasPalette.background,
+    onBackground = LightSenasPalette.text,
+    surface = LightSenasPalette.card,
+    onSurface = LightSenasPalette.text,
+    surfaceVariant = LightSenasPalette.elevated,
+    onSurfaceVariant = LightSenasPalette.secondaryText,
+    error = LightSenasPalette.error
 )
 
 @Composable
 fun UsuariokotlinTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val palette = if (darkTheme) {
+        DarkSenasPalette
+    } else {
+        LightSenasPalette
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val colorScheme = if (darkTheme) {
+        DarkColorScheme
+    } else {
+        LightColorScheme
+    }
+
+    CompositionLocalProvider(
+        LocalSenasPalette provides palette
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

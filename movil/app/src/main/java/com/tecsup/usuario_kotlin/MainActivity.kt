@@ -12,8 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
+import com.tecsup.usuario_kotlin.data.repository.TranslationPreferencesRepository
 import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
@@ -51,8 +53,26 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            UsuariokotlinTheme {
 
+            // Preferencias del usuario autenticado
+            val userId = authViewModel.loggedUserId
+
+            val preferencesRepository = remember(userId) {
+                userId?.takeIf { it > 0 }?.let {
+                    TranslationPreferencesRepository(
+                        applicationContext, it
+                    )
+                }
+            }
+
+            val darkModeEnabled = preferencesRepository
+                ?.darkMode
+                ?.collectAsStateWithLifecycle()
+                ?.value ?: true
+
+            UsuariokotlinTheme(
+                darkTheme = darkModeEnabled
+            ) {
                 val screenSaver = Saver<String, String>(
                     save = { it },
                     restore = { savedScreen ->
@@ -73,7 +93,6 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf("login")
                 }
 
-                // Proteger las pantallas privadas
                 val activeScreen = if (
                     currentScreen in protectedScreens &&
                     !authViewModel.loginSuccess
@@ -83,8 +102,6 @@ class MainActivity : ComponentActivity() {
                     currentScreen
                 }
 
-                // Datos del usuario autenticado
-                val userId = authViewModel.loggedUserId
                 val userName = authViewModel.loggedUserName
                 val userEmail = authViewModel.loggedUserEmail
                 val userPhoto = authViewModel.loggedUserPhoto
@@ -98,7 +115,6 @@ class MainActivity : ComponentActivity() {
                 ) {
                     when (activeScreen) {
 
-                        // Inicio de sesión
                         "login" -> {
                             LoginScreen(
                                 authViewModel = authViewModel,
@@ -116,7 +132,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Registro
                         "register" -> {
                             RegisterScreen(
                                 authViewModel = authViewModel,
@@ -130,7 +145,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Recuperación de contraseña
                         "forgot_password" -> {
                             ForgotPasswordScreen(
                                 authViewModel = authViewModel,
@@ -141,7 +155,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Catálogo de señas
                         "home" -> {
                             HomeScreen(
                                 username = userName,
@@ -155,7 +168,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Traductor con historial por usuario
                         "translation" -> {
                             if (userId != null && userId > 0) {
                                 key(userId) {
@@ -182,12 +194,18 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        // Mi cuenta
                         "perfil" -> {
                             ProfileScreen(
                                 userName = userName,
                                 userEmail = userEmail,
                                 userPhoto = userPhoto,
+
+                                darkModeEnabled = darkModeEnabled,
+                                onDarkModeChange = { enabled ->
+                                    preferencesRepository
+                                        ?.cambiarModoOscuro(enabled)
+                                },
+
                                 onNavigateToTraducir = {
                                     currentScreen = "translation"
                                 },
@@ -206,7 +224,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Editar perfil
                         "edit_profile" -> {
                             EditProfileScreen(
                                 profileViewModel = profileViewModel,
@@ -221,7 +238,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Cambiar contraseña
                         "change_password" -> {
                             ChangePasswordScreen(
                                 profileViewModel = profileViewModel,
@@ -231,7 +247,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Pantalla de respaldo
                         else -> {
                             LoginScreen(
                                 authViewModel = authViewModel,
@@ -254,7 +269,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Registrar cada seña aceptada en Spring Boot
+    // Registrar las señas reconocidas
     private fun registrarTraduccion(nombreSena: String) {
         lifecycleScope.launch {
             try {
@@ -284,7 +299,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Cerrar sesión sin eliminar el historial persistente
     private fun cerrarSesion() {
         translationViewModel.cerrarSesionTraductor()
         profileViewModel.clearProfileOperations()

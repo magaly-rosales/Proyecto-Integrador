@@ -13,10 +13,10 @@ class SequenceBuffer {
         // Intervalo mínimo entre capturas
         const val FRAME_INTERVAL_MS = 100L
 
-        // Enviar una secuencia cada tres cuadros nuevos
+        // Enviar cada tres cuadros nuevos
         private const val SEND_EVERY_FRAMES = 3
 
-        // Reiniciar si existe una interrupción prolongada
+        // Interrupción máxima entre fotogramas
         private const val MAX_FRAME_GAP_MS = 350L
 
         // Cantidad de puntos por mano
@@ -27,12 +27,11 @@ class SequenceBuffer {
     private val frames =
         ArrayDeque<List<PuntoManoDto>>()
 
-    // Control de tiempo y capturas
     private var lastFrameTime: Long? = null
 
     private var framesSinceLastSequence = 0
 
-    // Identificar cada secuencia de captura
+    // Identificador de cada secuencia
     var generation = 0L
         private set
 
@@ -40,44 +39,33 @@ class SequenceBuffer {
     val frameCount: Int
         get() = frames.size
 
-    // Cantidad de manos en la secuencia
+    // Cantidad de manos
     val handCount: Int
         get() {
-
             val puntos =
                 frames.firstOrNull()?.size ?: 0
 
             return puntos / POINTS_PER_HAND
         }
 
-    // Progreso de captura entre 0 y 1
+    // Progreso de la captura
     val progress: Float
         get() = (
                 frameCount.toFloat() / WINDOW_SIZE
                 ).coerceIn(0f, 1f)
 
-    // Verificar si la ventana está completa
+    // Verificar ventana completa
     val isReady: Boolean
         get() = frameCount == WINDOW_SIZE
 
-    // Agregar un fotograma a la ventana
+    // Agregar un fotograma
     fun registrar(
         puntos: List<PuntoManoDto>,
         timestampMs: Long = SystemClock.elapsedRealtime()
     ): List<List<PuntoManoDto>>? {
 
-        // Validar los puntos recibidos
-        val puntosValidos =
-            puntos.size in setOf(21, 42) &&
-                    puntos.all { punto ->
-
-                        punto.x.isFinite() &&
-                                punto.y.isFinite() &&
-                                punto.z.isFinite()
-                    }
-
-        // No mezclar secuencias sin manos válidas
-        if (!puntosValidos) {
+        // Reutilizar la validación centralizada
+        if (!RecognitionUtils.puntosValidos(puntos)) {
 
             if (
                 frames.isNotEmpty() ||
@@ -100,7 +88,7 @@ class SequenceBuffer {
             limpiar()
         }
 
-        // Verificar interrupciones entre fotogramas
+        // Verificar interrupciones de captura
         val tiempoAnterior = lastFrameTime
 
         if (
@@ -114,7 +102,7 @@ class SequenceBuffer {
             limpiar()
         }
 
-        // Limitar la frecuencia de captura
+        // Limitar frecuencia de captura
         val ultimaCaptura = lastFrameTime
 
         if (
@@ -125,23 +113,19 @@ class SequenceBuffer {
             return null
         }
 
-        // Registrar el tiempo de captura
         lastFrameTime = timestampMs
 
-        // Almacenar una copia de los puntos
-        frames.addLast(
-            puntos.toList()
-        )
+        // Almacenar copia de los puntos
+        frames.addLast(puntos.toList())
 
-        // Mantener solamente los últimos 20 cuadros
+        // Mantener una ventana de 20 cuadros
         while (frames.size > WINDOW_SIZE) {
-
             frames.removeFirst()
         }
 
         framesSinceLastSequence++
 
-        // Esperar hasta completar la ventana
+        // Esperar una ventana completa
         if (!isReady) {
             return null
         }
@@ -156,16 +140,14 @@ class SequenceBuffer {
 
         framesSinceLastSequence = 0
 
-        // Devolver una copia independiente de la secuencia
+        // Devolver una copia independiente
         return frames.map { cuadro ->
-
             cuadro.toList()
         }
     }
 
-    // Reiniciar la secuencia de captura
+    // Reiniciar captura
     fun limpiar() {
-
         frames.clear()
 
         lastFrameTime = null

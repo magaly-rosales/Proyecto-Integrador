@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tecsup.usuario_kotlin.data.model.ForgotPasswordRequest
 import com.tecsup.usuario_kotlin.data.model.LoginRequest
+import com.tecsup.usuario_kotlin.data.model.PasswordRequest
 import com.tecsup.usuario_kotlin.data.model.PerfilDatosRequest
 import com.tecsup.usuario_kotlin.data.model.RegisterRequest
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
@@ -69,6 +70,19 @@ class AuthViewModel : ViewModel() {
 
     private var profileUpdateJob: Job? = null
 
+    // Estados del cambio de contraseña
+
+    var isChangingPassword by mutableStateOf(false)
+        private set
+
+    var passwordChangeSuccess by mutableStateOf(false)
+        private set
+
+    var passwordErrorMessage by mutableStateOf<String?>(null)
+        private set
+
+    private var passwordChangeJob: Job? = null
+
     // Inicio de sesión
 
     fun login(usernameOrEmail: String, password: String) {
@@ -85,7 +99,6 @@ class AuthViewModel : ViewModel() {
 
                 if (response.isSuccessful && user != null) {
 
-                    // Guardar los datos del usuario autenticado
                     loggedUserId = user.idUsuario
                     loggedUserName = user.nombre ?: user.email ?: "Usuario"
                     loggedUserEmail = user.email
@@ -262,7 +275,6 @@ class AuthViewModel : ViewModel() {
 
                 if (response.isSuccessful) {
 
-                    // Comprobar que la respuesta sea válida
                     if (
                         perfil == null ||
                         perfil.idUsuario != idUsuario ||
@@ -284,7 +296,6 @@ class AuthViewModel : ViewModel() {
 
                 } else {
 
-                    // Mensaje alternativo según el código HTTP
                     val mensajePredeterminado = when (response.code()) {
 
                         400 -> "Los datos ingresados no son válidos"
@@ -302,7 +313,6 @@ class AuthViewModel : ViewModel() {
                             "No se pudo actualizar el perfil"
                     }
 
-                    // Recuperar el mensaje enviado por Spring Boot
                     val cuerpoError = response.errorBody()?.string()
 
                     profileErrorMessage = obtenerMensajeError(
@@ -320,6 +330,154 @@ class AuthViewModel : ViewModel() {
 
             } finally {
                 isUpdatingProfile = false
+            }
+        }
+    }
+
+    // Cambio de contraseña
+
+    fun cambiarPassword(
+        actual: String,
+        nueva: String,
+        confirmacion: String
+    ) {
+
+        // Evitar solicitudes duplicadas
+        if (isChangingPassword) return
+
+        passwordErrorMessage = null
+        passwordChangeSuccess = false
+
+        val idUsuario = loggedUserId
+
+        // Verificar que exista una sesión activa
+        if (!loginSuccess || idUsuario == null) {
+            passwordErrorMessage =
+                "Debes iniciar sesión para cambiar tu contraseña"
+            return
+        }
+
+        // Validar contraseña actual
+        if (actual.isBlank()) {
+            passwordErrorMessage =
+                "Ingresa tu contraseña actual"
+            return
+        }
+
+        // Validar nueva contraseña
+        if (nueva.isBlank()) {
+            passwordErrorMessage =
+                "Ingresa tu nueva contraseña"
+            return
+        }
+
+        // Validar longitud mínima
+        if (nueva.length < 6) {
+            passwordErrorMessage =
+                "La contraseña debe tener al menos 6 caracteres"
+            return
+        }
+
+        // Validar longitud máxima
+        if (nueva.length > 30) {
+            passwordErrorMessage =
+                "La contraseña no puede superar los 30 caracteres"
+            return
+        }
+
+        // Evitar reutilizar la contraseña actual
+        if (actual == nueva) {
+            passwordErrorMessage =
+                "La nueva contraseña debe ser diferente a la actual"
+            return
+        }
+
+        // Validar campo de confirmación
+        if (confirmacion.isBlank()) {
+            passwordErrorMessage =
+                "Confirma tu nueva contraseña"
+            return
+        }
+
+        // Verificar coincidencia de contraseñas
+        if (nueva != confirmacion) {
+            passwordErrorMessage =
+                "Las contraseñas no coinciden"
+            return
+        }
+
+        isChangingPassword = true
+
+        passwordChangeJob = viewModelScope.launch {
+
+            try {
+
+                // Enviar únicamente las contraseñas necesarias
+                val request = PasswordRequest(
+                    actual = actual,
+                    nueva = nueva
+                )
+
+                val response =
+                    RetrofitClient.apiService.cambiarPassword(
+                        idUsuario = idUsuario,
+                        request = request
+                    )
+
+                // Verificar que la sesión continúe activa
+                if (!loginSuccess || loggedUserId != idUsuario) {
+                    return@launch
+                }
+
+                if (response.isSuccessful) {
+
+                    passwordChangeSuccess = true
+
+                } else {
+
+                    val mensajePredeterminado = when (response.code()) {
+
+                        400 ->
+                            "La nueva contraseña no cumple los requisitos"
+
+                        401 ->
+                            "La contraseña actual no es correcta"
+
+                        403 ->
+                            "No tienes autorización para realizar esta acción"
+
+                        404 ->
+                            "Usuario no encontrado"
+
+                        429 ->
+                            "Demasiados intentos. Inténtalo más tarde"
+
+                        500 ->
+                            "Error interno del servidor"
+
+                        else ->
+                            "No se pudo actualizar la contraseña"
+                    }
+
+                    val cuerpoError = response.errorBody()?.string()
+
+                    passwordErrorMessage = obtenerMensajeError(
+                        cuerpoError,
+                        mensajePredeterminado
+                    )
+                }
+
+            } catch (e: CancellationException) {
+                throw e
+
+            } catch (e: Exception) {
+
+                passwordErrorMessage =
+                    "No se pudo conectar con el servidor"
+
+            } finally {
+
+                isChangingPassword = false
             }
         }
     }
@@ -346,7 +504,7 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // Restablecer estados de la edición del perfil
+    // Restablecer estados de edición del perfil
 
     fun resetProfileUpdateState() {
 
@@ -356,14 +514,28 @@ class AuthViewModel : ViewModel() {
         profileErrorMessage = null
     }
 
+    // Restablecer estados del cambio de contraseña
+
+    fun resetPasswordChangeState() {
+
+        if (isChangingPassword) return
+
+        passwordChangeSuccess = false
+        passwordErrorMessage = null
+    }
+
     // Cierre de sesión y limpieza de datos
 
     fun logout() {
 
-        // Cancelar una actualización de perfil pendiente
+        // Cancelar actualizaciones pendientes
         profileUpdateJob?.cancel()
         profileUpdateJob = null
 
+        passwordChangeJob?.cancel()
+        passwordChangeJob = null
+
+        // Limpiar datos del usuario autenticado
         loggedUserId = null
         loggedUserName = "Usuario"
         loggedUserEmail = ""
@@ -373,9 +545,15 @@ class AuthViewModel : ViewModel() {
         loginSuccess = false
         errorMessage = null
 
+        // Limpiar estados de edición del perfil
         isUpdatingProfile = false
         profileUpdateSuccess = false
         profileErrorMessage = null
+
+        // Limpiar estados del cambio de contraseña
+        isChangingPassword = false
+        passwordChangeSuccess = false
+        passwordErrorMessage = null
     }
 
     fun resetRegisterSuccess() {

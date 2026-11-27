@@ -56,3 +56,14 @@ data class PerfilResponse(
     val rol: String? = null,
     val foto: String? = null
 )
+
+// Solicitud de cambio de contraseña
+data class PasswordRequest(
+    val actual: String,
+    val nueva: String
+)
+
+// Respuesta del cambio de contraseña
+data class PasswordResponse(
+    val mensaje: String? = null
+)

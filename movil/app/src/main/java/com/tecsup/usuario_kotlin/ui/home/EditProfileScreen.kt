@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,7 +44,8 @@ private val ErrorColor = Color(0xFFFF8585)
 @Composable
 fun EditProfileScreen(
     authViewModel: AuthViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNavigateToChangePassword: () -> Unit = {}
 ) {
 
     val context = LocalContext.current
@@ -62,7 +66,16 @@ fun EditProfileScreen(
         mutableStateOf(authViewModel.loggedUserEmail)
     }
 
+    // Confirmación cuando existen cambios sin guardar
+    var showUnsavedChangesDialog by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     val isUpdating = authViewModel.isUpdatingProfile
+
+    val hasUnsavedChanges =
+        nombre != authViewModel.loggedUserName ||
+                email != authViewModel.loggedUserEmail
 
     val initial = authViewModel.loggedUserName
         .trim()
@@ -77,9 +90,31 @@ fun EditProfileScreen(
         }
     }
 
+    // Navegar hacia el cambio de contraseña
+    val abrirCambioPassword: () -> Unit = {
+        if (!isUpdating) {
+
+            if (hasUnsavedChanges) {
+
+                showUnsavedChangesDialog = true
+
+            } else {
+
+                authViewModel.resetProfileUpdateState()
+                authViewModel.resetPasswordChangeState()
+
+                onNavigateToChangePassword()
+            }
+        }
+    }
+
     // Controlar el botón de retroceso de Android
     BackHandler {
-        regresar()
+        if (showUnsavedChangesDialog) {
+            showUnsavedChangesDialog = false
+        } else {
+            regresar()
+        }
     }
 
     // Procesar una actualización exitosa
@@ -98,8 +133,6 @@ fun EditProfileScreen(
                 null
             )
 
-            // Actualizar solamente si el correo anterior
-            // estaba guardado mediante Recordarme
             if (
                 rememberedEmail != null &&
                 rememberedEmail.equals(
@@ -125,6 +158,66 @@ fun EditProfileScreen(
 
             onBackClick()
         }
+    }
+
+    // Diálogo para evitar perder cambios accidentalmente
+    if (showUnsavedChangesDialog) {
+
+        AlertDialog(
+            onDismissRequest = {
+                showUnsavedChangesDialog = false
+            },
+            containerColor = CardDark,
+            titleContentColor = TextPrimary,
+            textContentColor = TextSecondary,
+            shape = RoundedCornerShape(18.dp),
+            title = {
+                Text(
+                    text = "Cambios sin guardar",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Tienes cambios pendientes en tus datos personales. " +
+                            "Si continúas, estos cambios no se guardarán."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+
+                        showUnsavedChangesDialog = false
+
+                        nombre = authViewModel.loggedUserName
+                        email = authViewModel.loggedUserEmail
+
+                        authViewModel.resetProfileUpdateState()
+                        authViewModel.resetPasswordChangeState()
+
+                        onNavigateToChangePassword()
+                    }
+                ) {
+                    Text(
+                        text = "Continuar",
+                        color = AccentCyan,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showUnsavedChangesDialog = false
+                    }
+                ) {
+                    Text(
+                        text = "Cancelar",
+                        color = TextSecondary
+                    )
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -427,6 +520,97 @@ fun EditProfileScreen(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
+                    }
+                }
+            }
+
+            // Nueva sección de seguridad
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = CardDark,
+                border = BorderStroke(1.dp, CardElevated)
+            ) {
+
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+
+                    Text(
+                        text = "Seguridad",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "Protege el acceso a tu cuenta.",
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Opción para cambiar la contraseña
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = CardElevated,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(
+                                    enabled = !isUpdating,
+                                    onClick = abrirCambioPassword
+                                )
+                                .padding(16.dp),
+                            verticalAlignment =
+                                Alignment.CenterVertically
+                        ) {
+
+                            Icon(
+                                imageVector = Icons.Outlined.Lock,
+                                contentDescription = null,
+                                tint = AccentCyan,
+                                modifier = Modifier.size(24.dp)
+                            )
+
+                            Spacer(modifier = Modifier.width(14.dp))
+
+                            Column(
+                                modifier = Modifier.weight(1f)
+                            ) {
+
+                                Text(
+                                    text = "Cambiar contraseña",
+                                    color = TextPrimary,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+
+                                Spacer(
+                                    modifier = Modifier.height(4.dp)
+                                )
+
+                                Text(
+                                    text = "Actualiza tu contraseña de acceso",
+                                    color = TextSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            Icon(
+                                imageVector =
+                                    Icons.Rounded.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = AccentCyan,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             }

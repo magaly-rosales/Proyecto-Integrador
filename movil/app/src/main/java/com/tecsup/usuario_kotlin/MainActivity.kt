@@ -19,6 +19,7 @@ import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
 import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
+import com.tecsup.usuario_kotlin.ui.home.ChangePasswordScreen
 import com.tecsup.usuario_kotlin.ui.home.EditProfileScreen
 import com.tecsup.usuario_kotlin.ui.home.HomeScreen
 import com.tecsup.usuario_kotlin.ui.home.ProfileScreen
@@ -45,7 +46,8 @@ class MainActivity : ComponentActivity() {
                     "home",
                     "translation",
                     "perfil",
-                    "edit_profile"
+                    "edit_profile",
+                    "change_password"
                 )
 
                 // Restaurar la navegación sin permitir el acceso
@@ -232,6 +234,26 @@ class MainActivity : ComponentActivity() {
                                 authViewModel = authViewModel,
                                 onBackClick = {
                                     currentScreen = "perfil"
+                                },
+                                onNavigateToChangePassword = {
+
+                                    // Limpiar estados de intentos anteriores
+                                    authViewModel.resetPasswordChangeState()
+
+                                    // Abrir la pantalla de cambio de contraseña
+                                    currentScreen = "change_password"
+                                }
+                            )
+                        }
+
+                        // Cambio de contraseña
+                        "change_password" -> {
+                            ChangePasswordScreen(
+                                authViewModel = authViewModel,
+                                onBackClick = {
+
+                                    // Regresar a la edición del perfil
+                                    currentScreen = "edit_profile"
                                 }
                             )
                         }

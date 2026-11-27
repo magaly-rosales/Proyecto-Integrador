@@ -5,6 +5,8 @@ import com.tecsup.usuario_kotlin.data.model.ForgotPasswordRequest
 import com.tecsup.usuario_kotlin.data.model.ForgotPasswordResponse
 import com.tecsup.usuario_kotlin.data.model.LoginRequest
 import com.tecsup.usuario_kotlin.data.model.LoginResponse
+import com.tecsup.usuario_kotlin.data.model.PasswordRequest
+import com.tecsup.usuario_kotlin.data.model.PasswordResponse
 import com.tecsup.usuario_kotlin.data.model.PerfilDatosRequest
 import com.tecsup.usuario_kotlin.data.model.PerfilResponse
 import com.tecsup.usuario_kotlin.data.model.PuntoManoDto
@@ -45,6 +47,12 @@ interface ApiService {
         @Path("id") idUsuario: Int,
         @Body request: PerfilDatosRequest
     ): Response<PerfilResponse>
+
+    @PUT("api/perfil/{id}/password")
+    suspend fun cambiarPassword(
+        @Path("id") idUsuario: Int,
+        @Body request: PasswordRequest
+    ): Response<PasswordResponse>
 
 
     // CATÁLOGO DE SEÑAS

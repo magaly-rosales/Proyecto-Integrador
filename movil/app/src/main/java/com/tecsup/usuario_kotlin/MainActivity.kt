@@ -19,6 +19,7 @@ import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
 import com.tecsup.usuario_kotlin.ui.auth.ForgotPasswordScreen
 import com.tecsup.usuario_kotlin.ui.auth.LoginScreen
 import com.tecsup.usuario_kotlin.ui.auth.RegisterScreen
+import com.tecsup.usuario_kotlin.ui.home.EditProfileScreen
 import com.tecsup.usuario_kotlin.ui.home.HomeScreen
 import com.tecsup.usuario_kotlin.ui.home.ProfileScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
@@ -43,7 +44,8 @@ class MainActivity : ComponentActivity() {
                 val protectedScreens = setOf(
                     "home",
                     "translation",
-                    "perfil"
+                    "perfil",
+                    "edit_profile"
                 )
 
                 // Restaurar la navegación sin permitir el acceso
@@ -212,6 +214,24 @@ class MainActivity : ComponentActivity() {
 
                                     // Regresar al inicio de sesión
                                     currentScreen = "login"
+                                },
+                                onNavigateToEditProfile = {
+
+                                    // Limpiar estados de ediciones anteriores
+                                    authViewModel.resetProfileUpdateState()
+
+                                    // Abrir la pantalla de edición
+                                    currentScreen = "edit_profile"
+                                }
+                            )
+                        }
+
+                        // Edición de datos personales
+                        "edit_profile" -> {
+                            EditProfileScreen(
+                                authViewModel = authViewModel,
+                                onBackClick = {
+                                    currentScreen = "perfil"
                                 }
                             )
                         }

@@ -46,17 +46,17 @@ fun ProfileScreen(
     darkModeEnabled: Boolean = true,
     onDarkModeChange: (Boolean) -> Unit = {},
     textSize: TextSize = TextSize.NORMAL,
-    onTextSizeChange: (TextSize) -> Unit = {}
+    onTextSizeChange: (TextSize) -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val displayName = userName.ifBlank { "Usuario" }
     val displayEmail = userEmail.ifBlank { "Correo no disponible" }
 
-    // Estado del diálogo de tamaño de texto
     var showTextSizeDialog by remember {
         mutableStateOf(false)
     }
 
-    // Configurar el tamaño del texto
+    // Acceso rápido al tamaño de texto
     if (showTextSizeDialog) {
         TextSizeDialog(
             selectedSize = textSize,
@@ -126,9 +126,7 @@ fun ProfileScreen(
 
                 Spacer(Modifier.width(16.dp))
 
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = displayName,
                         color = ProfileColors.TextPrimary,
@@ -146,16 +144,17 @@ fun ProfileScreen(
                 }
             }
 
-            // Menú de opciones
+            // Menú del perfil
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
                 color = ProfileColors.CardDark,
-                border = BorderStroke(1.dp, ProfileColors.CardElevated)
+                border = BorderStroke(
+                    1.dp,
+                    ProfileColors.CardElevated
+                )
             ) {
                 Column {
-
-                    // Información del perfil
                     ProfileMenuItem(
                         icon = Icons.Outlined.Person,
                         title = "Mi perfil",
@@ -164,16 +163,15 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Configuración
+                    // Navegar a la pantalla de configuración
                     ProfileMenuItem(
                         icon = Icons.Outlined.Tune,
                         title = "Configuración",
-                        onClick = {}
+                        onClick = onNavigateToSettings
                     )
 
                     ProfileDivider()
 
-                    // Notificaciones
                     ProfileMenuItem(
                         icon = Icons.Outlined.Notifications,
                         title = "Notificaciones",
@@ -187,7 +185,7 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Tema claro y oscuro
+                    // Acceso rápido al tema
                     ProfileMenuItem(
                         icon = Icons.Outlined.DarkMode,
                         title = "Modo oscuro",
@@ -214,7 +212,7 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Tamaño del texto
+                    // Acceso rápido al tamaño del texto
                     ProfileMenuItem(
                         icon = Icons.Outlined.TextFields,
                         title = "Tamaño del texto",
@@ -233,7 +231,6 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Panel de administración
                     ProfileMenuItem(
                         icon = Icons.Outlined.Security,
                         title = "Panel de administración",
@@ -243,7 +240,6 @@ fun ProfileScreen(
 
                     ProfileDivider()
 
-                    // Cerrar sesión
                     ProfileMenuItem(
                         icon = Icons.AutoMirrored.Outlined.Logout,
                         title = "Cerrar sesión",

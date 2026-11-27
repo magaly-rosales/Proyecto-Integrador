@@ -24,6 +24,7 @@ import com.tecsup.usuario_kotlin.ui.home.ChangePasswordScreen
 import com.tecsup.usuario_kotlin.ui.home.EditProfileScreen
 import com.tecsup.usuario_kotlin.ui.home.HomeScreen
 import com.tecsup.usuario_kotlin.ui.home.ProfileScreen
+import com.tecsup.usuario_kotlin.ui.home.SettingsScreen
 import com.tecsup.usuario_kotlin.ui.theme.UsuariokotlinTheme
 import com.tecsup.usuario_kotlin.ui.translation.TranslationScreen
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
@@ -47,7 +48,8 @@ class MainActivity : ComponentActivity() {
         "translation",
         "perfil",
         "edit_profile",
-        "change_password"
+        "change_password",
+        "settings"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,24 +57,24 @@ class MainActivity : ComponentActivity() {
 
         setContent {
 
-            // Preferencias del usuario autenticado
             val userId = authViewModel.loggedUserId
 
+            // Repositorio compartido por toda la sesión
             val preferencesRepository = remember(userId) {
                 userId?.takeIf { it > 0 }?.let {
                     TranslationPreferencesRepository(
-                        applicationContext, it
+                        applicationContext,
+                        it
                     )
                 }
             }
 
-            // Tema seleccionado
+            // Preferencias visuales globales
             val darkModeEnabled = preferencesRepository
                 ?.darkMode
                 ?.collectAsStateWithLifecycle()
                 ?.value ?: true
 
-            // Tamaño de texto seleccionado
             val textSize = preferencesRepository
                 ?.textSize
                 ?.collectAsStateWithLifecycle()
@@ -102,17 +104,19 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf("login")
                 }
 
-                // Proteger las pantallas privadas
+                // Validar el acceso a pantallas privadas
                 val activeScreen = if (
                     currentScreen in protectedScreens &&
-                    !authViewModel.loginSuccess
+                    (
+                            !authViewModel.loginSuccess ||
+                                    preferencesRepository == null
+                            )
                 ) {
                     "login"
                 } else {
                     currentScreen
                 }
 
-                // Datos del usuario autenticado
                 val userName = authViewModel.loggedUserName
                 val userEmail = authViewModel.loggedUserEmail
                 val userPhoto = authViewModel.loggedUserPhoto
@@ -185,11 +189,17 @@ class MainActivity : ComponentActivity() {
 
                         // Traductor
                         "translation" -> {
-                            if (userId != null && userId > 0) {
+                            if (
+                                userId != null &&
+                                userId > 0 &&
+                                preferencesRepository != null
+                            ) {
                                 key(userId) {
                                     TranslationScreen(
                                         viewModel = translationViewModel,
                                         userId = userId,
+                                        preferencesRepository =
+                                            preferencesRepository,
                                         userInitial = userInitial,
                                         onNavigateToSenas = {
                                             currentScreen = "home"
@@ -217,18 +227,20 @@ class MainActivity : ComponentActivity() {
                                 userEmail = userEmail,
                                 userPhoto = userPhoto,
 
-                                // Preferencia del tema
                                 darkModeEnabled = darkModeEnabled,
                                 onDarkModeChange = { enabled ->
                                     preferencesRepository
                                         ?.cambiarModoOscuro(enabled)
                                 },
 
-                                // Preferencia del tamaño de texto
                                 textSize = textSize,
                                 onTextSizeChange = { size ->
                                     preferencesRepository
                                         ?.cambiarTamanoTexto(size)
+                                },
+
+                                onNavigateToSettings = {
+                                    currentScreen = "settings"
                                 },
 
                                 onNavigateToTraducir = {
@@ -247,6 +259,29 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "edit_profile"
                                 }
                             )
+                        }
+
+                        // Configuración de preferencias
+                        "settings" -> {
+                            if (
+                                userId != null &&
+                                preferencesRepository != null
+                            ) {
+                                key(userId) {
+                                    SettingsScreen(
+                                        preferencesRepository =
+                                            preferencesRepository,
+                                        onBackClick = {
+                                            currentScreen = "perfil"
+                                        }
+                                    )
+                                }
+                            } else {
+                                LaunchedEffect(Unit) {
+                                    cerrarSesion()
+                                    currentScreen = "login"
+                                }
+                            }
                         }
 
                         // Editar perfil

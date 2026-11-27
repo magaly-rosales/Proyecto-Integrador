@@ -27,7 +27,7 @@ class TranslationPreferencesRepository(
     private val darkModeKey = "dark_mode_$userId"
     private val textSizeKey = "text_size_$userId"
 
-    // Preferencia del modo de salida
+    // Modo de salida
     private val _outputMode = MutableStateFlow(
         OutputMode.fromName(
             preferences.getString(outputModeKey, null)
@@ -36,14 +36,14 @@ class TranslationPreferencesRepository(
 
     val outputMode = _outputMode.asStateFlow()
 
-    // Preferencia del tema visual
+    // Tema visual
     private val _darkMode = MutableStateFlow(
         preferences.getBoolean(darkModeKey, true)
     )
 
     val darkMode = _darkMode.asStateFlow()
 
-    // Preferencia del tamaño de texto
+    // Tamaño del texto
     private val _textSize = MutableStateFlow(
         TextSize.fromName(
             preferences.getString(textSizeKey, null)
@@ -52,7 +52,7 @@ class TranslationPreferencesRepository(
 
     val textSize = _textSize.asStateFlow()
 
-    // Cambiar el modo de traducción
+    // Actualizar modo de salida
     fun cambiarModoSalida(mode: OutputMode) {
         if (_outputMode.value == mode) return
 
@@ -63,7 +63,7 @@ class TranslationPreferencesRepository(
         _outputMode.value = mode
     }
 
-    // Cambiar el tema de la aplicación
+    // Actualizar tema visual
     fun cambiarModoOscuro(enabled: Boolean) {
         if (_darkMode.value == enabled) return
 
@@ -74,7 +74,7 @@ class TranslationPreferencesRepository(
         _darkMode.value = enabled
     }
 
-    // Cambiar el tamaño del texto
+    // Actualizar tamaño del texto
     fun cambiarTamanoTexto(size: TextSize) {
         if (_textSize.value == size) return
 
@@ -83,5 +83,18 @@ class TranslationPreferencesRepository(
             .apply()
 
         _textSize.value = size
+    }
+
+    // Restablecer únicamente las preferencias del usuario actual
+    fun restablecerPreferencias() {
+        preferences.edit()
+            .remove(outputModeKey)
+            .remove(darkModeKey)
+            .remove(textSizeKey)
+            .apply()
+
+        _outputMode.value = OutputMode.BOTH
+        _darkMode.value = true
+        _textSize.value = TextSize.NORMAL
     }
 }

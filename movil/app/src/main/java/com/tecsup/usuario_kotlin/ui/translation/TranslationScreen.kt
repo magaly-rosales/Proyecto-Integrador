@@ -36,6 +36,7 @@ import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
 fun TranslationScreen(
     viewModel: TranslationViewModel,
     userId: Int,
+    preferencesRepository: TranslationPreferencesRepository,
     userInitial: String = "M",
     notificationCount: Int = 3,
     onNavigateToSenas: () -> Unit = {},
@@ -57,26 +58,32 @@ fun TranslationScreen(
 
     val registrarSena by rememberUpdatedState(onSpeakText)
 
-    // Historial persistente
-    val recentPhraseRepository = remember(context.applicationContext, userId) {
-        RecentPhraseRepository(context.applicationContext, userId)
+    // Historial persistente por usuario
+    val recentPhraseRepository = remember(
+        context.applicationContext,
+        userId
+    ) {
+        RecentPhraseRepository(
+            context.applicationContext,
+            userId
+        )
     }
 
     val frasesRecientes by recentPhraseRepository.frases
         .collectAsStateWithLifecycle()
 
-    // Preferencias del usuario
-    val preferencesRepository = remember(context.applicationContext, userId) {
-        TranslationPreferencesRepository(context.applicationContext, userId)
-    }
-
+    // Preferencias compartidas desde MainActivity
     val outputMode by preferencesRepository.outputMode
         .collectAsStateWithLifecycle()
 
-    var showClearDialog by remember(userId) { mutableStateOf(false) }
+    var showClearDialog by remember(userId) {
+        mutableStateOf(false)
+    }
 
     // Estados de cámara
-    var cameraError by remember { mutableStateOf<String?>(null) }
+    var cameraError by remember {
+        mutableStateOf<String?>(null)
+    }
 
     var lensFacing by remember {
         mutableIntStateOf(CameraSelector.LENS_FACING_BACK)
@@ -93,7 +100,8 @@ fun TranslationScreen(
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
-                context, Manifest.permission.CAMERA
+                context,
+                Manifest.permission.CAMERA
             ) == PackageManager.PERMISSION_GRANTED
         )
     }
@@ -110,7 +118,9 @@ fun TranslationScreen(
 
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
+            permissionLauncher.launch(
+                Manifest.permission.CAMERA
+            )
         }
     }
 
@@ -120,7 +130,10 @@ fun TranslationScreen(
     }
 
     DisposableEffect(context.applicationContext) {
-        val helper = TextToSpeechHelper(context.applicationContext)
+        val helper = TextToSpeechHelper(
+            context.applicationContext
+        )
+
         speechHelper = helper
 
         onDispose {
@@ -129,7 +142,7 @@ fun TranslationScreen(
         }
     }
 
-    // Ciclo de vida
+    // Ciclo de vida de la pantalla
     DisposableEffect(lifecycleOwner, viewModel, context) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -140,7 +153,8 @@ fun TranslationScreen(
                 Lifecycle.Event.ON_RESUME -> {
                     hasCameraPermission =
                         ContextCompat.checkSelfPermission(
-                            context, Manifest.permission.CAMERA
+                            context,
+                            Manifest.permission.CAMERA
                         ) == PackageManager.PERMISSION_GRANTED
 
                     if (!hasCameraPermission) {
@@ -166,12 +180,13 @@ fun TranslationScreen(
         }
     }
 
-    // Ejecutar la traducción según el modo seleccionado
+    // Ejecutar la salida según la preferencia actual
     fun ejecutarSalida(
         palabras: List<String>,
         desdeHistorial: Boolean = false
     ) {
         val frase = palabras.joinToString(" ").trim()
+
         if (frase.isBlank()) return
 
         val modoActual = preferencesRepository.outputMode.value
@@ -215,7 +230,7 @@ fun TranslationScreen(
         }
     }
 
-    // Confirmar eliminación del historial
+    // Confirmación para eliminar el historial
     if (showClearDialog) {
         ClearRecentPhrasesDialog(
             onConfirm = {
@@ -228,7 +243,7 @@ fun TranslationScreen(
         )
     }
 
-    // Etiqueta del reconocimiento
+    // Etiqueta de reconocimiento
     val badgeText = when {
         handLandmarks.isEmpty() ->
             "BUSCANDO SEÑA..."
@@ -260,7 +275,10 @@ fun TranslationScreen(
         containerColor = ProfileColors.BgDark,
 
         topBar = {
-            SenasTopBar(userInitial, notificationCount)
+            SenasTopBar(
+                userInitial,
+                notificationCount
+            )
         },
 
         bottomBar = {
@@ -279,9 +297,12 @@ fun TranslationScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 20.dp)
+            contentPadding = PaddingValues(
+                top = 8.dp,
+                bottom = 20.dp
+            )
         ) {
-            // Componente de cámara
+            // Cámara y reconocimiento
             item(key = "camera") {
                 CameraDetectionCard(
                     hasCameraPermission = hasCameraPermission,
@@ -339,7 +360,7 @@ fun TranslationScreen(
                 )
             }
 
-            // Traducción y selector de salida
+            // Construcción de frases y modo de salida
             item(key = "translation_phrase") {
                 TranslationPhraseCard(
                     words = phraseWords,
@@ -350,7 +371,8 @@ fun TranslationScreen(
                             speechHelper?.stop()
                         }
 
-                        preferencesRepository.cambiarModoSalida(mode)
+                        preferencesRepository
+                            .cambiarModoSalida(mode)
                     },
 
                     onSpeakClick = {

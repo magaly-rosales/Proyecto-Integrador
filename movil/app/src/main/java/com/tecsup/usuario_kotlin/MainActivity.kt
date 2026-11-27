@@ -31,15 +31,12 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
-    // ViewModel de autenticación
     private val authViewModel: AuthViewModel by viewModels()
 
-    // ViewModel del perfil con la misma sesión
     private val profileViewModel: ProfileViewModel by viewModels {
         ProfileViewModel.factory(authViewModel.sessionState)
     }
 
-    // ViewModel del traductor
     private val translationViewModel: TranslationViewModel by viewModels()
 
     private val protectedScreens = setOf(
@@ -76,7 +73,7 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf("login")
                 }
 
-                // Proteger las pantallas que requieren sesión
+                // Proteger las pantallas privadas
                 val activeScreen = if (
                     currentScreen in protectedScreens &&
                     !authViewModel.loginSuccess
@@ -86,14 +83,14 @@ class MainActivity : ComponentActivity() {
                     currentScreen
                 }
 
+                // Datos del usuario autenticado
+                val userId = authViewModel.loggedUserId
                 val userName = authViewModel.loggedUserName
                 val userEmail = authViewModel.loggedUserEmail
                 val userPhoto = authViewModel.loggedUserPhoto
 
-                val userInitial = userName
-                    .trim()
-                    .firstOrNull()
-                    ?.uppercase() ?: "U"
+                val userInitial = userName.trim()
+                    .firstOrNull()?.uppercase() ?: "U"
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -158,21 +155,31 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // Traductor
+                        // Traductor con historial por usuario
                         "translation" -> {
-                            TranslationScreen(
-                                viewModel = translationViewModel,
-                                userInitial = userInitial,
-                                onNavigateToSenas = {
-                                    currentScreen = "home"
-                                },
-                                onNavigateToPerfil = {
-                                    currentScreen = "perfil"
-                                },
-                                onSpeakText = { nombreSena ->
-                                    registrarTraduccion(nombreSena)
+                            if (userId != null && userId > 0) {
+                                key(userId) {
+                                    TranslationScreen(
+                                        viewModel = translationViewModel,
+                                        userId = userId,
+                                        userInitial = userInitial,
+                                        onNavigateToSenas = {
+                                            currentScreen = "home"
+                                        },
+                                        onNavigateToPerfil = {
+                                            currentScreen = "perfil"
+                                        },
+                                        onSpeakText = { nombreSena ->
+                                            registrarTraduccion(nombreSena)
+                                        }
+                                    )
                                 }
-                            )
+                            } else {
+                                LaunchedEffect(Unit) {
+                                    cerrarSesion()
+                                    currentScreen = "login"
+                                }
+                            }
                         }
 
                         // Mi cuenta
@@ -194,7 +201,6 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToEditProfile = {
                                     profileViewModel.resetProfileUpdateState()
                                     profileViewModel.resetPhotoUpdateState()
-
                                     currentScreen = "edit_profile"
                                 }
                             )
@@ -210,7 +216,6 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToChangePassword = {
                                     profileViewModel.resetPasswordChangeState()
                                     profileViewModel.resetPhotoUpdateState()
-
                                     currentScreen = "change_password"
                                 }
                             )
@@ -249,9 +254,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Registrar una traducción en el backend
+    // Registrar cada seña aceptada en Spring Boot
     private fun registrarTraduccion(nombreSena: String) {
-
         lifecycleScope.launch {
             try {
                 val respuesta = RetrofitClient.apiService
@@ -280,8 +284,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Cancelar operaciones y cerrar la sesión
+    // Cerrar sesión sin eliminar el historial persistente
     private fun cerrarSesion() {
+        translationViewModel.cerrarSesionTraductor()
         profileViewModel.clearProfileOperations()
         authViewModel.logout()
     }

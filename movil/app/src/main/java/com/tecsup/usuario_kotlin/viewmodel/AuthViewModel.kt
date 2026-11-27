@@ -9,6 +9,7 @@ import com.tecsup.usuario_kotlin.data.model.ForgotPasswordRequest
 import com.tecsup.usuario_kotlin.data.model.LoginRequest
 import com.tecsup.usuario_kotlin.data.model.RegisterRequest
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
+import com.tecsup.usuario_kotlin.utils.NetworkErrorUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -64,42 +65,55 @@ class AuthViewModel : ViewModel() {
             )
         )
 
+        response.errorBody()?.close()
+
         currentCoroutineContext().ensureActive()
 
-        val user = response.body()
+        if (!response.isSuccessful) {
+            errorMessage = when (response.code()) {
+                401 ->
+                    "Correo o contraseña incorrectos"
 
-        if (response.isSuccessful && user != null) {
+                403 ->
+                    "Tu cuenta no tiene acceso. " +
+                            "Contacta al administrador."
 
-            val id = user.idUsuario
-
-            if (id == null || id <= 0) {
-                errorMessage =
-                    "El servidor devolvió una sesión no válida"
-                return@ejecutarAuth
+                else -> NetworkErrorUtils.mensajeHttp(
+                    code = response.code(),
+                    predeterminado =
+                        "No se pudo iniciar sesión"
+                )
             }
 
-            sessionState.iniciarSesion(
-                SessionUser(
-                    id = id,
-                    nombre = user.nombre
-                        ?: user.email
-                        ?: "Usuario",
-                    email = user.email
-                        ?: if (usernameOrEmail.contains("@")) {
-                            usernameOrEmail
-                        } else {
-                            ""
-                        },
-                    rol = user.rol,
-                    foto = user.foto
-                )
-            )
-
-        } else {
-
-            errorMessage =
-                "Correo o contraseña incorrectos"
+            return@ejecutarAuth
         }
+
+        val user = response.body()
+        val id = user?.idUsuario
+
+        if (user == null || id == null || id <= 0) {
+            errorMessage =
+                "El servidor devolvió una sesión no válida"
+
+            return@ejecutarAuth
+        }
+
+        sessionState.iniciarSesion(
+            SessionUser(
+                id = id,
+                nombre = user.nombre
+                    ?: user.email
+                    ?: "Usuario",
+                email = user.email
+                    ?: if (usernameOrEmail.contains("@")) {
+                        usernameOrEmail
+                    } else {
+                        ""
+                    },
+                rol = user.rol,
+                foto = user.foto
+            )
+        )
     }
 
     // Registro de usuario
@@ -119,16 +133,23 @@ class AuthViewModel : ViewModel() {
             )
         )
 
+        response.errorBody()?.close()
+
         currentCoroutineContext().ensureActive()
 
         if (response.isSuccessful) {
-
             registerSuccess = true
-
         } else {
+            errorMessage = when (response.code()) {
+                409 ->
+                    "El usuario o correo ya está registrado"
 
-            errorMessage =
-                "Error al registrar usuario o correo ya existente"
+                else -> NetworkErrorUtils.mensajeHttp(
+                    code = response.code(),
+                    predeterminado =
+                        "No se pudo registrar el usuario"
+                )
+            }
         }
     }
 
@@ -144,26 +165,42 @@ class AuthViewModel : ViewModel() {
             ForgotPasswordRequest(email)
         )
 
+        response.errorBody()?.close()
+
         currentCoroutineContext().ensureActive()
 
         if (response.isSuccessful) {
+            val body = response.body()
 
-            forgotPasswordSuccess = true
-            forgotPasswordMessage =
-                "Enlace enviado a tu correo"
+            if (body != null && body.success) {
+                forgotPasswordSuccess = true
 
+                forgotPasswordMessage =
+                    "Solicitud de recuperación procesada"
+            } else {
+                errorMessage =
+                    "No se pudo confirmar la recuperación " +
+                            "de contraseña"
+            }
         } else {
+            errorMessage = when (response.code()) {
+                404, 405 ->
+                    "La recuperación de contraseña " +
+                            "no está disponible actualmente"
 
-            errorMessage =
-                "Correo no encontrado o error en el servidor"
+                else -> NetworkErrorUtils.mensajeHttp(
+                    code = response.code(),
+                    predeterminado =
+                        "No se pudo procesar la solicitud"
+                )
+            }
         }
     }
 
-    // Centralizar la ejecución de peticiones de autenticación
+    // Centralizar las peticiones de autenticación
     private fun ejecutarAuth(
         action: suspend () -> Unit
     ) {
-
         if (isLoading) return
 
         val version = ++authVersion
@@ -172,24 +209,23 @@ class AuthViewModel : ViewModel() {
         errorMessage = null
 
         authJob = viewModelScope.launch {
-
             try {
-
                 action()
 
             } catch (e: CancellationException) {
-
                 throw e
 
             } catch (e: Exception) {
-
                 if (version == authVersion) {
                     errorMessage =
-                        "No se pudo conectar con el servidor"
+                        NetworkErrorUtils.mensaje(
+                            error = e,
+                            predeterminado =
+                                "No se pudo completar la solicitud"
+                        )
                 }
 
             } finally {
-
                 if (version == authVersion) {
                     isLoading = false
                 }
@@ -199,7 +235,6 @@ class AuthViewModel : ViewModel() {
 
     // Cierre de sesión
     fun logout() {
-
         authVersion++
 
         authJob?.cancel()

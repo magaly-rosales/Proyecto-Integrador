@@ -4,7 +4,10 @@ import com.tecsup.usuario_kotlin.data.model.CatalogoResponse
 import com.tecsup.usuario_kotlin.data.model.PuntoManoDto
 import com.tecsup.usuario_kotlin.data.model.ReconocimientoResponse
 import com.tecsup.usuario_kotlin.data.remote.RetrofitClient
+import com.tecsup.usuario_kotlin.utils.RespuestaInvalidaException
 import kotlinx.coroutines.CancellationException
+import retrofit2.HttpException
+import retrofit2.Response
 
 class SenasRepository {
 
@@ -12,33 +15,8 @@ class SenasRepository {
 
     // Obtener catálogo de señas
     suspend fun getCatalogo(): Result<CatalogoResponse> {
-
-        return try {
-
-            val response = api.obtenerCatalogo()
-            val body = response.body()
-
-            if (response.isSuccessful && body != null) {
-
-                Result.success(body)
-
-            } else {
-
-                Result.failure(
-                    Exception(
-                        "Error HTTP ${response.code()}: " +
-                                response.message()
-                    )
-                )
-            }
-
-        } catch (e: CancellationException) {
-
-            throw e
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
+        return ejecutarPeticion {
+            api.obtenerCatalogo()
         }
     }
 
@@ -47,31 +25,8 @@ class SenasRepository {
         puntos: List<PuntoManoDto>
     ): Result<ReconocimientoResponse> {
 
-        return try {
-
-            val response = api.reconocerPuntos(puntos)
-            val body = response.body()
-
-            if (response.isSuccessful && body != null) {
-
-                Result.success(body)
-
-            } else {
-
-                Result.failure(
-                    Exception(
-                        "Error reconocimiento: ${response.code()}"
-                    )
-                )
-            }
-
-        } catch (e: CancellationException) {
-
-            throw e
-
-        } catch (e: Exception) {
-
-            Result.failure(e)
+        return ejecutarPeticion {
+            api.reconocerPuntos(puntos)
         }
     }
 
@@ -80,9 +35,8 @@ class SenasRepository {
         cuadros: List<List<PuntoManoDto>>
     ): Result<ReconocimientoResponse> {
 
-        // Validar la cantidad de fotogramas
+        // Validar cantidad de fotogramas
         if (cuadros.size !in 8..80) {
-
             return Result.failure(
                 IllegalArgumentException(
                     "La secuencia debe contener entre 8 y 80 cuadros"
@@ -94,7 +48,6 @@ class SenasRepository {
 
         // Validar una o dos manos
         if (cantidadPuntos !in setOf(21, 42)) {
-
             return Result.failure(
                 IllegalArgumentException(
                     "Cada cuadro debe contener 21 o 42 puntos"
@@ -102,17 +55,16 @@ class SenasRepository {
             )
         }
 
-        // Verificar que todos los cuadros tengan
-        // la misma cantidad de puntos
+        // Validar cantidad uniforme de puntos
         if (
             cuadros.any { cuadro ->
                 cuadro.size != cantidadPuntos
             }
         ) {
-
             return Result.failure(
                 IllegalArgumentException(
-                    "Todos los cuadros deben tener la misma cantidad de puntos"
+                    "Todos los cuadros deben tener " +
+                            "la misma cantidad de puntos"
                 )
             )
         }
@@ -120,16 +72,13 @@ class SenasRepository {
         // Validar coordenadas
         if (
             cuadros.any { cuadro ->
-
                 cuadro.any { punto ->
-
                     !punto.x.isFinite() ||
                             !punto.y.isFinite() ||
                             !punto.z.isFinite()
                 }
             }
         ) {
-
             return Result.failure(
                 IllegalArgumentException(
                     "La secuencia contiene puntos inválidos"
@@ -138,33 +87,42 @@ class SenasRepository {
         }
 
         // Enviar secuencia al servidor
+        return ejecutarPeticion {
+            api.reconocerSecuencia(cuadros)
+        }
+    }
+
+    // Procesamiento centralizado de respuestas
+    private suspend fun <T : Any> ejecutarPeticion(
+        peticion: suspend () -> Response<T>
+    ): Result<T> {
+
         return try {
+            val response = peticion()
 
-            val response =
-                api.reconocerSecuencia(cuadros)
-
-            val body = response.body()
-
-            if (response.isSuccessful && body != null) {
-
-                Result.success(body)
-
-            } else {
+            if (!response.isSuccessful) {
+                response.errorBody()?.close()
 
                 Result.failure(
-                    Exception(
-                        "Error reconocimiento dinámico: " +
-                                response.code()
-                    )
+                    HttpException(response)
                 )
+            } else {
+                val body = response.body()
+
+                if (body != null) {
+                    Result.success(body)
+                } else {
+                    Result.failure(
+                        RespuestaInvalidaException()
+                    )
+                }
             }
 
         } catch (e: CancellationException) {
-
+            // Respetar la cancelación de corrutinas
             throw e
 
         } catch (e: Exception) {
-
             Result.failure(e)
         }
     }

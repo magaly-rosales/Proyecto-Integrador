@@ -10,6 +10,7 @@ import com.tecsup.usuario_kotlin.data.model.SenaCatalogoDto
 import com.tecsup.usuario_kotlin.data.recognition.DynamicSignRecognizer
 import com.tecsup.usuario_kotlin.data.recognition.StaticSignRecognizer
 import com.tecsup.usuario_kotlin.data.repository.SenasRepository
+import com.tecsup.usuario_kotlin.utils.NetworkErrorUtils
 import com.tecsup.usuario_kotlin.utils.PhraseBuilder
 import com.tecsup.usuario_kotlin.utils.RecognitionUtils
 import kotlinx.coroutines.CancellationException
@@ -18,6 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 
 class TranslationViewModel(
     private val repository: SenasRepository = SenasRepository()
@@ -27,6 +29,10 @@ class TranslationViewModel(
         private const val STATIC_INTERVAL_MS = 600L
         private const val DYNAMIC_INTERVAL_MS = 700L
         private const val DYNAMIC_HOLD_MS = 1500L
+
+        private const val ERROR_RETRY_DELAY_MS = 3000L
+        private const val RATE_LIMIT_DELAY_MS = 30000L
+
         private const val WAITING_SIGN = "Esperando seña..."
     }
 
@@ -35,7 +41,7 @@ class TranslationViewModel(
     private val dynamicRecognizer = DynamicSignRecognizer(repository)
     private val phraseBuilder = PhraseBuilder()
 
-    // Palabras que conforman la frase
+    // Palabras de la frase
     val phraseWords = phraseBuilder.words
 
     // Resultado del reconocimiento
@@ -48,59 +54,91 @@ class TranslationViewModel(
     // Puntos de MediaPipe
     private val _handLandmarks =
         MutableStateFlow<List<PuntoManoDto>>(emptyList())
+
     val handLandmarks = _handLandmarks.asStateFlow()
 
     // Catálogo
     private val _senasList =
         MutableStateFlow<List<SenaCatalogoDto>>(emptyList())
+
     val senasList = _senasList.asStateFlow()
 
     private val _categoriasList =
         MutableStateFlow<List<CategoriaCatalogoDto>>(emptyList())
+
     val categoriasList = _categoriasList.asStateFlow()
 
-    // Errores
+    // Errores de reconocimiento
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
+
+    // Separar los errores del catálogo
+    private val _catalogErrorMessage =
+        MutableStateFlow<String?>(null)
+
+    val catalogErrorMessage =
+        _catalogErrorMessage.asStateFlow()
 
     // Reconocimiento dinámico
     private val _sequenceFrameCount = MutableStateFlow(0)
     val sequenceFrameCount = _sequenceFrameCount.asStateFlow()
 
     private val _isRecognizingSequence = MutableStateFlow(false)
-    val isRecognizingSequence = _isRecognizingSequence.asStateFlow()
+    val isRecognizingSequence =
+        _isRecognizingSequence.asStateFlow()
 
     private val _isDynamicRecognition = MutableStateFlow(false)
-    val isDynamicRecognition = _isDynamicRecognition.asStateFlow()
+    val isDynamicRecognition =
+        _isDynamicRecognition.asStateFlow()
 
     // Control de solicitudes
     private var requestJob: Job? = null
+    private var catalogJob: Job? = null
+
     private var generation = 0L
+
     private var lastStaticRequest = -STATIC_INTERVAL_MS
     private var lastDynamicRequest = -DYNAMIC_INTERVAL_MS
+
     private var lastRequestWasDynamic = false
     private var lastDynamicAcceptedAt: Long? = null
+
+    // Pausa temporal después de un error
+    private var nextRecognitionAt = 0L
 
     init {
         cargarCatalogo()
     }
 
+    // Cargar catálogo sin solicitudes simultáneas
     fun cargarCatalogo() {
-        viewModelScope.launch {
+        if (catalogJob?.isActive == true) return
+
+        catalogJob = viewModelScope.launch {
+
+            _catalogErrorMessage.value = null
+
             repository.getCatalogo()
                 .onSuccess { catalogo ->
+
                     _senasList.value = catalogo.senas
                     _categoriasList.value = catalogo.categorias
-                    _errorMessage.value = null
+
+                    _catalogErrorMessage.value = null
                 }
                 .onFailure { error ->
-                    _errorMessage.value = error.localizedMessage
-                        ?: "Error al cargar el catálogo"
+
+                    _catalogErrorMessage.value =
+                        NetworkErrorUtils.mensaje(
+                            error = error,
+                            predeterminado =
+                                "No se pudo cargar el catálogo"
+                        )
                 }
         }
     }
 
-    // Recibir los puntos detectados por la cámara
+    // Recibir puntos detectados por la cámara
     fun onHandDetected(
         puntos: List<PuntoManoDto>,
         onSignAccepted: (String) -> Unit = {}
@@ -112,15 +150,23 @@ class TranslationViewModel(
                 detenerReconocimiento()
             }
 
-            // Permitir repetir una seña después de retirar las manos
+            // Permitir repetir una seña
             phraseBuilder.registrarAusencia(now)
+
             return
         }
 
         phraseBuilder.registrarPresencia()
 
         val actuales = puntos.toList()
+
         _handLandmarks.value = actuales
+
+        // Mantener la detección visual sin enviar peticiones
+        // durante el periodo de recuperación
+        if (now < nextRecognitionAt) {
+            return
+        }
 
         // Capturar movimiento continuamente
         if (dynamicRecognizer.registrar(actuales, now)) {
@@ -129,7 +175,8 @@ class TranslationViewModel(
             _confidence.value = null
         }
 
-        _sequenceFrameCount.value = dynamicRecognizer.frameCount
+        _sequenceFrameCount.value =
+            dynamicRecognizer.frameCount
 
         if (requestJob?.isActive == true) return
 
@@ -160,6 +207,7 @@ class TranslationViewModel(
             }
 
             staticAvailable -> {
+
                 lastStaticRequest = now
                 lastRequestWasDynamic = false
 
@@ -181,10 +229,18 @@ class TranslationViewModel(
     ) {
         if (requestJob?.isActive == true) return
 
+        if (
+            SystemClock.elapsedRealtime() <
+            nextRecognitionAt
+        ) return
+
         val version = generation
+
         _isRecognizingSequence.value = dinamico
 
-        requestJob = viewModelScope.launch(start = CoroutineStart.LAZY) {
+        requestJob = viewModelScope.launch(
+            start = CoroutineStart.LAZY
+        ) {
             try {
                 val resultado = peticion()
 
@@ -201,9 +257,11 @@ class TranslationViewModel(
                     procesarEstatico(resultado)
                 }
 
+                // Recuperación correcta
                 _errorMessage.value = null
+                nextRecognitionAt = 0L
 
-                // Registrar únicamente señas agregadas a la frase
+                // Registrar únicamente señas aceptadas
                 nuevaSena?.let(onSignAccepted)
 
             } catch (e: CancellationException) {
@@ -211,14 +269,7 @@ class TranslationViewModel(
 
             } catch (e: Exception) {
                 if (version == generation) {
-                    if (dinamico) {
-                        dynamicRecognizer.limpiarConfirmaciones()
-                    } else {
-                        phraseBuilder.limpiarCandidato()
-                    }
-
-                    _errorMessage.value = e.localizedMessage
-                        ?: "Error durante el reconocimiento"
+                    gestionarErrorReconocimiento(e)
                 }
 
             } finally {
@@ -232,13 +283,49 @@ class TranslationViewModel(
         requestJob?.start()
     }
 
+    // Gestionar fallos sin eliminar la frase construida
+    private fun gestionarErrorReconocimiento(
+        error: Exception
+    ) {
+        val delay = if (
+            error is HttpException &&
+            error.code() == 429
+        ) {
+            RATE_LIMIT_DELAY_MS
+        } else {
+            ERROR_RETRY_DELAY_MS
+        }
+
+        nextRecognitionAt =
+            SystemClock.elapsedRealtime() + delay
+
+        // Limpiar confirmaciones y resultados anteriores
+        dynamicRecognizer.limpiar()
+        phraseBuilder.limpiarCandidato()
+
+        lastDynamicAcceptedAt = null
+
+        _sequenceFrameCount.value = 0
+        _translatedSign.value = WAITING_SIGN
+        _confidence.value = null
+        _isDynamicRecognition.value = false
+
+        _errorMessage.value =
+            NetworkErrorUtils.mensaje(
+                error = error,
+                predeterminado =
+                    "No se pudo completar el reconocimiento. " +
+                            "Inténtalo nuevamente."
+            )
+    }
+
     // Procesar una seña estática
     private fun procesarEstatico(
         resultado: ReconocimientoResponse
     ): String? {
         val now = SystemClock.elapsedRealtime()
 
-        // Evitar reemplazar inmediatamente un resultado dinámico
+        // Conservar temporalmente un resultado dinámico
         if (
             lastDynamicAcceptedAt?.let {
                 now - it < DYNAMIC_HOLD_MS
@@ -247,7 +334,10 @@ class TranslationViewModel(
             return null
         }
 
-        publicarResultado(resultado, dinamico = false)
+        publicarResultado(
+            resultado,
+            dinamico = false
+        )
 
         // PhraseBuilder exige tres confirmaciones
         return phraseBuilder.registrarEstatica(
@@ -263,27 +353,33 @@ class TranslationViewModel(
             return null
         }
 
-        publicarResultado(resultado, dinamico = true)
+        publicarResultado(
+            resultado,
+            dinamico = true
+        )
 
-        lastDynamicAcceptedAt = SystemClock.elapsedRealtime()
+        lastDynamicAcceptedAt =
+            SystemClock.elapsedRealtime()
 
         val nuevaSena = phraseBuilder.registrarDinamica(
             RecognitionUtils.obtenerNombre(resultado)
         )
 
         dynamicRecognizer.limpiar()
+
         _sequenceFrameCount.value = 0
 
         return nuevaSena
     }
 
-    // Actualizar el resultado visible de la cámara
+    // Actualizar resultado visible
     private fun publicarResultado(
         resultado: ReconocimientoResponse,
         dinamico: Boolean
     ) {
         _translatedSign.value =
-            RecognitionUtils.obtenerNombre(resultado) ?: WAITING_SIGN
+            RecognitionUtils.obtenerNombre(resultado)
+                ?: WAITING_SIGN
 
         _confidence.value =
             RecognitionUtils.obtenerConfianza(resultado)
@@ -299,16 +395,19 @@ class TranslationViewModel(
 
     fun borrarUltimaPalabra() {
         detenerReconocimiento()
+
         phraseBuilder.borrarUltima()
     }
 
     fun limpiarFrase() {
         detenerReconocimiento()
+
         phraseBuilder.limpiarFrase()
     }
 
     fun cargarFrase(palabras: List<String>) {
         detenerReconocimiento()
+
         phraseBuilder.cargarFrase(palabras)
     }
 
@@ -316,11 +415,13 @@ class TranslationViewModel(
 
     private fun cancelarSolicitud() {
         generation++
+
         requestJob?.cancel()
         requestJob = null
 
         lastStaticRequest = -STATIC_INTERVAL_MS
         lastDynamicRequest = -DYNAMIC_INTERVAL_MS
+
         lastRequestWasDynamic = false
         lastDynamicAcceptedAt = null
 
@@ -330,6 +431,7 @@ class TranslationViewModel(
     // Detener reconocimiento sin eliminar la frase
     fun detenerReconocimiento() {
         cancelarSolicitud()
+
         dynamicRecognizer.limpiar()
         phraseBuilder.reiniciarDeteccion()
 
@@ -341,13 +443,16 @@ class TranslationViewModel(
         _errorMessage.value = null
     }
 
-    // Limpiar la sesión al abandonar el traductor
+    // Limpiar la sesión del traductor
     fun cerrarSesionTraductor() {
         detenerReconocimiento()
+
+        nextRecognitionAt = 0L
+
         phraseBuilder.reiniciarSesion()
     }
 
-    // Mantener compatibilidad con las funciones anteriores
+    // Compatibilidad con funciones anteriores
     fun updateTranslation(
         newSign: String,
         confidencePercent: Int? = null
@@ -359,9 +464,14 @@ class TranslationViewModel(
     }
 
     override fun onCleared() {
+        catalogJob?.cancel()
+        catalogJob = null
+
         cancelarSolicitud()
+
         dynamicRecognizer.limpiar()
         phraseBuilder.reiniciarSesion()
+
         super.onCleared()
     }
 }

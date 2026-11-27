@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,6 +33,7 @@ import com.tecsup.usuario_kotlin.data.repository.PracticeProgressRepository
 import com.tecsup.usuario_kotlin.ui.home.components.SenaCatalogItemCard
 import com.tecsup.usuario_kotlin.ui.theme.ProfileColors
 import com.tecsup.usuario_kotlin.ui.translation.SenasBottomBar
+import com.tecsup.usuario_kotlin.utils.NetworkErrorUtils
 import com.tecsup.usuario_kotlin.viewmodel.PracticeViewModel
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
 import kotlinx.coroutines.CancellationException
@@ -124,6 +127,8 @@ fun HomeScreen(
 
     val cargarCatalogo: () -> Unit = {
         if (!isLoading) {
+            isLoading = true
+            errorMessage = null
             refreshVersion++
         }
     }
@@ -137,43 +142,61 @@ fun HomeScreen(
             val response =
                 RetrofitClient.apiService.obtenerCatalogo()
 
+            response.errorBody()?.close()
+
             val body = response.body()
 
-            if (response.isSuccessful && body != null) {
-                categorias = body.categorias
-                senas = body.senas
+            when {
+                !response.isSuccessful -> {
+                    errorMessage =
+                        NetworkErrorUtils.mensajeHttp(
+                            code = response.code(),
+                            predeterminado =
+                                "No se pudo cargar el catálogo"
+                        )
+                }
 
-                apiUrl = response.raw()
-                    .request
-                    .url
-                    .toString()
+                body == null -> {
+                    errorMessage =
+                        "El servidor devolvió un catálogo " +
+                                "incompleto. Inténtalo nuevamente."
+                }
 
-                if (
-                    selectedCategoryId != null &&
-                    categorias.none {
-                        it.id == selectedCategoryId
+                else -> {
+                    categorias = body.categorias
+                    senas = body.senas
+
+                    // Obtener dirección real de la petición
+                    apiUrl = response.raw()
+                        .request
+                        .url
+                        .toString()
+
+                    // Verificar categoría seleccionada
+                    if (
+                        selectedCategoryId != null &&
+                        categorias.none {
+                            it.id == selectedCategoryId
+                        }
+                    ) {
+                        selectedCategoryId = null
                     }
-                ) {
-                    selectedCategoryId = null
-                }
 
-                if (
-                    selectedSenaId != null &&
-                    senas.none {
-                        it.id == selectedSenaId
+                    // Verificar seña seleccionada
+                    if (
+                        selectedSenaId != null &&
+                        senas.none {
+                            it.id == selectedSenaId
+                        }
+                    ) {
+                        selectedSenaId = null
+                        showPractice = false
                     }
-                ) {
-                    selectedSenaId = null
-                    showPractice = false
-                }
 
-                if (selectedSenaId == null) {
-                    showPractice = false
+                    if (selectedSenaId == null) {
+                        showPractice = false
+                    }
                 }
-
-            } else {
-                errorMessage =
-                    "Error al cargar catálogo (${response.code()})"
             }
 
         } catch (e: CancellationException) {
@@ -181,8 +204,11 @@ fun HomeScreen(
 
         } catch (e: Exception) {
             errorMessage =
-                "Sin conexión con el servidor: " +
-                        (e.localizedMessage ?: "Error desconocido")
+                NetworkErrorUtils.mensaje(
+                    error = e,
+                    predeterminado =
+                        "No se pudo cargar el catálogo"
+                )
 
         } finally {
             isLoading = false
@@ -230,7 +256,7 @@ fun HomeScreen(
             val practiceViewModel: PracticeViewModel =
                 composeViewModel()
 
-            // Registrar progreso y generar notificación
+            // Registrar progreso y notificación
             DisposableEffect(
                 practiceViewModel,
                 progressRepository,
@@ -244,13 +270,11 @@ fun HomeScreen(
                         nombreReconocido ==
                         selectedSena.nombre.trim()
                     ) {
-                        // Guardar progreso del usuario
                         progressRepository.registrarExito(
                             senaId = selectedSena.id,
                             nombreSena = selectedSena.nombre
                         )
 
-                        // Generar notificación de éxito
                         notificarPractica(
                             selectedSena.nombre
                         )
@@ -372,8 +396,7 @@ fun HomeScreen(
                 )
             ) {
                 Icon(
-                    imageVector =
-                        Icons.Outlined.EmojiEvents,
+                    imageVector = Icons.Outlined.EmojiEvents,
                     contentDescription = null,
                     modifier = Modifier.size(22.dp)
                 )
@@ -441,16 +464,29 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(
-                            color = ProfileColors.AccentCyan
-                        )
+                        Column(
+                            horizontalAlignment =
+                                Alignment.CenterHorizontally,
+                            verticalArrangement =
+                                Arrangement.spacedBy(12.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                color = ProfileColors.AccentCyan
+                            )
+
+                            Text(
+                                text = "Cargando catálogo...",
+                                color = ProfileColors.TextSecondary,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
 
                 errorMessage != null -> {
                     CatalogError(
                         message = errorMessage
-                            ?: "Error al cargar catálogo",
+                            ?: "No se pudo cargar el catálogo",
                         onRetry = cargarCatalogo
                     )
                 }
@@ -462,7 +498,8 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "No se encontraron señas registradas",
-                            color = ProfileColors.TextSecondary
+                            color = ProfileColors.TextSecondary,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -641,20 +678,39 @@ private fun CatalogError(
     onRetry: () -> Unit
 ) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment =
-                Alignment.CenterHorizontally
+                Alignment.CenterHorizontally,
+            verticalArrangement =
+                Arrangement.spacedBy(12.dp)
         ) {
+            Icon(
+                imageVector = Icons.Outlined.CloudOff,
+                contentDescription = null,
+                tint = ProfileColors.TextSecondary,
+                modifier = Modifier.size(48.dp)
+            )
+
+            Text(
+                text = "No se pudo cargar el catálogo",
+                color = ProfileColors.TextPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                textAlign = TextAlign.Center
+            )
+
             Text(
                 text = message,
                 color = ProfileColors.TextSecondary,
-                fontSize = 14.sp
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                textAlign = TextAlign.Center
             )
-
-            Spacer(Modifier.height(10.dp))
 
             Button(
                 onClick = onRetry,
@@ -663,6 +719,14 @@ private fun CatalogError(
                     contentColor = ProfileColors.BgDark
                 )
             ) {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+
+                Spacer(Modifier.width(8.dp))
+
                 Text(
                     text = "Reintentar",
                     fontWeight = FontWeight.Bold

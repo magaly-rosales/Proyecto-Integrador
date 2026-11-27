@@ -3,6 +3,7 @@ package com.tecsup.usuario_kotlin.ui.translation
 import android.Manifest
 import android.content.pm.PackageManager
 import android.speech.tts.TextToSpeech
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -16,9 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Videocam
@@ -48,6 +47,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tecsup.usuario_kotlin.camera.CameraPreview
 import com.tecsup.usuario_kotlin.camera.HandSkeletonOverlay
+import com.tecsup.usuario_kotlin.ui.translation.components.TranslationPhraseCard
 import com.tecsup.usuario_kotlin.utils.RecognitionUtils
 import com.tecsup.usuario_kotlin.utils.SequenceBuffer
 import com.tecsup.usuario_kotlin.viewmodel.TranslationViewModel
@@ -64,7 +64,8 @@ private val BadgeYellow = Color(0xFFF5B82E)
 
 data class FraseReciente(
     val texto: String,
-    val tiempo: String
+    val tiempo: String,
+    val palabras: List<String> = listOf(texto)
 )
 
 @Composable
@@ -84,6 +85,12 @@ fun TranslationScreen(
     val recognizingSequence by viewModel.isRecognizingSequence.collectAsStateWithLifecycle()
     val dynamicRecognition by viewModel.isDynamicRecognition.collectAsStateWithLifecycle()
     val recognitionError by viewModel.errorMessage.collectAsStateWithLifecycle()
+
+    // Palabras acumuladas de la frase
+    val phraseWords by viewModel.phraseWords.collectAsStateWithLifecycle()
+
+    // Reutilizar el callback de registro de MainActivity
+    val registrarSena by rememberUpdatedState(onSpeakText)
 
     val handDetected = handLandmarks.isNotEmpty()
 
@@ -111,6 +118,7 @@ fun TranslationScreen(
         )
     }
 
+    // Permiso de cámara
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -132,6 +140,32 @@ fun TranslationScreen(
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    // Motor de voz
+    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+    var ttsReady by remember { mutableStateOf(false) }
+
+    DisposableEffect(context) {
+        val textToSpeech = TextToSpeech(context) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val languageResult = tts?.setLanguage(
+                    Locale("es", "PE")
+                )
+
+                ttsReady = languageResult != null &&
+                        languageResult >= TextToSpeech.LANG_AVAILABLE
+            }
+        }
+
+        tts = textToSpeech
+
+        onDispose {
+            textToSpeech.stop()
+            textToSpeech.shutdown()
+            ttsReady = false
+            tts = null
         }
     }
 
@@ -157,6 +191,7 @@ fun TranslationScreen(
                 Lifecycle.Event.ON_STOP -> {
                     screenActive = false
                     viewModel.detenerReconocimiento()
+                    tts?.stop()
                 }
 
                 else -> Unit
@@ -167,37 +202,75 @@ fun TranslationScreen(
 
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            viewModel.detenerReconocimiento()
+            viewModel.cerrarSesionTraductor()
         }
     }
 
-    // Motor de voz
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-
-    DisposableEffect(context) {
-        val textToSpeech = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                tts?.language = Locale("es", "PE")
-            }
-        }
-
-        tts = textToSpeech
-
-        onDispose {
-            textToSpeech.stop()
-            textToSpeech.shutdown()
-        }
-    }
-
+    // Frases recientes temporales
     val frasesRecientes = remember {
         mutableStateListOf<FraseReciente>()
     }
 
+    // Reproducir una frase completa
+    fun hablarFrase(palabras: List<String>) {
+        val frase = palabras.joinToString(" ").trim()
+
+        if (frase.isBlank()) return
+
+        if (!ttsReady) {
+            Toast.makeText(
+                context,
+                "El motor de voz no está disponible",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            return
+        }
+
+        val resultado = tts?.speak(
+            frase,
+            TextToSpeech.QUEUE_FLUSH,
+            null,
+            "frase_${System.currentTimeMillis()}"
+        )
+
+        if (resultado != TextToSpeech.SUCCESS) {
+            Toast.makeText(
+                context,
+                "No se pudo reproducir la frase",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            return
+        }
+
+        // Guardar la frase sin duplicados
+        frasesRecientes.removeAll {
+            it.texto.equals(frase, ignoreCase = true)
+        }
+
+        frasesRecientes.add(
+            0,
+            FraseReciente(
+                texto = frase,
+                tiempo = "Ahora",
+                palabras = palabras.toList()
+            )
+        )
+
+        // Mantener el límite anterior de frases recientes
+        if (frasesRecientes.size > 10) {
+            frasesRecientes.removeAt(frasesRecientes.lastIndex)
+        }
+    }
+
     Scaffold(
         containerColor = BgDark,
+
         topBar = {
             SenasTopBar(userInitial, notificationCount)
         },
+
         bottomBar = {
             SenasBottomBar(
                 selectedTab = 0,
@@ -206,6 +279,7 @@ fun TranslationScreen(
                 onSelectPerfil = onNavigateToPerfil
             )
         }
+
     ) { innerPadding ->
 
         LazyColumn(
@@ -214,22 +288,28 @@ fun TranslationScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 20.dp)
+            contentPadding = PaddingValues(
+                top = 8.dp,
+                bottom = 20.dp
+            )
         ) {
             // Cámara y reconocimiento
             item {
                 val badgeText = when {
-                    dynamicRecognition && RecognitionUtils.esNombreValido(currentSign) ->
+                    !handDetected ->
+                        "BUSCANDO SEÑA..."
+
+                    dynamicRecognition &&
+                            RecognitionUtils.esNombreValido(currentSign) ->
                         "MOV. · ${currentSign.uppercase()}"
 
                     recognizingSequence ->
                         "ANALIZANDO MOV."
 
-                    handDetected &&
-                            (
-                                    currentSign == "Esperando seña..." ||
-                                            !RecognitionUtils.esNombreValido(currentSign)
-                                    ) && frameCount > 0 ->
+                    (
+                            currentSign == "Esperando seña..." ||
+                                    !RecognitionUtils.esNombreValido(currentSign)
+                            ) && frameCount > 0 ->
                         "MOV. $frameCount/${SequenceBuffer.WINDOW_SIZE}"
 
                     currentSign.isBlank() ||
@@ -250,7 +330,9 @@ fun TranslationScreen(
                     detectedLabel = badgeText,
 
                     onRequestPermission = {
-                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                        permissionLauncher.launch(
+                            Manifest.permission.CAMERA
+                        )
                     },
 
                     onSwitchCamera = {
@@ -268,6 +350,7 @@ fun TranslationScreen(
 
                     cameraPreview = {
                         if (screenActive) {
+
                             DisposableEffect(viewModel, lensFacing) {
                                 onDispose {
                                     viewModel.detenerReconocimiento()
@@ -285,7 +368,12 @@ fun TranslationScreen(
                                             lifecycleOwner.lifecycle.currentState
                                                 .isAtLeast(Lifecycle.State.STARTED)
                                         ) {
-                                            viewModel.onHandDetected(manos.flatten())
+                                            viewModel.onHandDetected(
+                                                puntos = manos.flatten(),
+                                                onSignAccepted = { sena ->
+                                                    registrarSena(sena)
+                                                }
+                                            )
                                         }
                                     },
 
@@ -301,7 +389,8 @@ fun TranslationScreen(
                                 HandSkeletonOverlay(
                                     landmarks = handLandmarks,
                                     isFrontCamera =
-                                        lensFacing == CameraSelector.LENS_FACING_FRONT,
+                                        lensFacing ==
+                                                CameraSelector.LENS_FACING_FRONT,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
@@ -310,50 +399,26 @@ fun TranslationScreen(
                 )
             }
 
-            // Resultado y voz
+            // Frase completa y acciones
             item {
-                val displaySign = if (
-                    currentSign == "Esperando seña..."
-                ) {
-                    ""
-                } else {
-                    currentSign
-                }
-
-                TranslationResultCard(
-                    translatedText = displaySign,
+                TranslationPhraseCard(
+                    words = phraseWords,
 
                     onSpeakClick = {
-                        if (RecognitionUtils.esNombreValido(displaySign)) {
-                            tts?.speak(
-                                displaySign,
-                                TextToSpeech.QUEUE_FLUSH,
-                                null,
-                                null
-                            )
+                        hablarFrase(phraseWords)
+                    },
 
-                            frasesRecientes.removeAll {
-                                it.texto == displaySign
-                            }
-
-                            frasesRecientes.add(
-                                0, FraseReciente(displaySign, "Ahora")
-                            )
-
-                            if (frasesRecientes.size > 10) {
-                                frasesRecientes.removeAt(frasesRecientes.lastIndex)
-                            }
-
-                            onSpeakText(displaySign)
-                        }
+                    onDeleteLastClick = {
+                        viewModel.borrarUltimaPalabra()
                     },
 
                     onClearClick = {
-                        viewModel.updateTranslation("")
+                        viewModel.limpiarFrase()
                     }
                 )
             }
 
+            // Frases recientes
             item {
                 Text(
                     text = "FRASES RECIENTES",
@@ -375,20 +440,17 @@ fun TranslationScreen(
                 }
             }
 
-            items(frasesRecientes) { item ->
+            items(
+                items = frasesRecientes,
+                key = { it.texto }
+            ) { frase ->
+
                 RecentPhraseItem(
-                    frase = item,
+                    frase = frase,
+
                     onRepeatClick = {
-                        viewModel.updateTranslation(item.texto)
-
-                        tts?.speak(
-                            item.texto,
-                            TextToSpeech.QUEUE_FLUSH,
-                            null,
-                            null
-                        )
-
-                        onSpeakText(item.texto)
+                        viewModel.cargarFrase(frase.palabras)
+                        hablarFrase(frase.palabras)
                     }
                 )
             }
@@ -396,7 +458,8 @@ fun TranslationScreen(
     }
 }
 
-// Barra superior
+// BARRA SUPERIOR
+
 @Composable
 private fun SenasTopBar(
     userInitial: String,
@@ -500,7 +563,8 @@ private fun SenasTopBar(
     }
 }
 
-// Tarjeta de cámara
+// TARJETA DE CÁMARA
+
 @Composable
 private fun CameraDetectionCard(
     hasCameraPermission: Boolean,
@@ -561,7 +625,6 @@ private fun CameraDetectionCard(
                 .fillMaxSize()
                 .padding(14.dp)
         ) {
-            // Estado de detección
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
@@ -649,105 +712,8 @@ private fun CameraDetectionCard(
     }
 }
 
-// Resultado de traducción y voz
-@Composable
-private fun TranslationResultCard(
-    translatedText: String,
-    onSpeakClick: () -> Unit,
-    onClearClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = CardDark,
-        border = BorderStroke(1.dp, CardElevated)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = "TRADUCCIÓN",
-                color = TextSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.sp
-            )
+// FRASES RECIENTES
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
-                    contentDescription = null,
-                    tint = AccentCyan,
-                    modifier = Modifier.size(22.dp)
-                )
-
-                Spacer(Modifier.width(10.dp))
-
-                Text(
-                    text = translatedText.ifBlank {
-                        "Esperando seña..."
-                    },
-                    color = TextPrimary,
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = onSpeakClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentCyan,
-                        contentColor = BgDark
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-
-                    Spacer(Modifier.width(8.dp))
-
-                    Text(
-                        text = "Decir en voz alta",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = onClearClick,
-                    modifier = Modifier.size(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(0.dp),
-                    border = BorderStroke(1.dp, CardElevated),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = CardElevated.copy(alpha = 0.5f),
-                        contentColor = AccentCyan
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Backspace,
-                        contentDescription = "Borrar texto",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-// Frases recientes
 @Composable
 private fun RecentPhraseItem(
     frase: FraseReciente,
@@ -794,7 +760,8 @@ private fun RecentPhraseItem(
     }
 }
 
-// Barra inferior compartida
+// BARRA INFERIOR COMPARTIDA
+
 @Composable
 fun SenasBottomBar(
     selectedTab: Int,

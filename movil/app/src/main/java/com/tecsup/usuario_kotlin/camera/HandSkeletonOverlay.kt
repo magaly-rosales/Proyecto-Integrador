@@ -9,14 +9,43 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import com.tecsup.usuario_kotlin.data.model.PuntoManoDto
 
+private const val LANDMARKS_PER_HAND = 21
 
+// Conexiones correspondientes a una mano
 private val HAND_CONNECTIONS = listOf(
-    0 to 1, 1 to 2, 2 to 3, 3 to 4,         // Pulgar
-    0 to 5, 5 to 6, 6 to 7, 7 to 8,         // Índice
-    5 to 9, 9 to 10, 10 to 11, 11 to 12,    // Medio
-    9 to 13, 13 to 14, 14 to 15, 15 to 16,  // Anular
-    13 to 17, 17 to 18, 18 to 19, 19 to 20, // Meñique
-    0 to 17                                 // Base de la palma
+
+    // Pulgar
+    0 to 1,
+    1 to 2,
+    2 to 3,
+    3 to 4,
+
+    // Índice
+    0 to 5,
+    5 to 6,
+    6 to 7,
+    7 to 8,
+
+    // Medio
+    5 to 9,
+    9 to 10,
+    10 to 11,
+    11 to 12,
+
+    // Anular
+    9 to 13,
+    13 to 14,
+    14 to 15,
+    15 to 16,
+
+    // Meñique
+    13 to 17,
+    17 to 18,
+    18 to 19,
+    19 to 20,
+
+    // Base de la palma
+    0 to 17
 )
 
 @Composable
@@ -25,42 +54,83 @@ fun HandSkeletonOverlay(
     isFrontCamera: Boolean,
     modifier: Modifier = Modifier
 ) {
-    if (landmarks.size < 21) return
+
+    // Verificar que exista al menos una mano completa
+    if (landmarks.size < LANDMARKS_PER_HAND) {
+        return
+    }
+
+    // Separar los puntos de cada mano
+    val hands = landmarks
+        .chunked(LANDMARKS_PER_HAND)
+        .filter { hand ->
+            hand.size == LANDMARKS_PER_HAND
+        }
 
     val lineColor = Color(0xFF22B8CF)
     val pointInnerColor = Color.White
 
     Canvas(modifier = modifier) {
+
+        // Convertir coordenadas de MediaPipe
+        // a coordenadas de la pantalla
         fun toOffset(punto: PuntoManoDto): Offset {
-            val normX = if (isFrontCamera) 1f - punto.x else punto.x
+
+            val normX = if (isFrontCamera) {
+                1f - punto.x
+            } else {
+                punto.x
+            }
+
             return Offset(
                 x = normX.coerceIn(0f, 1f) * size.width,
                 y = punto.y.coerceIn(0f, 1f) * size.height
             )
         }
 
-        HAND_CONNECTIONS.forEach { (startIdx, endIdx) ->
-            drawLine(
-                color = lineColor.copy(alpha = 0.85f),
-                start = toOffset(landmarks[startIdx]),
-                end = toOffset(landmarks[endIdx]),
-                strokeWidth = 2.5.dp.toPx(),
-                cap = StrokeCap.Round
-            )
+        // Dibujar las conexiones de todas las manos
+        hands.forEach { hand ->
+
+            HAND_CONNECTIONS.forEach {
+                    (startIdx, endIdx) ->
+
+                drawLine(
+                    color = lineColor.copy(alpha = 0.85f),
+
+                    start = toOffset(
+                        hand[startIdx]
+                    ),
+
+                    end = toOffset(
+                        hand[endIdx]
+                    ),
+
+                    strokeWidth = 2.5.dp.toPx(),
+
+                    cap = StrokeCap.Round
+                )
+            }
         }
 
-        landmarks.forEach { punto ->
-            val center = toOffset(punto)
-            drawCircle(
-                color = lineColor,
-                radius = 5.dp.toPx(),
-                center = center
-            )
-            drawCircle(
-                color = pointInnerColor,
-                radius = 2.5.dp.toPx(),
-                center = center
-            )
+        // Dibujar los puntos de todas las manos
+        hands.forEach { hand ->
+
+            hand.forEach { punto ->
+
+                val center = toOffset(punto)
+
+                drawCircle(
+                    color = lineColor,
+                    radius = 5.dp.toPx(),
+                    center = center
+                )
+
+                drawCircle(
+                    color = pointInnerColor,
+                    radius = 2.5.dp.toPx(),
+                    center = center
+                )
+            }
         }
     }
 }

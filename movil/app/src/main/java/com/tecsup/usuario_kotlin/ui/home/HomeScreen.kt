@@ -46,14 +46,18 @@ fun HomeScreen(
     }
 
     var categorias by remember {
-        mutableStateOf<List<CategoriaCatalogoDto>>(emptyList())
+        mutableStateOf<List<CategoriaCatalogoDto>>(
+            emptyList()
+        )
     }
 
     var senas by remember {
-        mutableStateOf<List<SenaCatalogoDto>>(emptyList())
+        mutableStateOf<List<SenaCatalogoDto>>(
+            emptyList()
+        )
     }
 
-    // Conservar la búsqueda y categoría seleccionada
+    // Estados de búsqueda y filtrado
     var selectedCategoryId by rememberSaveable {
         mutableStateOf<Int?>(null)
     }
@@ -62,9 +66,14 @@ fun HomeScreen(
         mutableStateOf("")
     }
 
-    // Identificar la seña seleccionada
+    // Seña seleccionada
     var selectedSenaId by rememberSaveable {
         mutableStateOf<Int?>(null)
+    }
+
+    // Controlar la navegación hacia la práctica
+    var showPractice by rememberSaveable {
+        mutableStateOf(false)
     }
 
     // Conservar la posición de desplazamiento
@@ -76,18 +85,19 @@ fun HomeScreen(
         mutableStateOf<String?>(null)
     }
 
-    // Controlar las actualizaciones del catálogo
+    // Control de actualización del catálogo
     var refreshVersion by remember {
         mutableIntStateOf(0)
     }
 
     val cargarCatalogo: () -> Unit = {
+
         if (!isLoading) {
             refreshVersion++
         }
     }
 
-    // Cargar el catálogo desde Spring Boot
+    // Cargar catálogo desde Spring Boot
     LaunchedEffect(refreshVersion) {
 
         isLoading = true
@@ -105,19 +115,20 @@ fun HomeScreen(
                 categorias = body.categorias
                 senas = body.senas
 
-                // Obtener la URL real de la petición
+                // Obtener la dirección real de la petición
                 apiUrl = response.raw()
                     .request
                     .url
                     .toString()
 
-                // Verificar que la categoría siga disponible
+                // Verificar la categoría seleccionada
                 if (
                     selectedCategoryId != null &&
                     categorias.none {
                         it.id == selectedCategoryId
                     }
                 ) {
+
                     selectedCategoryId = null
                 }
 
@@ -128,7 +139,14 @@ fun HomeScreen(
                         it.id == selectedSenaId
                     }
                 ) {
+
                     selectedSenaId = null
+                    showPractice = false
+                }
+
+                if (selectedSenaId == null) {
+
+                    showPractice = false
                 }
 
             } else {
@@ -153,42 +171,58 @@ fun HomeScreen(
         }
     }
 
-    // Obtener los datos de la seña seleccionada
+    // Obtener la información de la seña seleccionada
     val selectedSena = remember(
         senas,
         selectedSenaId
     ) {
+
         senas.firstOrNull {
             it.id == selectedSenaId
         }
     }
 
-    // Mostrar la pantalla de detalles
+    // Navegación interna del catálogo
     if (
         selectedSena != null &&
         !isLoading &&
         errorMessage == null
     ) {
-        SenaDetailScreen(
-            sena = selectedSena,
-            apiUrl = apiUrl,
-            onBackClick = {
 
-                // Regresar al catálogo
-                selectedSenaId = null
-            },
-            onPracticeClick = {
+        if (showPractice) {
 
-                // Mantener temporalmente la navegación al traductor
-                viewModel.updateTranslation(
-                    selectedSena.nombre
-                )
+            // Mostrar pantalla de práctica
+            SenaPracticeScreen(
+                sena = selectedSena,
+                apiUrl = apiUrl,
+                onBackClick = {
 
-                selectedSenaId = null
+                    // Regresar a los detalles
+                    showPractice = false
+                }
+            )
 
-                onNavigateToTranslator()
-            }
-        )
+        } else {
+
+            // Mostrar detalles de la seña
+            SenaDetailScreen(
+                sena = selectedSena,
+                apiUrl = apiUrl,
+
+                onBackClick = {
+
+                    // Regresar al catálogo
+                    showPractice = false
+                    selectedSenaId = null
+                },
+
+                onPracticeClick = {
+
+                    // Abrir modalidad de práctica
+                    showPractice = true
+                }
+            )
+        }
 
         return
     }
@@ -199,6 +233,7 @@ fun HomeScreen(
         selectedCategoryId,
         searchQuery
     ) {
+
         senas.filter { sena ->
 
             val matchesCat =
@@ -225,11 +260,14 @@ fun HomeScreen(
     Scaffold(
         containerColor = ProfileColors.BgDark,
         bottomBar = {
+
             SenasBottomBar(
                 selectedTab = 1,
-                onSelectTraducir = onNavigateToTranslator,
+                onSelectTraducir =
+                    onNavigateToTranslator,
                 onSelectSenas = {},
-                onSelectPerfil = onNavigateToPerfil
+                onSelectPerfil =
+                    onNavigateToPerfil
             )
         }
     ) { innerPadding ->
@@ -245,6 +283,7 @@ fun HomeScreen(
             verticalArrangement =
                 Arrangement.spacedBy(12.dp)
         ) {
+
             // Cabecera del catálogo
             CatalogHeader(
                 totalSenas = senasFiltradas.size,
@@ -252,15 +291,16 @@ fun HomeScreen(
                 onRefresh = cargarCatalogo
             )
 
-            // Buscador de señas
+            // Buscador
             CatalogSearchField(
                 searchQuery = searchQuery,
                 onSearchChange = {
+
                     searchQuery = it
                 }
             )
 
-            // Categorías disponibles
+            // Filtros de categorías
             if (categorias.isNotEmpty()) {
 
                 LazyRow(
@@ -268,12 +308,15 @@ fun HomeScreen(
                     horizontalArrangement =
                         Arrangement.spacedBy(8.dp)
                 ) {
+
                     item {
+
                         CategoryChip(
                             label = "Todas",
                             selected =
                                 selectedCategoryId == null,
                             onClick = {
+
                                 selectedCategoryId = null
                             }
                         )
@@ -282,11 +325,15 @@ fun HomeScreen(
                     items(categorias) { categoria ->
 
                         CategoryChip(
-                            label = "${categoria.nombre} (${categoria.total})",
+                            label =
+                                "${categoria.nombre} (${categoria.total})",
                             selected =
-                                selectedCategoryId == categoria.id,
+                                selectedCategoryId ==
+                                        categoria.id,
                             onClick = {
-                                selectedCategoryId = categoria.id
+
+                                selectedCategoryId =
+                                    categoria.id
                             }
                         )
                     }
@@ -300,10 +347,13 @@ fun HomeScreen(
 
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment =
+                            Alignment.Center
                     ) {
+
                         CircularProgressIndicator(
-                            color = ProfileColors.AccentCyan
+                            color =
+                                ProfileColors.AccentCyan
                         )
                     }
                 }
@@ -321,11 +371,15 @@ fun HomeScreen(
 
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment =
+                            Alignment.Center
                     ) {
+
                         Text(
-                            text = "No se encontraron señas registradas",
-                            color = ProfileColors.TextSecondary
+                            text =
+                                "No se encontraron señas registradas",
+                            color =
+                                ProfileColors.TextSecondary
                         )
                     }
                 }
@@ -336,10 +390,10 @@ fun HomeScreen(
                         state = catalogListState,
                         verticalArrangement =
                             Arrangement.spacedBy(10.dp),
-                        contentPadding = PaddingValues(
-                            bottom = 16.dp
-                        )
+                        contentPadding =
+                            PaddingValues(bottom = 16.dp)
                     ) {
+
                         items(
                             items = senasFiltradas,
                             key = { sena -> sena.id }
@@ -348,10 +402,14 @@ fun HomeScreen(
                             SenaCatalogItemCard(
                                 sena = sena,
                                 apiUrl = apiUrl,
+
                                 onPracticeClick = {
 
-                                    // Abrir los detalles de la seña
-                                    selectedSenaId = sena.id
+                                    // Abrir los detalles
+                                    showPractice = false
+
+                                    selectedSenaId =
+                                        sena.id
                                 }
                             )
                         }
@@ -362,19 +420,24 @@ fun HomeScreen(
     }
 }
 
-// Cabecera y botón de actualización
+// Cabecera del catálogo
 @Composable
 private fun CatalogHeader(
     totalSenas: Int,
     isLoading: Boolean,
     onRefresh: () -> Unit
 ) {
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement =
+            Arrangement.SpaceBetween,
+        verticalAlignment =
+            Alignment.CenterVertically
     ) {
+
         Column {
+
             Text(
                 text = "Diccionario de Señas",
                 color = ProfileColors.TextPrimary,
@@ -393,9 +456,11 @@ private fun CatalogHeader(
             onClick = onRefresh,
             enabled = !isLoading
         ) {
+
             Icon(
                 imageVector = Icons.Rounded.Refresh,
-                contentDescription = "Actualizar catálogo",
+                contentDescription =
+                    "Actualizar catálogo",
                 tint = ProfileColors.AccentCyan
             )
         }
@@ -408,25 +473,33 @@ private fun CatalogSearchField(
     searchQuery: String,
     onSearchChange: (String) -> Unit
 ) {
+
     OutlinedTextField(
         value = searchQuery,
         onValueChange = onSearchChange,
         modifier = Modifier.fillMaxWidth(),
+
         placeholder = {
+
             Text(
                 text = "Buscar seña o frase...",
                 color = ProfileColors.TextSecondary
             )
         },
+
         leadingIcon = {
+
             Icon(
                 imageVector = Icons.Outlined.Search,
                 contentDescription = null,
                 tint = ProfileColors.AccentCyan
             )
         },
+
         singleLine = true,
+
         shape = RoundedCornerShape(14.dp),
+
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor =
                 ProfileColors.CardDark,
@@ -451,38 +524,59 @@ private fun CategoryChip(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+
     Surface(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .clickable(onClick = onClick),
+
         shape = RoundedCornerShape(50),
+
         color = if (selected) {
+
             ProfileColors.AccentCyan
+
         } else {
+
             ProfileColors.CardDark
         },
+
         border = BorderStroke(
             1.dp,
             if (selected) {
+
                 ProfileColors.AccentCyan
+
             } else {
+
                 ProfileColors.CardElevated
             }
         )
     ) {
+
         Text(
             text = label,
+
             color = if (selected) {
+
                 ProfileColors.BgDark
+
             } else {
+
                 ProfileColors.TextPrimary
             },
+
             fontSize = 12.sp,
+
             fontWeight = if (selected) {
+
                 FontWeight.Bold
+
             } else {
+
                 FontWeight.Medium
             },
+
             modifier = Modifier.padding(
                 horizontal = 14.dp,
                 vertical = 8.dp
@@ -491,30 +585,36 @@ private fun CategoryChip(
     }
 }
 
-// Estado de error y opción de reintentar
+// Estado de error del catálogo
 @Composable
 private fun CatalogError(
     message: String,
     onRetry: () -> Unit
 ) {
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
+
         Column(
             horizontalAlignment =
                 Alignment.CenterHorizontally
         ) {
+
             Text(
                 text = message,
                 color = ProfileColors.TextSecondary,
                 fontSize = 14.sp
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(
+                modifier = Modifier.height(10.dp)
+            )
 
             Button(
                 onClick = onRetry,
+
                 colors = ButtonDefaults.buttonColors(
                     containerColor =
                         ProfileColors.AccentCyan,
@@ -522,6 +622,7 @@ private fun CatalogError(
                         ProfileColors.BgDark
                 )
             ) {
+
                 Text(
                     text = "Reintentar",
                     fontWeight = FontWeight.Bold

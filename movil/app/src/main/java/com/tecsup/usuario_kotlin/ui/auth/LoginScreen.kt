@@ -1,5 +1,6 @@
 package com.tecsup.usuario_kotlin.ui.auth
 
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -19,6 +21,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -33,7 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tecsup.usuario_kotlin.ui.viewmodel.AuthViewModel
 
-// Color Constants matching design
+// Constantes de colores del diseño original
 private val DarkHeaderBg = Color(0xFF06141B)
 private val PrimaryCyan = Color(0xFF14A3A7)
 private val SubtitleGray = Color(0xFF9BB0BC)
@@ -45,6 +49,10 @@ private val PlaceholderGray = Color(0xFF8E9AA0)
 private val CheckboxTextDark = Color(0xFF3E4D56)
 private val CardSubtitleGray = Color(0xFF6A7B84)
 
+// Claves para recordar el correo del usuario
+private const val PREFS_NAME = "senasapp_preferences"
+private const val KEY_REMEMBERED_EMAIL = "remembered_email"
+
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel,
@@ -52,13 +60,66 @@ fun LoginScreen(
     onRegisterClick: () -> Unit = {},
     onForgotPasswordClick: () -> Unit = {}
 ) {
-    var email by remember { mutableStateOf("") }
+
+    val context = LocalContext.current
+    val isPreview = LocalInspectionMode.current
+
+    // Almacenamiento local de preferencias
+    val preferences = remember(context, isPreview) {
+        if (isPreview) {
+            null
+        } else {
+            context.getSharedPreferences(
+                PREFS_NAME,
+                Context.MODE_PRIVATE
+            )
+        }
+    }
+
+    // Recuperar el correo guardado anteriormente
+    var email by rememberSaveable {
+        mutableStateOf(
+            preferences?.getString(KEY_REMEMBERED_EMAIL, "") ?: ""
+        )
+    }
+
+    // La contraseña nunca se guarda en preferencias
     var password by remember { mutableStateOf("") }
-    var rememberMe by remember { mutableStateOf(false) }
+
+    var rememberMe by rememberSaveable {
+        mutableStateOf(
+            preferences?.contains(KEY_REMEMBERED_EMAIL) == true
+        )
+    }
+
     var passwordVisible by remember { mutableStateOf(false) }
 
-    if (authViewModel.loginSuccess) {
-        LaunchedEffect(Unit) {
+    // Conservar la selección realizada al enviar el login
+    var rememberOnLogin by rememberSaveable {
+        mutableStateOf<Boolean?>(null)
+    }
+
+    // Guardar las preferencias únicamente después de un login exitoso
+    LaunchedEffect(authViewModel.loginSuccess) {
+        if (authViewModel.loginSuccess) {
+
+            rememberOnLogin?.let { shouldRemember ->
+
+                preferences?.edit()?.apply {
+                    if (shouldRemember) {
+                        putString(
+                            KEY_REMEMBERED_EMAIL,
+                            authViewModel.loggedUserEmail
+                        )
+                    } else {
+                        remove(KEY_REMEMBERED_EMAIL)
+                    }
+                }?.apply()
+            }
+
+            rememberOnLogin = null
+            password = ""
+
             onLoginSuccess()
         }
     }
@@ -68,29 +129,54 @@ fun LoginScreen(
             .fillMaxSize()
             .background(DarkHeaderBg)
     ) {
+
         // --- TOP SECTION (HEADER) ---
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 24.dp, end = 20.dp, top = 40.dp, bottom = 28.dp)
+                .padding(
+                    start = 24.dp,
+                    end = 20.dp,
+                    top = 40.dp,
+                    bottom = 28.dp
+                )
         ) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
+
                 // App Logo
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    LogoIcon(modifier = Modifier.size(44.dp))
+                    LogoIcon(
+                        modifier = Modifier.size(44.dp)
+                    )
+
                     Spacer(modifier = Modifier.width(10.dp))
+
                     Text(
                         text = buildAnnotatedString {
-                            withStyle(style = SpanStyle(color = Color.White, fontWeight = FontWeight.Bold, fontSize = 22.sp)) {
+                            withStyle(
+                                style = SpanStyle(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 22.sp
+                                )
+                            ) {
                                 append("Señas")
                             }
-                            withStyle(style = SpanStyle(color = PrimaryCyan, fontWeight = FontWeight.Bold, fontSize = 22.sp)) {
+
+                            withStyle(
+                                style = SpanStyle(
+                                    color = PrimaryCyan,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 22.sp
+                                )
+                            ) {
                                 append("App")
                             }
                         }
@@ -100,7 +186,10 @@ fun LoginScreen(
                 // Skeleton Hand Tracking Graphic
                 SkeletonHandGraphic(
                     modifier = Modifier
-                        .size(width = 130.dp, height = 140.dp)
+                        .size(
+                            width = 130.dp,
+                            height = 140.dp
+                        )
                 )
             }
 
@@ -111,7 +200,10 @@ fun LoginScreen(
                 modifier = Modifier
                     .width(36.dp)
                     .height(4.dp)
-                    .background(PrimaryCyan, shape = CircleShape)
+                    .background(
+                        PrimaryCyan,
+                        shape = CircleShape
+                    )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -143,15 +235,23 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            shape = RoundedCornerShape(
+                topStart = 28.dp,
+                topEnd = 28.dp
+            ),
             color = Color.White
         ) {
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp, vertical = 28.dp)
+                    .padding(
+                        horizontal = 24.dp,
+                        vertical = 28.dp
+                    )
             ) {
+
                 Text(
                     text = "Iniciar sesión",
                     style = TextStyle(
@@ -182,7 +282,9 @@ fun LoginScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                 )
+
                 Spacer(modifier = Modifier.height(6.dp))
+
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -194,7 +296,9 @@ fun LoginScreen(
                         )
                     },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email
+                    ),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -219,7 +323,9 @@ fun LoginScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                 )
+
                 Spacer(modifier = Modifier.height(6.dp))
+
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -231,10 +337,20 @@ fun LoginScreen(
                         )
                     },
                     singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    visualTransformation = if (passwordVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password
+                    ),
                     trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        IconButton(
+                            onClick = {
+                                passwordVisible = !passwordVisible
+                            }
+                        ) {
                             EyeToggleIcon(
                                 isVisible = passwordVisible,
                                 tint = CardSubtitleGray,
@@ -263,19 +379,25 @@ fun LoginScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+
                         Checkbox(
                             checked = rememberMe,
-                            onCheckedChange = { rememberMe = it },
+                            onCheckedChange = {
+                                rememberMe = it
+                            },
                             colors = CheckboxDefaults.colors(
                                 checkedColor = PrimaryCyan,
                                 uncheckedColor = PlaceholderGray
                             ),
                             modifier = Modifier.size(20.dp)
                         )
+
                         Spacer(modifier = Modifier.width(8.dp))
+
                         Text(
                             text = "Recordarme",
                             style = TextStyle(
@@ -293,7 +415,9 @@ fun LoginScreen(
                             fontWeight = FontWeight.Bold,
                             textDecoration = TextDecoration.Underline
                         ),
-                        modifier = Modifier.clickable { onForgotPasswordClick() }
+                        modifier = Modifier.clickable {
+                            onForgotPasswordClick()
+                        }
                     )
                 }
 
@@ -301,7 +425,16 @@ fun LoginScreen(
 
                 // Submit Button
                 Button(
-                    onClick = { authViewModel.login(email, password) },
+                    onClick = {
+
+                        // Guardar la selección antes de enviar la petición
+                        rememberOnLogin = rememberMe
+
+                        authViewModel.login(
+                            email.trim(),
+                            password
+                        )
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -309,18 +442,26 @@ fun LoginScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = DarkHeaderBg,
                         contentColor = PrimaryCyan,
-                        disabledContainerColor = DarkHeaderBg.copy(alpha = 0.7f),
-                        disabledContentColor = PrimaryCyan.copy(alpha = 0.5f)
+                        disabledContainerColor = DarkHeaderBg.copy(
+                            alpha = 0.7f
+                        ),
+                        disabledContentColor = PrimaryCyan.copy(
+                            alpha = 0.5f
+                        )
                     ),
                     enabled = !authViewModel.isLoading
                 ) {
+
                     if (authViewModel.isLoading) {
+
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             color = PrimaryCyan,
                             strokeWidth = 2.dp
                         )
+
                     } else {
+
                         Text(
                             text = "Iniciar sesión",
                             style = TextStyle(
@@ -333,7 +474,9 @@ fun LoginScreen(
                 }
 
                 authViewModel.errorMessage?.let { error ->
+
                     Spacer(modifier = Modifier.height(14.dp))
+
                     Text(
                         text = error,
                         color = MaterialTheme.colorScheme.error,
@@ -349,6 +492,7 @@ fun LoginScreen(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+
                     Text(
                         text = "¿No tienes cuenta? ",
                         style = TextStyle(
@@ -356,6 +500,7 @@ fun LoginScreen(
                             fontSize = 13.sp
                         )
                     )
+
                     Text(
                         text = "Regístrate",
                         style = TextStyle(
@@ -364,7 +509,9 @@ fun LoginScreen(
                             fontWeight = FontWeight.Bold,
                             textDecoration = TextDecoration.Underline
                         ),
-                        modifier = Modifier.clickable { onRegisterClick() }
+                        modifier = Modifier.clickable {
+                            onRegisterClick()
+                        }
                     )
                 }
             }
@@ -375,11 +522,16 @@ fun LoginScreen(
 // Custom App Logo Icon (Circular border + Hand gesture inside)
 @Composable
 internal fun LogoIcon(modifier: Modifier = Modifier) {
+
     Canvas(modifier = modifier) {
+
         val diameter = size.minDimension
         val strokeWidthPx = 2.dp.toPx()
         val radius = (diameter - strokeWidthPx) / 2f
-        val center = Offset(size.width / 2f, size.height / 2f)
+        val center = Offset(
+            size.width / 2f,
+            size.height / 2f
+        )
 
         // Outer cyan circle
         drawCircle(
@@ -401,60 +553,108 @@ internal fun LogoIcon(modifier: Modifier = Modifier) {
         // Thumb
         drawLine(
             color = handColor,
-            start = Offset(cX - 8f * scale, cY + 4f * scale),
-            end = Offset(cX - 12f * scale, cY - 2f * scale),
+            start = Offset(
+                cX - 8f * scale,
+                cY + 4f * scale
+            ),
+            end = Offset(
+                cX - 12f * scale,
+                cY - 2f * scale
+            ),
             strokeWidth = fingerStroke,
             cap = StrokeCap.Round
         )
+
         // Index
         drawLine(
             color = handColor,
-            start = Offset(cX - 5f * scale, cY + 6f * scale),
-            end = Offset(cX - 6f * scale, cY - 9f * scale),
+            start = Offset(
+                cX - 5f * scale,
+                cY + 6f * scale
+            ),
+            end = Offset(
+                cX - 6f * scale,
+                cY - 9f * scale
+            ),
             strokeWidth = fingerStroke,
             cap = StrokeCap.Round
         )
+
         // Middle
         drawLine(
             color = handColor,
-            start = Offset(cX, cY + 7f * scale),
-            end = Offset(cX, cY - 11f * scale),
+            start = Offset(
+                cX,
+                cY + 7f * scale
+            ),
+            end = Offset(
+                cX,
+                cY - 11f * scale
+            ),
             strokeWidth = fingerStroke,
             cap = StrokeCap.Round
         )
+
         // Ring
         drawLine(
             color = handColor,
-            start = Offset(cX + 5f * scale, cY + 6f * scale),
-            end = Offset(cX + 5f * scale, cY - 9f * scale),
+            start = Offset(
+                cX + 5f * scale,
+                cY + 6f * scale
+            ),
+            end = Offset(
+                cX + 5f * scale,
+                cY - 9f * scale
+            ),
             strokeWidth = fingerStroke,
             cap = StrokeCap.Round
         )
+
         // Pinky
         drawLine(
             color = handColor,
-            start = Offset(cX + 9f * scale, cY + 5f * scale),
-            end = Offset(cX + 10f * scale, cY - 4f * scale),
+            start = Offset(
+                cX + 9f * scale,
+                cY + 5f * scale
+            ),
+            end = Offset(
+                cX + 10f * scale,
+                cY - 4f * scale
+            ),
             strokeWidth = fingerStroke,
             cap = StrokeCap.Round
         )
+
         // Palm base arc line
         drawArc(
             color = handColor,
             startAngle = 20f,
             sweepAngle = 140f,
             useCenter = false,
-            topLeft = Offset(cX - 9f * scale, cY + 2f * scale),
-            size = Size(18f * scale, 10f * scale),
-            style = Stroke(width = fingerStroke, cap = StrokeCap.Round)
+            topLeft = Offset(
+                cX - 9f * scale,
+                cY + 2f * scale
+            ),
+            size = Size(
+                18f * scale,
+                10f * scale
+            ),
+            style = Stroke(
+                width = fingerStroke,
+                cap = StrokeCap.Round
+            )
         )
     }
 }
 
 // Custom Hand Tracking Skeleton Vector Graphic
 @Composable
-internal fun SkeletonHandGraphic(modifier: Modifier = Modifier) {
+internal fun SkeletonHandGraphic(
+    modifier: Modifier = Modifier
+) {
+
     Canvas(modifier = modifier) {
+
         val w = size.width
         val h = size.height
 
@@ -497,10 +697,15 @@ internal fun SkeletonHandGraphic(modifier: Modifier = Modifier) {
         val cyanColor = PrimaryCyan
 
         fun drawBone(pA: Offset, pB: Offset) {
-            drawLine(color = cyanColor, start = pA, end = pB, strokeWidth = strokePx, cap = StrokeCap.Round)
+            drawLine(
+                color = cyanColor,
+                start = pA,
+                end = pB,
+                strokeWidth = strokePx,
+                cap = StrokeCap.Round
+            )
         }
 
-        // Draw connections (bones)
         // Thumb branch
         drawBone(wrist, t1)
         drawBone(t1, t2)
@@ -548,8 +753,18 @@ internal fun SkeletonHandGraphic(modifier: Modifier = Modifier) {
         )
 
         for (pt in allPoints) {
-            drawCircle(color = cyanColor, radius = nodeRadiusPx, center = pt)
-            drawCircle(color = Color.White, radius = innerDotPx, center = pt)
+
+            drawCircle(
+                color = cyanColor,
+                radius = nodeRadiusPx,
+                center = pt
+            )
+
+            drawCircle(
+                color = Color.White,
+                radius = innerDotPx,
+                center = pt
+            )
         }
     }
 }
@@ -561,7 +776,9 @@ internal fun EyeToggleIcon(
     tint: Color,
     modifier: Modifier = Modifier
 ) {
+
     Canvas(modifier = modifier) {
+
         val w = size.width
         val h = size.height
         val cX = w / 2f
@@ -570,24 +787,31 @@ internal fun EyeToggleIcon(
 
         // Upper curve of eye
         val eyePath = Path().apply {
+
             moveTo(w * 0.15f, cY)
+
             cubicTo(
                 w * 0.35f, cY - h * 0.35f,
                 w * 0.65f, cY - h * 0.35f,
                 w * 0.85f, cY
             )
+
             cubicTo(
                 w * 0.65f, cY + h * 0.35f,
                 w * 0.35f, cY + h * 0.35f,
                 w * 0.15f, cY
             )
+
             close()
         }
 
         drawPath(
             path = eyePath,
             color = tint,
-            style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+            style = Stroke(
+                width = strokeWidthPx,
+                cap = StrokeCap.Round
+            )
         )
 
         // Center pupil circle
@@ -599,10 +823,17 @@ internal fun EyeToggleIcon(
 
         // Slash line if hidden
         if (!isVisible) {
+
             drawLine(
                 color = tint,
-                start = Offset(w * 0.2f, h * 0.8f),
-                end = Offset(w * 0.8f, h * 0.2f),
+                start = Offset(
+                    w * 0.2f,
+                    h * 0.8f
+                ),
+                end = Offset(
+                    w * 0.8f,
+                    h * 0.2f
+                ),
                 strokeWidth = strokeWidthPx,
                 cap = StrokeCap.Round
             )
@@ -611,9 +842,14 @@ internal fun EyeToggleIcon(
 }
 
 // Preview
-@Preview(showBackground = true, widthDp = 360, heightDp = 740)
+@Preview(
+    showBackground = true,
+    widthDp = 360,
+    heightDp = 740
+)
 @Composable
 fun LoginScreenPreview() {
+
     LoginScreen(
         authViewModel = AuthViewModel(),
         onLoginSuccess = {}

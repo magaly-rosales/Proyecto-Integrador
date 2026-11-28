@@ -211,6 +211,7 @@ export default function Traducir() {
       try {
         const respuesta = await enviarSecuencia([...buffer]);
         const valor = respuesta.sena;
+        console.log("[movimiento]", valor, Number(respuesta.distancia).toFixed(2)); // temporal: para ajustar el umbral
         if (!esSenaValida(valor)) {
           candidata = { sena: null, veces: 0 };
         } else {

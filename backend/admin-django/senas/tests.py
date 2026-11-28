@@ -224,7 +224,7 @@ class SenasApiTests(CarpetaMediaTemporal, APITestCase):
 
     def _crear(self, **extra):
         datos = {'nombre': 'Buenos días', 'categoria_id': self.cat.pk,
-                 'descripcion': 'Mano abierta', 'imagen': imagen_png()}
+                 'descripcion': 'Mano abierta', 'imagen': imagen_png(), 'video': video_mp4()}
         datos.update(extra)
         return self.cliente.post('/api/senas/', {k: v for k, v in datos.items() if v is not None})
 
@@ -299,6 +299,12 @@ class SenasApiTests(CarpetaMediaTemporal, APITestCase):
         self.assertIn('imagen', r.data['errores'])
         self.assertEqual(Sena.objects.count(), 0)
 
+    def test_crear_sin_video_da_error(self):
+        r = self._crear(video=None)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('video', r.data['errores'])
+        self.assertEqual(Sena.objects.count(), 0)
+
     def test_crear_sin_nombre_da_error(self):
         r = self._crear(nombre='   ')
         self.assertEqual(r.status_code, 400)
@@ -331,14 +337,15 @@ class SenasApiTests(CarpetaMediaTemporal, APITestCase):
     def test_editar_cambia_nombre_y_categoria(self):
         otra = crear_categoria('Familia')
         sena = crear_sena('Mama', self.cat)
-        r = self.cliente.patch(f'/api/senas/{sena.pk}/', {'nombre': 'Mamá', 'categoria_id': otra.pk})
+        r = self.cliente.patch(f'/api/senas/{sena.pk}/',
+                               {'nombre': 'Mamá', 'categoria_id': otra.pk, 'video': video_mp4()})
         self.assertEqual(r.status_code, 200, r.content)
         sena.refresh_from_db()
         self.assertEqual((sena.nombre, sena.categoria, sena.categoria_ref_id), ('Mamá', 'Familia', otra.pk))
 
     def test_editar_sin_imagen_conserva_la_anterior(self):
         sena = crear_sena('Hola', self.cat, imagen='/media/imagenes_senas/vieja.png')
-        self.cliente.patch(f'/api/senas/{sena.pk}/', {'descripcion': 'nueva'})
+        self.cliente.patch(f'/api/senas/{sena.pk}/', {'descripcion': 'nueva', 'video': video_mp4()})
         sena.refresh_from_db()
         self.assertEqual(sena.imagen, '/media/imagenes_senas/vieja.png')
 
@@ -351,11 +358,17 @@ class SenasApiTests(CarpetaMediaTemporal, APITestCase):
         self.assertFalse(os.path.exists(vieja))
         self.assertTrue(os.path.exists(ruta_en_disco(Sena.objects.get(pk=creada['id']).imagen)))
 
-    def test_editar_puede_quitar_el_video(self):
-        creada = self._crear(video=video_mp4()).data['data']
-        self.assertIsNotNone(creada['video'])
-        r = self.cliente.patch(f"/api/senas/{creada['id']}/", {'quitar_video': 'true'})
-        self.assertIsNone(r.data['data']['video'])
+    def test_editar_conserva_el_video_si_no_se_envia_uno_nuevo(self):
+        creada = self._crear().data['data']
+        r = self.cliente.patch(f"/api/senas/{creada['id']}/", {'descripcion': 'otra'})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertIsNotNone(r.data['data']['video'])
+
+    def test_editar_una_seña_sin_video_exige_uno(self):
+        sena = crear_sena('Hola', self.cat)
+        r = self.cliente.patch(f'/api/senas/{sena.pk}/', {'descripcion': 'nueva'})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('video', r.data['errores'])
 
     def test_editar_no_permite_repetir_el_nombre_de_otra_seña(self):
         crear_sena('Hola', self.cat)

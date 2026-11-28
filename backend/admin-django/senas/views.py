@@ -44,7 +44,7 @@ class SenaViewSet(viewsets.ModelViewSet):
     def _error(self, errores, codigo=status.HTTP_400_BAD_REQUEST):
         return Response({"exito": False, "errores": errores}, status=codigo)
 
-    def _validar_archivos(self, request, imagen_obligatoria):
+    def _validar_archivos(self, request, imagen_obligatoria, video_obligatorio=False):
         """Devuelve (imagen, video, errores)."""
         errores = {}
         imagen = request.FILES.get('imagen')
@@ -61,12 +61,15 @@ class SenaViewSet(viewsets.ModelViewSet):
                 validar_video(video)
             except ValidationError as e:
                 errores['video'] = e.messages
+        elif video_obligatorio:
+            errores['video'] = ['El video de referencia es obligatorio: sirve para recordar cómo se hace la seña.']
         return imagen, video, errores
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         valido = serializer.is_valid()
-        imagen, video, errores_archivos = self._validar_archivos(request, imagen_obligatoria=True)
+        imagen, video, errores_archivos = self._validar_archivos(
+            request, imagen_obligatoria=True, video_obligatorio=True)
         if not valido or errores_archivos:
             return self._error({**serializer.errors, **errores_archivos})
 
@@ -86,7 +89,9 @@ class SenaViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         valido = serializer.is_valid()
-        imagen, video, errores_archivos = self._validar_archivos(request, imagen_obligatoria=False)
+        # Si la seña aún no tiene video, al editarla se pide uno
+        imagen, video, errores_archivos = self._validar_archivos(
+            request, imagen_obligatoria=False, video_obligatorio=not instance.videos.exists())
         if not valido or errores_archivos:
             return self._error({**serializer.errors, **errores_archivos})
 
@@ -99,8 +104,6 @@ class SenaViewSet(viewsets.ModelViewSet):
             if video:
                 sena.videos.all().delete()  # el nuevo video reemplaza al anterior
                 guardar_video(sena, video)
-            elif str(request.data.get('quitar_video', '')).lower() in ('1', 'true'):
-                sena.videos.all().delete()
         if imagen:
             borrar_archivo(imagen_vieja)
 

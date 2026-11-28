@@ -2,11 +2,11 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { actualizarSena, crearSena } from '../../api/senasApi';
 import { mensajeError } from '../../api/errores';
 import { IconoImagen, IconoSubir } from '../../components/ui/IconosUi';
+import GrabadorVideo, { puedeGrabarMp4 } from '../../components/GrabadorVideo';
 import Modal from '../../components/ui/Modal';
 import '../../estilos/Formulario.css';
 
 const MAX_IMAGEN = 2 * 1024 * 1024;
-const MAX_VIDEO = 50 * 1024 * 1024;
 const extension = (archivo) => archivo.name.split('.').pop().toLowerCase();
 
 // Campos del servidor que tienen su propio lugar en el formulario
@@ -39,7 +39,7 @@ export default function FormularioSena({ sena, categorias, onCerrar, onGuardada 
     const [descripcion, setDescripcion] = useState(sena?.descripcion ?? '');
     const [imagen, setImagen] = useState(null);
     const [video, setVideo] = useState(null);
-    const [quitarVideo, setQuitarVideo] = useState(false);
+    const [grabando, setGrabando] = useState(false);
     const [errores, setErrores] = useState({});
     const [enviando, setEnviando] = useState(false);
 
@@ -59,18 +59,11 @@ export default function FormularioSena({ sena, categorias, onCerrar, onGuardada 
         if (!error) setImagen(archivo);
     };
 
-    const elegirVideo = (e) => {
-        const archivo = e.target.files[0];
-        e.target.value = '';
-        if (!archivo) return;
-        let error = '';
-        if (extension(archivo) !== 'mp4') error = 'El video debe ser MP4.';
-        else if (archivo.size > MAX_VIDEO) error = 'El video supera el máximo de 50 MB.';
-        setErrores((a) => ({ ...a, video: error }));
-        if (!error) {
-            setVideo(archivo);
-            setQuitarVideo(false);
-        }
+    // El video grabado con la cámara llega ya como archivo MP4
+    const videoGrabado = (archivo) => {
+        setErrores((a) => ({ ...a, video: '' }));
+        setVideo(archivo);
+        setGrabando(false);
     };
 
     const validar = () => {
@@ -79,6 +72,7 @@ export default function FormularioSena({ sena, categorias, onCerrar, onGuardada 
         else if (nombre.trim().length > 100) e.nombre = 'El nombre admite hasta 100 caracteres.';
         if (!categoriaId) e.categoria_id = 'Elige una categoría.';
         if (!editando && !imagen) e.imagen = 'La imagen es obligatoria.';
+        if (!video && !sena?.video) e.video = 'El video de referencia es obligatorio.';
         return e;
     };
 
@@ -96,7 +90,6 @@ export default function FormularioSena({ sena, categorias, onCerrar, onGuardada 
         datos.append('descripcion', descripcion.trim());
         if (imagen) datos.append('imagen', imagen);
         if (video) datos.append('video', video);
-        else if (quitarVideo) datos.append('quitar_video', 'true');
 
         setEnviando(true);
         setErrores({});
@@ -184,30 +177,22 @@ export default function FormularioSena({ sena, categorias, onCerrar, onGuardada 
                     </div>
                 </Campo>
 
-                <Campo id={`${id}-video`} etiqueta="Video (opcional)" error={errores.video}
-                    ayuda="MP4, máximo 50 MB.">
-                    <div className="campo-archivo">
-                        <label className="boton-contorno boton-archivo">
-                            <IconoSubir /> {video || (sena?.video && !quitarVideo) ? 'Cambiar video' : 'Elegir video'}
-                            <input
-                                id={`${id}-video`}
-                                className="solo-lector"
-                                type="file"
-                                accept=".mp4,video/mp4"
-                                onChange={elegirVideo}
-                            />
-                        </label>
-                        {video && <span className="campo-nombre">{video.name}</span>}
-                    </div>
-                    {editando && sena.video && !video && (
-                        <label className="campo-casilla">
-                            <input
-                                type="checkbox"
-                                checked={quitarVideo}
-                                onChange={(e) => setQuitarVideo(e.target.checked)}
-                            />
-                            Quitar el video actual
-                        </label>
+                <Campo id={`${id}-video`} etiqueta="Video de referencia" obligatorio error={errores.video}
+                    ayuda="Se graba con la cámara, hasta 10 segundos. Muestra cómo se hace la seña.">
+                    {grabando ? (
+                        <GrabadorVideo onListo={videoGrabado} onCancelar={() => setGrabando(false)} />
+                    ) : puedeGrabarMp4() ? (
+                        <div className="campo-archivo">
+                            <button type="button" id={`${id}-video`} className="boton-contorno boton-archivo"
+                                onClick={() => setGrabando(true)}>
+                                {video || sena?.video ? 'Grabar de nuevo' : 'Grabar video'}
+                            </button>
+                            {video && <span className="campo-nombre">Video grabado ✓</span>}
+                        </div>
+                    ) : (
+                        <p className="campo-ayuda">
+                            Tu navegador no permite grabar video. Usa Chrome o Edge actualizado.
+                        </p>
                     )}
                 </Campo>
 
